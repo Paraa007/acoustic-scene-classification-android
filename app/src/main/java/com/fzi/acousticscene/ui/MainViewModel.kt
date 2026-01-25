@@ -78,13 +78,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val totalPredictionsCount: StateFlow<Int> = _totalPredictionsCount.asStateFlow()
     
     private var recordingJob: Job? = null
+    private var volumeJob: Job? = null
     private var isRecording = false
     private var currentMode: RecordingMode = RecordingMode.STANDARD
     private var audioRecorder: AudioRecorder = AudioRecorder(durationSeconds = currentMode.durationSeconds)
-    
+
     init {
         loadModel()
         updateStatistics()
+        // Starte Volume-Beobachtung
+        startVolumeObservation()
+    }
+
+    /**
+     * Beobachtet den Volume-Flow vom AudioRecorder und aktualisiert den UI-State
+     */
+    private fun startVolumeObservation() {
+        volumeJob?.cancel()
+        volumeJob = viewModelScope.launch {
+            audioRecorder.volumeFlow.collect { volume ->
+                _uiState.update { it.copy(currentVolume = volume) }
+            }
+        }
     }
     
     private fun updateStatistics() {
@@ -279,9 +294,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         )
                         predictionRepository.addPrediction(record)
                         updateStatistics()
-                        
+
                         // Normal: Aktualisiere UI State mit Ergebnis
                         updateStateWithResult(result)
+
+                        // LONG-Modus: Pause nach Aufnahme (z.B. 30 Minuten warten)
+                        if (currentMode.hasPauseAfterRecording() && isRecording) {
+                            val pauseMs = currentMode.pauseAfterRecordingMs
+                            val pauseMinutes = currentMode.getPauseMinutes()
+                            Log.d(TAG, "LONG mode: Starting ${pauseMinutes} minute pause")
+
+                            // Zeige Pause-Status in der UI
+                            var remainingMinutes = pauseMinutes
+                            while (remainingMinutes > 0 && isActive && isRecording) {
+                                _uiState.update {
+                                    it.copy(appState = AppState.Paused(remainingMinutes))
+                                }
+                                // Warte 1 Minute
+                                delay(60 * 1000L)
+                                remainingMinutes--
+                            }
+
+                            if (isRecording) {
+                                Log.d(TAG, "LONG mode: Pause completed, starting next recording")
+                            }
+                        }
                     } else {
                         // Fehler
                         if (isRecording) {
@@ -370,6 +407,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (currentMode != mode && !isRecording) {
             currentMode = mode
             audioRecorder = AudioRecorder(durationSeconds = mode.durationSeconds)
+            // Starte Volume-Beobachtung für neuen AudioRecorder neu
+            startVolumeObservation()
             _uiState.update { it.copy(recordingMode = mode) }
             Log.d(TAG, "Recording mode changed to: ${mode.label}")
         }

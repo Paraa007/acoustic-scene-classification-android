@@ -91,6 +91,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var timerProgress: LinearProgressIndicator
     private lateinit var timerText: TextView
     private lateinit var confidenceCircleView: com.fzi.acousticscene.ui.ConfidenceCircleView
+    private lateinit var ripplePulseView: com.fzi.acousticscene.ui.RipplePulseView
+    private lateinit var volumeLevelText: TextView
     private lateinit var currentSceneLabel: TextView
     private lateinit var infoCard: MaterialCardView
     private lateinit var recordingDurationText: TextView
@@ -228,6 +230,8 @@ class MainActivity : AppCompatActivity() {
         timerProgress = findViewById(R.id.timerProgress)
         timerText = findViewById(R.id.timerText)
         confidenceCircleView = findViewById(R.id.confidenceCircleView)
+        ripplePulseView = findViewById(R.id.ripplePulseView)
+        volumeLevelText = findViewById(R.id.volumeLevelText)
         currentSceneLabel = findViewById(R.id.currentSceneLabel)
         infoCard = findViewById(R.id.infoCard)
         recordingDurationText = findViewById(R.id.recordingDurationText)
@@ -294,9 +298,29 @@ class MainActivity : AppCompatActivity() {
         updateStatistics(state.totalClassifications, state.averageInferenceTime)
         updateHistory(state.history)
         updateModeButtons(state.recordingMode)
-        
+        updateVolumeDisplay(state.currentVolume, state.appState)
+
         if (state.errorMessage != null) {
             showError(state.errorMessage)
+        }
+    }
+
+    /**
+     * Aktualisiert die Lautstärke-Anzeige und Ripple-Animation
+     */
+    private fun updateVolumeDisplay(volume: Float, appState: AppState) {
+        // Ripple-Animation nur während der Aufnahme zeigen
+        when (appState) {
+            is AppState.Recording -> {
+                ripplePulseView.setVolume(volume)
+                volumeLevelText.visibility = View.VISIBLE
+                val volumePercent = (volume * 100).toInt()
+                volumeLevelText.text = "Vol: $volumePercent"
+            }
+            else -> {
+                ripplePulseView.clear()
+                volumeLevelText.visibility = View.GONE
+            }
         }
     }
     
@@ -390,6 +414,16 @@ class MainActivity : AppCompatActivity() {
                 startStopButton.text = getString(R.string.stop_recording)
                 timerProgress.visibility = View.GONE
                 timerText.visibility = View.GONE
+            }
+            is AppState.Paused -> {
+                val minutes = appState.minutesRemaining
+                statusLabel.text = "Pause: $minutes Min. bis zur nächsten Aufnahme"
+                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
+                startStopButton.isEnabled = true
+                startStopButton.text = getString(R.string.stop_recording)
+                timerProgress.visibility = View.GONE
+                timerText.text = "$minutes Min."
+                timerText.visibility = View.VISIBLE
             }
             is AppState.Error -> {
                 statusLabel.text = appState.message
