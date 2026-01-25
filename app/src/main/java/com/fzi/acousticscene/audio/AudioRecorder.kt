@@ -6,21 +6,29 @@ import android.media.MediaRecorder
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlin.coroutines.coroutineContext
+import kotlin.math.sqrt
 
 /**
  * AudioRecorder für kontinuierliche Audio-Aufnahme
- * 
+ *
  * OPTIMIERT: Läuft komplett auf IO Thread um Main Thread nicht zu blockieren!
- * 
+ *
+ * Features:
+ * - Echtzeit-Lautstärke-Messung (RMS) via volumeFlow
+ * - Progress-Updates während Aufnahme
+ *
  * Aufnahme-Parameter:
  * - Sample Rate: 32000 Hz
  * - Channels: Mono
  * - Format: PCM 16-bit
- * 
+ *
  * @param sampleRate Sample Rate in Hz (Standard: 32000)
  * @param durationSeconds Aufnahme-Dauer in Sekunden (Standard: 10)
  */
@@ -32,7 +40,13 @@ class AudioRecorder(
         private const val TAG = "AudioRecorder"
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        
+
+        // Empirischer Teiler für Lautstärke-Normalisierung (16-bit PCM max: 32767)
+        private const val VOLUME_NORMALIZATION_DIVISOR = 5000.0
+
+        // Smoothing-Faktor für Lautstärke (0.0 = nur neuer Wert, 1.0 = nur alter Wert)
+        private const val VOLUME_SMOOTHING_FACTOR = 0.7f
+
         /**
          * Berechnet die Buffer-Größe für AudioRecord
          */
@@ -40,10 +54,42 @@ class AudioRecorder(
             return AudioRecord.getMinBufferSize(sampleRate, CHANNEL_CONFIG, AUDIO_FORMAT) * 2
         }
     }
-    
+
     private var audioRecord: AudioRecord? = null
     @Volatile private var isRecording = false
     private val totalSamples = sampleRate * durationSeconds
+
+    // Echtzeit-Lautstärke Flow (0.0 = Stille, 1.0 = Sehr laut)
+    private val _volumeFlow = MutableStateFlow(0f)
+    val volumeFlow: StateFlow<Float> = _volumeFlow.asStateFlow()
+
+    /**
+     * Berechnet den RMS (Root Mean Square) Wert eines Audio-Buffers.
+     * RMS ist ein guter Indikator für die "gefühlte" Lautstärke.
+     *
+     * @param buffer Audio-Samples als ShortArray (PCM 16-bit)
+     * @param samplesRead Anzahl der gültigen Samples im Buffer
+     * @return Normalisierter Lautstärke-Wert zwischen 0.0 und 1.0
+     */
+    private fun calculateRmsVolume(buffer: ShortArray, samplesRead: Int): Float {
+        if (samplesRead <= 0) return 0f
+
+        var sum = 0.0
+        for (i in 0 until samplesRead) {
+            val sample = buffer[i].toDouble()
+            sum += sample * sample
+        }
+        val rms = sqrt(sum / samplesRead)
+
+        // Normalisiere auf 0.0 - 1.0 und wende Smoothing an
+        val targetVolume = (rms / VOLUME_NORMALIZATION_DIVISOR).toFloat().coerceIn(0f, 1f)
+
+        // Low-Pass Filter für weichere Animation (verhindert "Zappeln")
+        val smoothedVolume = _volumeFlow.value * VOLUME_SMOOTHING_FACTOR +
+                targetVolume * (1f - VOLUME_SMOOTHING_FACTOR)
+
+        return smoothedVolume
+    }
     
     /**
      * Startet die Audio-Aufnahme und gibt einen Flow zurück
@@ -98,14 +144,18 @@ class AudioRecorder(
             while (samplesRead < totalSamples && coroutineContext.isActive && isRecording) {
                 val remaining = totalSamples - samplesRead
                 val toRead = minOf(readBuffer.size, remaining)
-                
+
                 val read = recorder.read(readBuffer, 0, toRead)
-                
+
                 if (read > 0) {
                     // Kopiere gelesene Samples in Buffer
                     readBuffer.copyInto(audioBuffer, samplesRead, 0, read)
                     samplesRead += read
-                    
+
+                    // Berechne Echtzeit-Lautstärke (für Visualisierung)
+                    val volume = calculateRmsVolume(readBuffer, read)
+                    _volumeFlow.value = volume
+
                     // Progress Update (nicht zu oft!)
                     if (samplesRead - lastProgressUpdate >= progressInterval) {
                         val progress = samplesRead.toFloat() / totalSamples
@@ -147,6 +197,8 @@ class AudioRecorder(
      */
     fun stopRecording() {
         isRecording = false
+        // Setze Lautstärke auf 0 wenn gestoppt
+        _volumeFlow.value = 0f
         try {
             audioRecord?.stop()
             audioRecord?.release()

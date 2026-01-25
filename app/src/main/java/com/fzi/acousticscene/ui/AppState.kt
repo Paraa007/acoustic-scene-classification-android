@@ -27,7 +27,13 @@ sealed class AppState {
      * @param secondsRemaining Verbleibende Sekunden bis Ende der Aufnahme
      */
     data class Recording(val secondsRemaining: Int) : AppState()
-    
+
+    /**
+     * Paused: Pause zwischen Aufnahmen (nur bei LONG-Modus)
+     * @param minutesRemaining Verbleibende Minuten bis zur nächsten Aufnahme
+     */
+    data class Paused(val minutesRemaining: Int) : AppState()
+
     /**
      * Processing: Inferenz läuft
      */
@@ -49,6 +55,7 @@ sealed class AppState {
  * @param averageInferenceTime Durchschnittliche Inferenz-Zeit in ms
  * @param isModelLoaded Ob das Model geladen ist
  * @param recordingProgress Fortschritt der Aufnahme (0.0 - 1.0)
+ * @param currentVolume Aktuelle Lautstärke (0.0 - 1.0) für Visualisierung
  */
 data class UiState(
     val appState: AppState = AppState.Idle,
@@ -59,5 +66,6 @@ data class UiState(
     val isModelLoaded: Boolean = false,
     val errorMessage: String? = null,
     val recordingMode: RecordingMode = RecordingMode.STANDARD,
-    val recordingProgress: Float = 0f
+    val recordingProgress: Float = 0f,
+    val currentVolume: Float = 0f
 )
