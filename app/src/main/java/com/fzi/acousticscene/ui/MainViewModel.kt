@@ -1,0 +1,426 @@
+package com.fzi.acousticscene.ui
+
+import android.app.Application
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.fzi.acousticscene.audio.AudioRecorder
+import com.fzi.acousticscene.audio.RecordingState
+import com.fzi.acousticscene.data.PredictionRepository
+import com.fzi.acousticscene.data.PredictionStatistics
+import com.fzi.acousticscene.ml.ComputationDispatcher
+import com.fzi.acousticscene.ml.ModelInference
+import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.PredictionRecord
+import com.fzi.acousticscene.model.RecordingMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
+import java.io.File
+import java.util.concurrent.Executors
+
+/**
+ * ViewModel für MainActivity
+ * 
+ * Verwaltet:
+ * - Model Loading
+ * - Audio Recording
+ * - Model Inference
+ * - State Management
+ * - History
+ * 
+ * @param application Android Application Context
+ */
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        private const val TAG = "MainViewModel"
+        private const val HISTORY_SIZE = 5
+    }
+    
+    private val modelInference = ModelInference(application.applicationContext)
+    
+    // Repository für alle Vorhersagen
+    private val predictionRepository = PredictionRepository(application)
+    
+    // Session-Start-Zeit (wird beim App-Start gesetzt)
+    private var sessionStartTime: Long = System.currentTimeMillis()
+    
+    /**
+     * Setzt die Session-Start-Zeit (sollte beim App-Start aufgerufen werden)
+     */
+    fun initializeSession() {
+        sessionStartTime = System.currentTimeMillis()
+        Log.d(TAG, "Session initialized: $sessionStartTime")
+    }
+    
+    // Dedizierter Thread-Pool für ML-Operationen
+    private val mlDispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+    
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    
+    // Statistiken als StateFlow
+    private val _statistics = MutableStateFlow(PredictionStatistics())
+    val statistics: StateFlow<PredictionStatistics> = _statistics.asStateFlow()
+    
+    // Alle Vorhersagen Anzahl
+    private val _totalPredictionsCount = MutableStateFlow(0)
+    val totalPredictionsCount: StateFlow<Int> = _totalPredictionsCount.asStateFlow()
+    
+    private var recordingJob: Job? = null
+    private var isRecording = false
+    private var currentMode: RecordingMode = RecordingMode.STANDARD
+    private var audioRecorder: AudioRecorder = AudioRecorder(durationSeconds = currentMode.durationSeconds)
+    
+    init {
+        loadModel()
+        updateStatistics()
+    }
+    
+    private fun updateStatistics() {
+        _statistics.value = predictionRepository.getStatistics()
+        _totalPredictionsCount.value = predictionRepository.getCount()
+    }
+    
+    /**
+     * Lädt das PyTorch Model asynchron
+     */
+    private fun loadModel() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(appState = AppState.Loading, isModelLoaded = false) }
+            
+            try {
+                // Model Loading kann blockierend sein, daher auf IO Dispatcher
+                val success = withContext(Dispatchers.IO) {
+                    modelInference.loadModel()
+                }
+                
+                if (success) {
+                    _uiState.update {
+                        it.copy(
+                            appState = AppState.Ready,
+                            isModelLoaded = true,
+                            errorMessage = null
+                        )
+                    }
+                    Log.d(TAG, "Model loaded successfully")
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            appState = AppState.Error("Failed to load model"),
+                            isModelLoaded = false,
+                            errorMessage = "Failed to load model"
+                        )
+                    }
+                    Log.e(TAG, "Failed to load model")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading model", e)
+                _uiState.update {
+                    it.copy(
+                        appState = AppState.Error("Error loading model: ${e.message}"),
+                        isModelLoaded = false,
+                        errorMessage = "Error loading model: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+    
+    /**
+     * Startet kontinuierliche Klassifikation
+     */
+    fun startClassification() {
+        if (isRecording) {
+            Log.w(TAG, "Classification already running")
+            return
+        }
+        
+        if (!modelInference.isModelLoaded()) {
+            Log.e(TAG, "Model not loaded")
+            _uiState.update {
+                it.copy(
+                    appState = AppState.Error("Model not loaded"),
+                    errorMessage = "Model not loaded"
+                )
+            }
+            return
+        }
+        
+        isRecording = true
+        recordingJob = viewModelScope.launch {
+            while (isActive && isRecording) {
+                try {
+                    val durationSeconds = currentMode.durationSeconds
+                    
+                    // Starte Aufnahme
+                    _uiState.update { 
+                        it.copy(
+                            appState = AppState.Recording(durationSeconds),
+                            recordingProgress = 0f
+                        ) 
+                    }
+                    
+                    // Audio aufnehmen - Flow läuft auf IO Thread!
+                    var audioSamples: FloatArray? = null
+                    var recordingError: String? = null
+                    
+                    try {
+                        audioRecorder.startRecording()
+                            .catch { e: Throwable ->
+                                Log.e(TAG, "Recording error", e)
+                                recordingError = e.message ?: "Unknown error"
+                                _uiState.update { 
+                                    it.copy(
+                                        appState = AppState.Error("Recording failed: ${recordingError}"),
+                                        errorMessage = "Recording failed: ${recordingError}"
+                                    ) 
+                                }
+                            }
+                            .collect { state ->
+                                when (state) {
+                                    is RecordingState.Started -> {
+                                        Log.d(TAG, "Recording started")
+                                    }
+                                    is RecordingState.Progress -> {
+                                        // Progress Update auf Main Thread (UI Update)
+                                        val secondsRemaining = (durationSeconds * (1f - state.progress)).toInt()
+                                        _uiState.update { 
+                                            it.copy(
+                                                appState = AppState.Recording(secondsRemaining),
+                                                recordingProgress = state.progress
+                                            ) 
+                                        }
+                                    }
+                                    is RecordingState.Completed -> {
+                                        Log.d(TAG, "Recording completed: ${state.samples.size} samples")
+                                        audioSamples = state.samples
+                                    }
+                                    is RecordingState.Error -> {
+                                        Log.e(TAG, "Recording error: ${state.message}")
+                                        recordingError = state.message
+                                        _uiState.update { 
+                                            it.copy(
+                                                appState = AppState.Error(state.message),
+                                                errorMessage = state.message
+                                            ) 
+                                        }
+                                    }
+                                }
+                            }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error during recording collection", e)
+                        recordingError = e.message ?: "Unknown error"
+                        _uiState.update { 
+                            it.copy(
+                                appState = AppState.Error("Recording failed: ${recordingError}"),
+                                errorMessage = "Recording failed: ${recordingError}"
+                            ) 
+                        }
+                    }
+                    
+                    if (!isRecording) {
+                        Log.d(TAG, "Recording stopped, skipping inference")
+                        delay(1000) // Kurze Pause vor nächster Iteration
+                        continue
+                    }
+                    
+                    // Wenn Fehler oder keine Samples, überspringe Inferenz
+                    if (recordingError != null) {
+                        Log.e(TAG, "Recording error occurred: $recordingError")
+                        delay(1000)
+                        continue
+                    }
+                    
+                    if (audioSamples == null || audioSamples!!.isEmpty()) {
+                        Log.e(TAG, "No audio samples received")
+                        _uiState.update { 
+                            it.copy(
+                                appState = AppState.Error("No audio samples received"),
+                                errorMessage = "No audio samples received"
+                            ) 
+                        }
+                        delay(1000)
+                        continue
+                    }
+                    
+                    // Verarbeite Audio - Processing State
+                    _uiState.update { it.copy(appState = AppState.Processing, recordingProgress = 0f) }
+                    
+                    // Führe Inferenz durch auf dediziertem ML Thread-Pool
+                    // NICHT auf Main Thread! Mit withContext wechseln wir zu mlDispatcher
+                    val result = withContext(mlDispatcher) {
+                        modelInference.infer(audioSamples!!, currentMode)
+                    }
+                    
+                    // Prüfe, ob Recording noch aktiv ist (falls Benutzer gestoppt hat)
+                    if (result != null) {
+                        // Speichere in Repository (ALLE Vorhersagen)
+                        // Top 3 Predictions aus ClassificationResult extrahieren
+                        val top3 = result.getTopPredictions(3)
+                        val record = PredictionRecord(
+                            sceneClass = result.sceneClass,
+                            confidence = result.confidence,
+                            allProbabilities = result.allProbabilities,
+                            topPredictions = top3,  // Top 3 Predictions für CSV
+                            inferenceTimeMs = result.inferenceTimeMs,
+                            recordingMode = currentMode,
+                            sessionStartTime = sessionStartTime  // Session-Start-Zeit
+                        )
+                        predictionRepository.addPrediction(record)
+                        updateStatistics()
+                        
+                        // Normal: Aktualisiere UI State mit Ergebnis
+                        updateStateWithResult(result)
+                    } else {
+                        // Fehler
+                        if (isRecording) {
+                            _uiState.update {
+                                it.copy(
+                                    appState = AppState.Error("Inference failed"),
+                                    errorMessage = "Inference failed"
+                                )
+                            }
+                            delay(1000) // Kurze Pause bei Fehler
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error during classification", e)
+                    _uiState.update {
+                        it.copy(
+                            appState = AppState.Error(e.message ?: "Unknown error"),
+                            errorMessage = e.message ?: "Unknown error"
+                        )
+                    }
+                    delay(1000) // Kurze Pause bei Fehler
+                }
+            }
+        }
+    }
+    
+    /**
+     * Stoppt kontinuierliche Klassifikation
+     */
+    fun stopClassification() {
+        isRecording = false
+        recordingJob?.cancel()
+        audioRecorder.stopRecording()
+        _uiState.update { it.copy(appState = AppState.Ready) }
+        Log.d(TAG, "Classification stopped")
+    }
+    
+    /**
+     * Aktualisiert den UI State mit einem neuen Klassifikations-Ergebnis
+     */
+    private fun updateStateWithResult(result: ClassificationResult) {
+        _uiState.update { currentState ->
+            val newHistory = (listOf(result) + currentState.history).take(HISTORY_SIZE)
+            val totalCount = currentState.totalClassifications + 1
+            val totalTime = currentState.averageInferenceTime * (totalCount - 1) + result.inferenceTimeMs
+            val avgTime = totalTime / totalCount
+            
+            currentState.copy(
+                appState = AppState.Ready,
+                currentResult = result,
+                history = newHistory,
+                totalClassifications = totalCount,
+                averageInferenceTime = avgTime,
+                errorMessage = null
+            )
+        }
+    }
+    
+    /**
+     * Löscht die History
+     */
+    fun clearHistory() {
+        _uiState.update {
+            it.copy(history = emptyList(), totalClassifications = 0, averageInferenceTime = 0L)
+        }
+    }
+    
+    /**
+     * Löscht die Fehlermeldung
+     */
+    fun clearError() {
+        _uiState.update {
+            it.copy(errorMessage = null, appState = AppState.Ready)
+        }
+    }
+    
+    /**
+     * Prüft, ob aktuell klassifiziert wird
+     */
+    fun isClassifying(): Boolean = isRecording
+    
+    /**
+     * Setzt den Aufnahme-Modus (Standard 10s oder Fast 1s)
+     */
+    fun setRecordingMode(mode: RecordingMode) {
+        if (currentMode != mode && !isRecording) {
+            currentMode = mode
+            audioRecorder = AudioRecorder(durationSeconds = mode.durationSeconds)
+            _uiState.update { it.copy(recordingMode = mode) }
+            Log.d(TAG, "Recording mode changed to: ${mode.label}")
+        }
+    }
+    
+    /**
+     * Gibt den aktuellen Aufnahme-Modus zurück
+     */
+    fun getRecordingMode(): RecordingMode = currentMode
+    
+    /**
+     * Exportiert alle Vorhersagen als CSV
+     */
+    fun exportPredictions(onComplete: (File?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val file = predictionRepository.exportToCsvFile()
+                onComplete(file)
+            } catch (e: Exception) {
+                Log.e(TAG, "Export failed", e)
+                onComplete(null)
+            }
+        }
+    }
+    
+    /**
+     * Gibt alle Vorhersagen zurück
+     */
+    fun getAllPredictions(): List<PredictionRecord> {
+        return predictionRepository.getAllPredictions()
+    }
+    
+    /**
+     * Löscht alle Vorhersagen
+     */
+    fun clearAllPredictions() {
+        predictionRepository.clearAll()
+        updateStatistics()
+    }
+    
+    /**
+     * Löscht alte Vorhersagen
+     */
+    fun clearOldPredictions(days: Int) {
+        predictionRepository.clearOlderThan(days)
+        updateStatistics()
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        stopClassification()
+        mlDispatcher.close()  // Thread-Pool aufräumen
+    }
+}
