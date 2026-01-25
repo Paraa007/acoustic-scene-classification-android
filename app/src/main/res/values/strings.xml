@@ -1,0 +1,119 @@
+<resources>
+    <string name="app_name">Akustische Szenen-Klassifikation</string>
+    <string name="app_name_full_display">Akustische Szenen-Klassifikation</string>
+    
+    <!-- Main UI -->
+    <string name="start_recording">Aufnahme starten</string>
+    <string name="stop_recording">Aufnahme stoppen</string>
+    <string name="mode_standard">Standard (10s)</string>
+    <string name="mode_fast">Schnell (1s)</string>
+    <string name="mode_medium">Mittel (5s)</string>
+    <string name="mode_long">Lang (30min)</string>
+    <string name="recording_mode">Aufnahme-Modus</string>
+    <string name="loading_model">Lade Modell...</string>
+    <string name="model_loaded">Modell geladen</string>
+    <string name="model_error">Modell-Fehler</string>
+    
+    <!-- Status -->
+    <string name="status_idle">Bereit</string>
+    <string name="status_recording">Aufnahme läuft</string>
+    <string name="status_processing">Verarbeitung</string>
+    
+    <!-- Scene Labels (8 Classes - DCASE 2025) -->
+    <string name="scene_transit_vehicles">Transit - Fahrzeuge/draußen</string>
+    <string name="scene_urban_waiting">Außen-urban &amp; Transit-Gebäude/Wartezonen</string>
+    <string name="scene_nature">Außen - naturbetont</string>
+    <string name="scene_social">Innen - Soziale Umgebung</string>
+    <string name="scene_work">Innen - Arbeitsumgebung</string>
+    <string name="scene_commercial">Innen - Kommerzielle/belebte Umgebung</string>
+    <string name="scene_leisure_sport">Innen - Freizeit/Sport</string>
+    <string name="scene_culture_quiet">Innen - Kultur/Freizeit ruhig</string>
+    <string name="scene_unknown">Unbekannt</string>
+    
+    <!-- Scene Labels Short (für UI) -->
+    <string name="scene_transit_vehicles_short">Transit/Fahrzeuge</string>
+    <string name="scene_urban_waiting_short">Urban/Wartezonen</string>
+    <string name="scene_nature_short">Natur</string>
+    <string name="scene_social_short">Sozial</string>
+    <string name="scene_work_short">Arbeit</string>
+    <string name="scene_commercial_short">Kommerziell</string>
+    <string name="scene_leisure_sport_short">Freizeit/Sport</string>
+    <string name="scene_culture_quiet_short">Kultur/Ruhig</string>
+    
+    <!-- UI Labels -->
+    <string name="current_scene">Aktuelle Szene</string>
+    <string name="confidence">Konfidenz</string>
+    <string name="top_predictions">Top Vorhersagen</string>
+    <string name="history">Verlauf</string>
+    <string name="inference_time">Analyse-Zeit</string>
+    <string name="recording_duration">Aufnahmedauer</string>
+    <string name="model_confidence">Modell-Konfidenz</string>
+    <string name="seconds">s</string>
+    <string name="milliseconds">ms</string>
+    <string name="app_name_full">Akustische Szenen-Klassifikation</string>
+    <string name="timer_countdown">Timer: %1$ds</string>
+    
+    <!-- Permissions -->
+    <string name="permission_audio_required">Mikrofon-Berechtigung wird für die Szenen-Klassifikation benötigt</string>
+    <string name="permission_audio_explanation">Diese App benötigt Zugriff auf das Mikrofon, um Audio für die Szenen-Klassifikation aufzunehmen. Bitte gewähre die Berechtigung in den Einstellungen.</string>
+    <string name="permission_denied">Berechtigung verweigert</string>
+    <string name="permission_granted">Berechtigung erteilt</string>
+    <string name="settings">Einstellungen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="ok">OK</string>
+    
+    <!-- Errors -->
+    <string name="error_recording">Aufnahme-Fehler</string>
+    <string name="error_inference">Inferenz-Fehler</string>
+    <string name="error_model_load">Modell konnte nicht geladen werden</string>
+    <string name="error_audio_permission">Mikrofon-Berechtigung verweigert</string>
+    <string name="error_audio_recording">Audio-Aufnahme konnte nicht gestartet werden</string>
+    <string name="error_processing">Verarbeitungs-Fehler</string>
+    
+    <!-- Statistics -->
+    <string name="session_statistics">Sitzungs-Statistiken</string>
+    <string name="average_inference_time">Ø Inferenz-Zeit</string>
+    <string name="total_classifications">Gesamt Klassifikationen</string>
+    <string name="no_history">Noch keine Klassifikations-Historie vorhanden</string>
+    
+    <!-- History -->
+    <string name="save_history">Verlauf speichern</string>
+    <string name="history_saved">Verlauf gespeichert!</string>
+    <string name="history_save_error">Fehler beim Speichern</string>
+    <string name="history_export">Verlauf exportieren</string>
+    
+    <!-- CSV Export -->
+    <string name="export_csv">📤 CSV Export</string>
+    <string name="share_csv">CSV teilen</string>
+    <string name="csv_exported">CSV erfolgreich exportiert</string>
+    <string name="export_failed">Export fehlgeschlagen</string>
+    <string name="share_failed">Teilen fehlgeschlagen: %1$s</string>
+    
+    <!-- Statistics -->
+    <string name="statistics">Statistiken</string>
+    <string name="clear_predictions">Vorhersagen löschen</string>
+    <string name="clear_predictions_message">Was möchtest du löschen?</string>
+    <string name="clear_all">Alle löschen</string>
+    <string name="clear_old">Älter als 7 Tage</string>
+    <string name="predictions_cleared">Alle Vorhersagen gelöscht</string>
+    <string name="old_predictions_cleared">Alte Vorhersagen gelöscht</string>
+    <string name="export">Export</string>
+    <string name="clear">Löschen</string>
+    
+    <!-- Welcome Screen -->
+    <string name="start_app">App starten</string>
+    <string name="view_history">Verlauf anzeigen</string>
+    <string name="welcome_subtitle">Echtzeit-Akustische Umgebungs-Klassifikation</string>
+    
+    <!-- History Screen -->
+    <string name="history_title">Verlauf</string>
+    <string name="delete_all_history">Alle löschen</string>
+    <string name="delete_all_confirm">Möchtest du wirklich alle Einträge löschen?</string>
+    <string name="entry_deleted">Eintrag gelöscht</string>
+    <string name="undo">Rückgängig</string>
+    <string name="package_details">Package Details</string>
+    <string name="delete_package">Package löschen</string>
+    <string name="delete_package_confirm">Möchtest du dieses Package wirklich löschen?</string>
+    <string name="package_deleted">Package gelöscht</string>
+    <string name="delete">Löschen</string>
+</resources>
