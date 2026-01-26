@@ -1,6 +1,7 @@
 package com.fzi.acousticscene
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -831,13 +834,98 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
     }
-    
+
     /**
      * Prüft Permissions beim Start
      */
     private fun checkPermissions() {
         if (!hasAudioPermission()) {
             // Permission wird beim Klick auf Start angefordert
+        }
+        // Prüfe Batterie-Optimierung
+        checkBatteryOptimization()
+    }
+
+    /**
+     * Prüft, ob die App von der Batterie-Optimierung ausgenommen ist.
+     * KRITISCH für lückenlose Hintergrund-Aufnahmen!
+     *
+     * Ohne diese Ausnahme wird Android die App im Doze-Mode einschränken,
+     * was zu Datenlücken führt.
+     */
+    private fun checkBatteryOptimization() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val packageName = packageName
+
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                // App ist NICHT von Batterie-Optimierung ausgenommen
+                showBatteryOptimizationDialog()
+            } else {
+                android.util.Log.d(TAG, "Battery optimization already disabled - good!")
+            }
+        }
+    }
+
+    /**
+     * Zeigt einen Dialog, der den Benutzer bittet, die Batterie-Optimierung zu deaktivieren.
+     */
+    private fun showBatteryOptimizationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Wichtig: Batterie-Optimierung")
+            .setMessage(
+                "Für lückenlose Aufnahmen im Hintergrund muss die Batterie-Optimierung " +
+                "für diese App deaktiviert werden.\n\n" +
+                "Ohne diese Einstellung wird Android die App nach einiger Zeit einschränken " +
+                "und es entstehen Datenlücken.\n\n" +
+                "Möchtest du die Einstellung jetzt ändern?"
+            )
+            .setPositiveButton("Ja, deaktivieren") { _, _ ->
+                requestBatteryOptimizationExemption()
+            }
+            .setNegativeButton("Später") { dialog, _ ->
+                dialog.dismiss()
+                Toast.makeText(
+                    this,
+                    "Hinweis: Ohne diese Einstellung können Datenlücken entstehen!",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    /**
+     * Öffnet den System-Dialog zum Deaktivieren der Batterie-Optimierung.
+     */
+    @SuppressLint("BatteryLife")
+    private fun requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Could not open battery optimization settings", e)
+                // Fallback: Öffne die allgemeinen Batterie-Einstellungen
+                try {
+                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    startActivity(intent)
+                    Toast.makeText(
+                        this,
+                        "Bitte suche '${getString(R.string.app_name)}' und wähle 'Nicht optimieren'",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } catch (e2: Exception) {
+                    android.util.Log.e(TAG, "Could not open battery settings", e2)
+                    Toast.makeText(
+                        this,
+                        "Bitte deaktiviere die Batterie-Optimierung manuell in den Einstellungen",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
     

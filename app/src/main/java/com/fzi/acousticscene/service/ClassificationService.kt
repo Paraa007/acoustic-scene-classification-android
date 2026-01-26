@@ -1,16 +1,20 @@
 package com.fzi.acousticscene.service
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.fzi.acousticscene.MainActivity
@@ -40,6 +44,11 @@ class ClassificationService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val WAKELOCK_TAG = "AcousticScene::ClassificationWakeLock"
 
+        // Alarm-Intervall für periodische Aufweckung (alle 30 Sekunden)
+        // Dies ist ein Backup falls der WakeLock vom System ignoriert wird
+        private const val ALARM_INTERVAL_MS = 30 * 1000L
+        private const val ACTION_KEEP_ALIVE = "com.fzi.acousticscene.KEEP_ALIVE"
+
         const val ACTION_START = "com.fzi.acousticscene.START_CLASSIFICATION"
         const val ACTION_STOP = "com.fzi.acousticscene.STOP_CLASSIFICATION"
     }
@@ -55,6 +64,21 @@ class ClassificationService : Service() {
     // WakeLock um CPU aktiv zu halten während Aufnahme läuft
     // KRITISCH: Ohne WakeLock geht die CPU in den Schlafmodus wenn der Bildschirm aus ist!
     private var wakeLock: PowerManager.WakeLock? = null
+
+    // AlarmManager für periodische Aufweckung als Backup gegen Doze-Mode
+    private var alarmManager: AlarmManager? = null
+    private var keepAlivePendingIntent: PendingIntent? = null
+
+    // BroadcastReceiver für Keep-Alive Alarm
+    private val keepAliveReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_KEEP_ALIVE && isRunning) {
+                Log.d(TAG, "Keep-alive alarm received - ensuring WakeLock is held")
+                // Stelle sicher, dass WakeLock noch gehalten wird
+                ensureWakeLockHeld()
+            }
+        }
+    }
     
     /**
      * Listener für Service-Events
@@ -83,6 +107,17 @@ class ClassificationService : Service() {
         super.onCreate()
         Log.d(TAG, "Service created")
         createNotificationChannel()
+
+        // Registriere Keep-Alive BroadcastReceiver
+        val filter = IntentFilter(ACTION_KEEP_ALIVE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(keepAliveReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(keepAliveReceiver, filter)
+        }
+
+        // Initialisiere AlarmManager
+        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -108,6 +143,17 @@ class ClassificationService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "Service destroyed")
+
+        // Stoppe Keep-Alive Alarm
+        stopKeepAliveAlarm()
+
+        // Deregistriere BroadcastReceiver
+        try {
+            unregisterReceiver(keepAliveReceiver)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering receiver", e)
+        }
+
         // Sicherheit: WakeLock freigeben auch wenn stopForegroundClassification nicht aufgerufen wurde
         releaseWakeLock()
         stopForegroundClassification()
@@ -130,13 +176,93 @@ class ClassificationService : Service() {
         // Dies verhindert, dass die CPU in den Schlafmodus geht
         acquireWakeLock()
 
-        // Starte Foreground Service mit Notification
+        // Starte periodische Aufweckung als Backup gegen Doze-Mode
+        startKeepAliveAlarm()
+
+        // Starte Foreground Service mit Notification (HIGH Priority!)
         startForeground(NOTIFICATION_ID, createNotification("Klassifikation läuft..."))
 
         // Benachrichtige Listener
         serviceListener?.onClassificationStarted()
 
-        Log.d(TAG, "Foreground classification started with WakeLock")
+        Log.d(TAG, "Foreground classification started with WakeLock and Keep-Alive Alarm")
+    }
+
+    /**
+     * Startet einen periodischen Alarm der den Service aufweckt.
+     * Dies ist ein Backup falls Android den WakeLock im Doze-Mode ignoriert.
+     */
+    private fun startKeepAliveAlarm() {
+        try {
+            val intent = Intent(ACTION_KEEP_ALIVE).apply {
+                setPackage(packageName)
+            }
+            keepAlivePendingIntent = PendingIntent.getBroadcast(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            alarmManager?.let { am ->
+                // setExactAndAllowWhileIdle funktioniert auch im Doze-Mode!
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    am.setExactAndAllowWhileIdle(
+                        AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        SystemClock.elapsedRealtime() + ALARM_INTERVAL_MS,
+                        keepAlivePendingIntent!!
+                    )
+                } else {
+                    am.setExact(
+                        AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        SystemClock.elapsedRealtime() + ALARM_INTERVAL_MS,
+                        keepAlivePendingIntent!!
+                    )
+                }
+                Log.d(TAG, "Keep-alive alarm started (interval: ${ALARM_INTERVAL_MS}ms)")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start keep-alive alarm", e)
+        }
+    }
+
+    /**
+     * Stoppt den periodischen Keep-Alive Alarm
+     */
+    private fun stopKeepAliveAlarm() {
+        try {
+            keepAlivePendingIntent?.let { pending ->
+                alarmManager?.cancel(pending)
+                pending.cancel()
+            }
+            keepAlivePendingIntent = null
+            Log.d(TAG, "Keep-alive alarm stopped")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping keep-alive alarm", e)
+        }
+    }
+
+    /**
+     * Stellt sicher, dass der WakeLock noch gehalten wird.
+     * Wird vom Keep-Alive Alarm aufgerufen.
+     */
+    private fun ensureWakeLockHeld() {
+        wakeLock?.let { lock ->
+            if (!lock.isHeld) {
+                Log.w(TAG, "WakeLock was released! Re-acquiring...")
+                acquireWakeLock()
+            } else {
+                Log.d(TAG, "WakeLock still held - OK")
+            }
+        } ?: run {
+            Log.w(TAG, "WakeLock is null! Acquiring new one...")
+            acquireWakeLock()
+        }
+
+        // Schedule next keep-alive alarm
+        if (isRunning) {
+            startKeepAliveAlarm()
+        }
     }
 
     /**
@@ -182,6 +308,9 @@ class ClassificationService : Service() {
         Log.d(TAG, "Stopping foreground classification")
         isRunning = false
 
+        // Stoppe Keep-Alive Alarm
+        stopKeepAliveAlarm()
+
         // KRITISCH: WakeLock freigeben um Batterie zu schonen!
         releaseWakeLock()
 
@@ -224,18 +353,24 @@ class ClassificationService : Service() {
     
     /**
      * Erstellt den Notification Channel (Android O+)
+     *
+     * WICHTIG: IMPORTANCE_DEFAULT statt IMPORTANCE_LOW!
+     * Höhere Priorität hilft gegen Doze-Mode Einschränkungen.
      */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Klassifikation",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT  // Erhöht von LOW auf DEFAULT
             ).apply {
                 description = "Zeigt an, dass die Audio-Klassifikation im Hintergrund läuft"
                 setShowBadge(false)
+                // Deaktiviere Sound und Vibration (wir wollen nur höhere Priorität)
+                setSound(null, null)
+                enableVibration(false)
             }
-            
+
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
@@ -243,6 +378,8 @@ class ClassificationService : Service() {
     
     /**
      * Erstellt die Notification für den Foreground Service
+     *
+     * WICHTIG: PRIORITY_HIGH für bessere Behandlung im Doze-Mode!
      */
     private fun createNotification(text: String): Notification {
         val intent = Intent(this, MainActivity::class.java)
@@ -252,16 +389,18 @@ class ClassificationService : Service() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)  // Erhöht von LOW auf HIGH
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setShowWhen(false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setSilent(true)  // Kein Sound/Vibration trotz HIGH Priority
             .build()
     }
     
