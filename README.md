@@ -144,19 +144,62 @@ Ein **Foreground Service** ist ein Service, der dem Nutzer angezeigt wird (via N
 startForeground(NOTIFICATION_ID, notification)
 ```
 
-### Doze Mode (Android 6+)
+### Doze Mode (Android 6+) - KRITISCH!
 
 Android versetzt das Gerät in einen **Doze-Modus** wenn:
 - Bildschirm aus
-- Gerät liegt still
+- Gerät liegt still (keine Bewegung)
 - Nicht am Ladekabel
 
 Im Doze-Modus:
 - Netzwerk-Zugriff eingeschränkt
 - Jobs/Alarms verzögert
-- WakeLocks werden ignoriert (außer bei Foreground Services!)
+- **WakeLocks werden ignoriert!** (auch bei Foreground Services!)
 
-**Lösung:** Foreground Service + WakeLock = Kontinuierliche Aufnahme möglich!
+**Das Problem:** Selbst mit WakeLock und Foreground Service kann Android nach ca. 2-3 Stunden
+die App einschränken → Datenlücken entstehen.
+
+**Unsere mehrstufige Lösung:**
+
+1. **WakeLock** - Hält CPU wach (Basis-Schutz)
+2. **Foreground Service mit HIGH Priority** - Signalisiert Wichtigkeit
+3. **AlarmManager mit setExactAndAllowWhileIdle()** - Periodische Aufweckung (alle 30s)
+4. **Batterie-Optimierung deaktivieren** - **WICHTIGSTE MASSNAHME!**
+
+### Batterie-Optimierung deaktivieren (PFLICHT!)
+
+Ohne diese Einstellung werden die anderen Maßnahmen vom System ignoriert!
+
+**Beim ersten Start** der App erscheint ein Dialog. Bitte "Ja, deaktivieren" wählen!
+
+**Manuell prüfen/ändern:**
+
+**Stock Android:**
+```
+Einstellungen → Apps → [App-Name] → Akku → Nicht optimieren
+```
+
+**Samsung:**
+```
+Einstellungen → Apps → [App-Name] → Akku → Akkunutzung optimieren → Alle → [App-Name] → Nicht optimieren
+```
+
+**Xiaomi/MIUI:**
+```
+Einstellungen → Apps → App verwalten → [App-Name] → Autostart aktivieren
+Sicherheit → Akku-Verbrauch → [App-Name] → Keine Einschränkungen
+```
+
+**Huawei/EMUI:**
+```
+Einstellungen → Apps → [App-Name] → Akku → Start → Manuell verwalten → Alles aktivieren
+Telefonmanager → Geschützte Apps → [App-Name] aktivieren
+```
+
+**OnePlus/OxygenOS:**
+```
+Einstellungen → Akku → Akku-Optimierung → [App-Name] → Nicht optimieren
+```
 
 ### App Standby
 
