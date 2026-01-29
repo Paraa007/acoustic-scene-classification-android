@@ -49,6 +49,7 @@
     <color name="background">#0D0D0D</color>        <!-- Dark Background -->
     <color name="surface">#1A1A1A</color>           <!-- Dark Surface -->
     <color name="error">#D32F2F</color>             <!-- Rot für Fehler -->
+    <color name="error_color">#D32F2F</color>       <!-- Alias für Dialog buttons -->
     <color name="on_primary">#FFFFFF</color>        <!-- Weiß auf Grün -->
     <color name="on_background">#FFFFFF</color>     <!-- Weiß auf Dark Background -->
     <color name="on_surface">#FFFFFF</color>       <!-- Weiß auf Dark Surface -->

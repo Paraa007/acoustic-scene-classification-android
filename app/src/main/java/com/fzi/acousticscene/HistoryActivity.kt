@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -19,8 +21,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
+import com.fzi.acousticscene.model.SceneClass
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -137,43 +141,102 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     /**
-     * Zeigt Dialog mit Statistiken und CSV Export für ein Package
+     * Zeigt professionellen Material Design 3 Dialog mit Session Details
      */
     private fun showPackageDialog(packageRecords: List<PredictionRecord>) {
         val stats = calculatePackageStatistics(packageRecords)
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        
-        val startTime = dateFormat.format(Date(packageRecords.first().timestamp))
-        val endTime = dateFormat.format(Date(packageRecords.last().timestamp))
-        
-        val message = """
-            Start: $startTime
-            Ende: $endTime
-            Anzahl: ${packageRecords.size}
-            Ø Konfidenz: ${String.format(Locale.US, "%.1f", stats.averageConfidence)}%
-            
-            Verteilung:
-            ${stats.classDistribution.entries.sortedByDescending { it.value }
-                .take(3)
-                .joinToString("\n") { "${it.key.emoji} ${it.key.labelShort}: ${it.value}" }}
-        """.trimIndent()
 
-        AlertDialog.Builder(this)
-            .setTitle(R.string.package_details)
-            .setMessage(message)
-            .setPositiveButton(R.string.statistics) { _, _ ->
-                // Zeige erweiterte Statistiken
-                showDetailedStatistics(stats)
+        // Inflate custom dialog layout
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_history_details, null)
+
+        // Populate meta data
+        dialogView.findViewById<TextView>(R.id.startTimeValue).text =
+            dateFormat.format(Date(packageRecords.first().timestamp))
+        dialogView.findViewById<TextView>(R.id.endTimeValue).text =
+            dateFormat.format(Date(packageRecords.last().timestamp))
+        dialogView.findViewById<TextView>(R.id.countValue).text =
+            getString(R.string.recordings_count, packageRecords.size)
+        dialogView.findViewById<TextView>(R.id.avgConfidenceValue).text =
+            String.format(Locale.US, "%.1f%%", stats.averageConfidence)
+
+        // Model info - extract from first record (constant per session)
+        val firstRecord = packageRecords.first()
+        val modelName = if (firstRecord.modelName != "unknown") {
+            "${firstRecord.modelName}.pt"
+        } else {
+            getString(R.string.unknown_model)
+        }
+        dialogView.findViewById<TextView>(R.id.modelValue).text = modelName
+
+        // Mode info - extract from first record (constant per session)
+        dialogView.findViewById<TextView>(R.id.modeValue).text = firstRecord.recordingMode.label
+
+        // Populate distribution list
+        val distributionContainer = dialogView.findViewById<LinearLayout>(R.id.distributionContainer)
+        val totalCount = packageRecords.size
+
+        // Sort by count descending and add rows
+        stats.classDistribution.entries
+            .sortedByDescending { it.value }
+            .forEach { (sceneClass, count) ->
+                val rowView = LayoutInflater.from(this).inflate(R.layout.item_distribution_row, distributionContainer, false)
+
+                rowView.findViewById<TextView>(R.id.emojiIcon).text = sceneClass.emoji
+                rowView.findViewById<TextView>(R.id.classNameCount).text = "${sceneClass.labelShort} ($count)"
+
+                val percentage = if (totalCount > 0) (count * 100) / totalCount else 0
+                rowView.findViewById<ProgressBar>(R.id.percentageBar).progress = percentage
+                rowView.findViewById<TextView>(R.id.percentageText).text = "$percentage%"
+
+                // Set progress bar color based on scene class
+                val progressBar = rowView.findViewById<ProgressBar>(R.id.percentageBar)
+                val colorRes = getSceneClassColor(sceneClass)
+                progressBar.progressTintList = android.content.res.ColorStateList.valueOf(getColor(colorRes))
+
+                distributionContainer.addView(rowView)
             }
-            .setNeutralButton(R.string.export_csv) { _, _ ->
-                exportPackageCsv(packageRecords)
-            }
-            .setNegativeButton(R.string.delete) { _, _ ->
-                // Zeige Bestätigungsdialog für Löschen
-                showDeletePackageDialog(packageRecords)
-            }
-            .show()
+
+        // Create dialog
+        val dialog = MaterialAlertDialogBuilder(this, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+            .setView(dialogView)
+            .create()
+
+        // Set button click listeners
+        dialogView.findViewById<MaterialButton>(R.id.btnExport).setOnClickListener {
+            exportPackageCsv(packageRecords)
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<MaterialButton>(R.id.btnDelete).setOnClickListener {
+            dialog.dismiss()
+            showDeletePackageDialog(packageRecords)
+        }
+
+        dialogView.findViewById<MaterialButton>(R.id.btnClose).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // Show dialog with transparent background for rounded corners
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+    }
+
+    /**
+     * Maps SceneClass to its corresponding color resource
+     */
+    private fun getSceneClassColor(sceneClass: SceneClass): Int {
+        return when (sceneClass) {
+            SceneClass.TRANSIT_VEHICLES -> R.color.transit_vehicles
+            SceneClass.URBAN_WAITING -> R.color.urban_waiting
+            SceneClass.NATURE -> R.color.nature
+            SceneClass.SOCIAL -> R.color.social
+            SceneClass.WORK -> R.color.work
+            SceneClass.COMMERCIAL -> R.color.commercial
+            SceneClass.LEISURE_SPORT -> R.color.leisure_sport
+            SceneClass.CULTURE_QUIET -> R.color.culture_quiet
+            SceneClass.LIVING_ROOM -> R.color.living_room
+        }
     }
 
     private fun showDeletePackageDialog(packageRecords: List<PredictionRecord>) {

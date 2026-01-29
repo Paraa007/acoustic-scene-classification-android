@@ -19,7 +19,8 @@ data class PredictionRecord(
     val topPredictions: List<Pair<SceneClass, Float>>,  // Top 3 Predictions
     val inferenceTimeMs: Long,
     val recordingMode: RecordingMode,
-    val batteryLevel: Int = -1  // Akkustand in % (0-100), -1 = unbekannt
+    val batteryLevel: Int = -1,  // Akkustand in % (0-100), -1 = unbekannt
+    val modelName: String = "unknown"  // Modell-Name für History-Anzeige
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige
