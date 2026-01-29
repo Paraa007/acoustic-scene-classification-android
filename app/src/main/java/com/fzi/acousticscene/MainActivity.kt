@@ -13,8 +13,11 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
+import android.animation.ObjectAnimator
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -36,7 +39,6 @@ import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.ui.UiState
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.progressindicator.LinearProgressIndicator
 import androidx.activity.OnBackPressedCallback
 import kotlinx.coroutines.launch
 import java.io.File
@@ -95,7 +97,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var exportButton: MaterialButton
     private lateinit var statusLabel: TextView
     private lateinit var modelStatusLabel: TextView
-    private lateinit var timerProgress: LinearProgressIndicator
+    private lateinit var recordingProgressBar: ProgressBar
     private lateinit var timerText: TextView
     private lateinit var confidenceCircleView: com.fzi.acousticscene.ui.ConfidenceCircleView
     private lateinit var ripplePulseView: com.fzi.acousticscene.ui.RipplePulseView
@@ -103,7 +105,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var currentSceneLabel: TextView
     private lateinit var infoCard: MaterialCardView
     private lateinit var recordingDurationText: TextView
-    private lateinit var modelConfidenceText: TextView
     private lateinit var predictionsCard: MaterialCardView
     private lateinit var predictionsContainer: LinearLayout
     private lateinit var statisticsCard: MaterialCardView
@@ -281,7 +282,7 @@ class MainActivity : AppCompatActivity() {
             viewModel.setRecordingMode(RecordingMode.LONG)
             updateModeButtons(RecordingMode.LONG)
         }
-        timerProgress = findViewById(R.id.timerProgress)
+        recordingProgressBar = findViewById(R.id.recordingProgressBar)
         timerText = findViewById(R.id.timerText)
         confidenceCircleView = findViewById(R.id.confidenceCircleView)
         ripplePulseView = findViewById(R.id.ripplePulseView)
@@ -289,7 +290,6 @@ class MainActivity : AppCompatActivity() {
         currentSceneLabel = findViewById(R.id.currentSceneLabel)
         infoCard = findViewById(R.id.infoCard)
         recordingDurationText = findViewById(R.id.recordingDurationText)
-        modelConfidenceText = findViewById(R.id.modelConfidenceText)
         predictionsCard = findViewById(R.id.predictionsCard)
         predictionsContainer = findViewById(R.id.predictionsContainer)
         statisticsCard = findViewById(R.id.statisticsCard)
@@ -422,14 +422,14 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.text = getString(R.string.status_idle)
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = false
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Loading -> {
                 statusLabel.text = getString(R.string.status_idle)
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = false
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Ready -> {
@@ -437,7 +437,7 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.start_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Recording -> {
@@ -453,15 +453,15 @@ class MainActivity : AppCompatActivity() {
                 // Progress basierend auf recordingProgress aus UiState (0.0 - 1.0)
                 val recordingProgress = viewModel.uiState.value.recordingProgress
                 val progress = (recordingProgress * 100).toInt()
-                timerProgress.progress = progress
-                timerProgress.visibility = View.VISIBLE
+                setProgressAnimated(recordingProgressBar, progress)
+                recordingProgressBar.visibility = View.VISIBLE
             }
             is AppState.Processing -> {
                 statusLabel.text = getString(R.string.status_processing)
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_processing))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Paused -> {
@@ -470,7 +470,7 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.text = "$minutes ${getString(R.string.min)}"
                 timerText.visibility = View.VISIBLE
             }
@@ -479,7 +479,7 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.error))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.start_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
         }
@@ -516,7 +516,6 @@ class MainActivity : AppCompatActivity() {
             infoCard.visibility = View.VISIBLE
             val currentMode = viewModel.getRecordingMode()
             recordingDurationText.text = "${currentMode.durationSeconds}.0 s"
-            modelConfidenceText.text = "${(result.confidence * 100).toInt()}%"
         } else {
             currentSceneLabel.visibility = View.GONE
             infoCard.visibility = View.GONE
@@ -619,7 +618,19 @@ class MainActivity : AppCompatActivity() {
     private fun Int.dpToPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }
-    
+
+    /**
+     * Animates progress bar smoothly to a target value
+     */
+    private fun setProgressAnimated(progressBar: ProgressBar, progressTo: Int) {
+        ObjectAnimator.ofInt(progressBar, "progress", progressBar.progress, progressTo)
+            .setDuration(300) // 300ms smooth transition
+            .apply {
+                interpolator = DecelerateInterpolator()
+                start()
+            }
+    }
+
     /**
      * Aktualisiert die Statistiken
      */
