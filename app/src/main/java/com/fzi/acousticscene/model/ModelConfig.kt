@@ -3,7 +3,7 @@ package com.fzi.acousticscene.model
 /**
  * Configuration for different model types and their class counts
  *
- * User Mode: Uses standard 8-class model from user_models/
+ * User Mode: Uses standard 8-class model from user_model/
  * Dev Mode: Uses experimental models from dev_models/ (8 or 9 classes)
  */
 data class ModelConfig(
@@ -13,8 +13,8 @@ data class ModelConfig(
     val isDevMode: Boolean
 ) {
     companion object {
-        const val USER_MODELS_DIR = "user_models"
-        const val DEV_MODELS_DIR = "dev_models"
+        const val USER_MODEL_DIR = "user_model"  // Singular - matches assets folder name
+        const val DEV_MODELS_DIR = "dev_models"  // Plural - matches assets folder name
         const val DEFAULT_USER_MODEL = "model1.pt"
 
         /**
@@ -22,7 +22,7 @@ data class ModelConfig(
          */
         fun createUserMode(): ModelConfig {
             return ModelConfig(
-                modelPath = "$USER_MODELS_DIR/$DEFAULT_USER_MODEL",
+                modelPath = "$USER_MODEL_DIR/$DEFAULT_USER_MODEL",
                 modelName = DEFAULT_USER_MODEL,
                 numClasses = 8,
                 isDevMode = false
