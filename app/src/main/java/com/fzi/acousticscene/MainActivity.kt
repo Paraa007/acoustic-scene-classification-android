@@ -17,8 +17,11 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -82,6 +85,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     // UI Components
+    private lateinit var backButton: android.widget.ImageButton
     private lateinit var modeStandardButton: MaterialButton
     private lateinit var modeFastButton: MaterialButton
     private lateinit var modeMediumButton: MaterialButton
@@ -124,9 +128,19 @@ class MainActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        // Edge-to-Edge aktivieren für moderne Geräte
+        enableEdgeToEdge()
+
         try {
         setContentView(R.layout.activity_main)
+
+        // Window Insets für dynamisches Padding (Status Bar, Navigation Bar)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
             
             // Session initialisieren (neues Package startet hier)
             viewModel.initializeSession()
@@ -191,7 +205,13 @@ class MainActivity : AppCompatActivity() {
     
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // Navigiere zurück zu WelcomeActivity
+        navigateToWelcome()
+    }
+
+    /**
+     * Navigiert zurück zur WelcomeActivity
+     */
+    private fun navigateToWelcome() {
         val intent = Intent(this, WelcomeActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(intent)
@@ -202,6 +222,12 @@ class MainActivity : AppCompatActivity() {
      * Initialisiert alle UI-Komponenten
      */
     private fun initializeViews() {
+        // Zurück-Button
+        backButton = findViewById(R.id.backButton)
+        backButton.setOnClickListener {
+            navigateToWelcome()
+        }
+
         modeStandardButton = findViewById(R.id.modeStandardButton)
         modeFastButton = findViewById(R.id.modeFastButton)
         modeMediumButton = findViewById(R.id.modeMediumButton)
