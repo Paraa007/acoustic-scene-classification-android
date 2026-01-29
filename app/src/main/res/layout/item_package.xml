@@ -35,6 +35,15 @@
             android:textSize="14sp"
             android:textColor="@color/text_secondary" />
 
+        <!-- Batterie-Verbrauch -->
+        <TextView
+            android:id="@+id/batteryConsumptionText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
