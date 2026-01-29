@@ -7,7 +7,6 @@
     android:gravity="center_vertical"
     android:paddingVertical="6dp">
 
-    <!-- Column 1: Emoji Icon (fixed width, centered) -->
     <TextView
         android:id="@+id/emojiIcon"
         android:layout_width="32dp"
@@ -16,7 +15,6 @@
         android:textSize="18sp"
         tools:text="🚗" />
 
-    <!-- Column 2: Class Name + Count -->
     <TextView
         android:id="@+id/classNameCount"
         android:layout_width="0dp"
@@ -28,7 +26,6 @@
         android:layout_marginEnd="12dp"
         tools:text="Transit (12)" />
 
-    <!-- Column 3: Progress Bar for percentage -->
     <FrameLayout
         android:layout_width="80dp"
         android:layout_height="wrap_content">
@@ -54,6 +51,7 @@
             android:textSize="10sp"
             android:layout_marginTop="10dp"
             tools:text="45%" />
+
     </FrameLayout>
 
 </LinearLayout>
