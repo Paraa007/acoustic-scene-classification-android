@@ -48,17 +48,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private const val TAG = "MainViewModel"
         private const val HISTORY_SIZE = 5
     }
-    
-    private val modelInference = ModelInference(application.applicationContext)
-    
-    // Repository für alle Vorhersagen
+
+    private var modelInference = ModelInference(application.applicationContext)
+
+    // Model configuration
+    private var _modelPath: String = "user_models/model1.pt"
+    private var _modelName: String = "model1.pt"
+    private var _numClasses: Int = 8
+    private var _isDevMode: Boolean = false
+
+    val modelName: String get() = _modelName
+    val numClasses: Int get() = _numClasses
+    val isDevMode: Boolean get() = _isDevMode
+
+    // Repository for all predictions
     private val predictionRepository = PredictionRepository(application)
-    
-    // Session-Start-Zeit (wird beim App-Start gesetzt)
+
+    // Session start time (set on app start)
     private var sessionStartTime: Long = System.currentTimeMillis()
-    
+
     /**
-     * Setzt die Session-Start-Zeit (sollte beim App-Start aufgerufen werden)
+     * Sets the model configuration from Intent extras
+     */
+    fun setModelConfig(modelPath: String, modelName: String, numClasses: Int, isDevMode: Boolean) {
+        _modelPath = modelPath
+        _modelName = modelName
+        _numClasses = numClasses
+        _isDevMode = isDevMode
+
+        // Update the ModelInference with the new path
+        modelInference.setModelPath(modelPath)
+
+        Log.d(TAG, "Model config set: $modelName ($numClasses classes, devMode=$isDevMode)")
+    }
+
+    /**
+     * Sets the session start time (should be called on app start)
      */
     fun initializeSession() {
         sessionStartTime = System.currentTimeMillis()
@@ -310,11 +335,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             sceneClass = result.sceneClass,
                             confidence = result.confidence,
                             allProbabilities = result.allProbabilities,
-                            topPredictions = top3,  // Top 3 Predictions für CSV
+                            topPredictions = top3,  // Top 3 Predictions for CSV
                             inferenceTimeMs = result.inferenceTimeMs,
                             recordingMode = currentMode,
-                            sessionStartTime = sessionStartTime,  // Session-Start-Zeit
-                            batteryLevel = currentBatteryLevel  // NEU: Akkustand
+                            sessionStartTime = sessionStartTime,  // Session start time
+                            batteryLevel = currentBatteryLevel,  // Battery level
+                            modelName = _modelName,  // Model file name
+                            isDevMode = _isDevMode  // Whether Dev Mode is active
                         )
                         predictionRepository.addPrediction(record)
                         updateStatistics()
