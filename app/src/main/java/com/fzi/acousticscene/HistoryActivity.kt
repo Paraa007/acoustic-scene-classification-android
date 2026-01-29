@@ -19,7 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
-import com.google.android.material.appbar.MaterialToolbar
+import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,29 +30,26 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * History Screen - Zeigt alle gespeicherten Klassifikationen als Packages
+ * History Screen - Shows all saved classifications as packages
  */
 class HistoryActivity : AppCompatActivity() {
 
     private lateinit var repository: PredictionRepository
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
-    private lateinit var toolbar: MaterialToolbar
+    private lateinit var btnBack: MaterialButton
+    private lateinit var btnDeleteAll: MaterialButton
     private lateinit var adapter: PackageAdapter
-
-    companion object {
-        // Keine Zeit-Schwelle mehr - Packages basieren auf App-Sessions
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Edge-to-Edge aktivieren für moderne Geräte
+        // Enable Edge-to-Edge for modern devices
         enableEdgeToEdge()
 
         setContentView(R.layout.activity_history)
 
-        // Window Insets für dynamisches Padding (Status Bar, Navigation Bar)
+        // Window Insets for dynamic padding (Status Bar, Navigation Bar)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -62,23 +59,17 @@ class HistoryActivity : AppCompatActivity() {
         repository = PredictionRepository(this)
         recyclerView = findViewById(R.id.historyRecyclerView)
         emptyStateText = findViewById(R.id.emptyStateText)
-        toolbar = findViewById(R.id.toolbar)
+        btnBack = findViewById(R.id.btnBack)
+        btnDeleteAll = findViewById(R.id.btnDeleteAll)
 
-        // Toolbar Setup
-        toolbar.setNavigationOnClickListener {
+        // Material 3 Back Button
+        btnBack.setOnClickListener {
             finish()
         }
 
-        // Overflow Menu (Delete All)
-        toolbar.inflateMenu(R.menu.history_menu)
-        toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.delete_all -> {
-                    showDeleteAllDialog()
-                    true
-                }
-                else -> false
-            }
+        // Delete All Button
+        btnDeleteAll.setOnClickListener {
+            showDeleteAllDialog()
         }
 
         // RecyclerView Setup
@@ -124,70 +115,47 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun showDeleteAllDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_all_history)
-            .setMessage(R.string.delete_all_confirm)
-            .setPositiveButton(R.string.clear_all) { _, _ ->
+        ModernDialogHelper.showDeleteDialog(
+            context = this,
+            title = getString(R.string.delete_all_history),
+            message = getString(R.string.delete_all_confirm),
+            deleteText = getString(R.string.clear_all),
+            onDelete = {
                 repository.clearAll()
                 Toast.makeText(this, R.string.predictions_cleared, Toast.LENGTH_SHORT).show()
                 loadHistory()
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        )
     }
 
     /**
-     * Zeigt Dialog mit Statistiken und CSV Export für ein Package
+     * Shows modern dialog with statistics and CSV export for a package
      */
     private fun showPackageDialog(packageRecords: List<PredictionRecord>) {
         val stats = calculatePackageStatistics(packageRecords)
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        
-        val startTime = dateFormat.format(Date(packageRecords.first().timestamp))
-        val endTime = dateFormat.format(Date(packageRecords.last().timestamp))
-        
-        val message = """
-            Start: $startTime
-            Ende: $endTime
-            Anzahl: ${packageRecords.size}
-            Ø Konfidenz: ${String.format(Locale.US, "%.1f", stats.averageConfidence)}%
-            
-            Verteilung:
-            ${stats.classDistribution.entries.sortedByDescending { it.value }
-                .take(3)
-                .joinToString("\n") { "${it.key.emoji} ${it.key.labelShort}: ${it.value}" }}
-        """.trimIndent()
 
-        AlertDialog.Builder(this)
-            .setTitle(R.string.package_details)
-            .setMessage(message)
-            .setPositiveButton(R.string.statistics) { _, _ ->
-                // Zeige erweiterte Statistiken
-                showDetailedStatistics(stats)
-            }
-            .setNeutralButton(R.string.export_csv) { _, _ ->
-                exportPackageCsv(packageRecords)
-            }
-            .setNegativeButton(R.string.delete) { _, _ ->
-                // Zeige Bestätigungsdialog für Löschen
-                showDeletePackageDialog(packageRecords)
-            }
-            .show()
+        ModernDialogHelper.showPackageDetailsDialog(
+            context = this,
+            packageRecords = packageRecords,
+            stats = stats,
+            onDelete = { showDeletePackageDialog(packageRecords) },
+            onExport = { exportPackageCsv(packageRecords) },
+            onStats = { showDetailedStatistics(stats) }
+        )
     }
 
     private fun showDeletePackageDialog(packageRecords: List<PredictionRecord>) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete_package)
-            .setMessage(R.string.delete_package_confirm)
-            .setPositiveButton(R.string.delete) { _, _ ->
+        ModernDialogHelper.showDeleteDialog(
+            context = this,
+            title = getString(R.string.delete_package),
+            message = getString(R.string.delete_package_confirm),
+            onDelete = {
                 val sessionStartTime = packageRecords.first().sessionStartTime
                 repository.deletePackage(sessionStartTime)
                 Toast.makeText(this, R.string.package_deleted, Toast.LENGTH_SHORT).show()
                 loadHistory()
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        )
     }
 
     private fun calculatePackageStatistics(records: List<PredictionRecord>): PredictionStatistics {
@@ -208,23 +176,23 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun showDetailedStatistics(stats: PredictionStatistics) {
-        val message = """
-            📊 Detaillierte Statistiken
-            
-            Gesamt: ${stats.totalCount} Vorhersagen
-            Ø Konfidenz: ${String.format(Locale.US, "%.1f", stats.averageConfidence)}%
-            Ø Inferenz: ${String.format(Locale.US, "%.0f", stats.averageInferenceTimeMs)}ms
-            
-            Verteilung:
-            ${stats.classDistribution.entries.sortedByDescending { it.value }
-                .joinToString("\n") { "${it.key.emoji} ${it.key.label}: ${it.value}" }}
-        """.trimIndent()
+        val message = buildString {
+            append("${getString(R.string.total)}: ${stats.totalCount} ${getString(R.string.predictions)}\n")
+            append("${getString(R.string.avg_confidence)}: ${String.format(Locale.US, "%.1f", stats.averageConfidence)}%\n")
+            append("${getString(R.string.avg_inference)}: ${String.format(Locale.US, "%.0f", stats.averageInferenceTimeMs)}ms\n\n")
+            append("${getString(R.string.distribution)}:\n")
+            stats.classDistribution.entries.sortedByDescending { it.value }
+                .forEach { append("${it.key.emoji} ${it.key.label}: ${it.value}\n") }
+        }
 
-        AlertDialog.Builder(this)
-            .setTitle(R.string.statistics)
-            .setMessage(message)
-            .setPositiveButton(R.string.ok, null)
-            .show()
+        ModernDialogHelper.showConfirmDialog(
+            context = this,
+            title = getString(R.string.detailed_statistics),
+            message = message,
+            confirmText = getString(R.string.ok),
+            cancelText = "",
+            onConfirm = {}
+        )
     }
 
     private fun exportPackageCsv(records: List<PredictionRecord>) {
@@ -239,7 +207,7 @@ class HistoryActivity : AppCompatActivity() {
                 val timeFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
                 val startTime = timeFormat.format(Date(records.first().timestamp))
                 val endTime = timeFormat.format(Date(records.last().timestamp))
-                val fileName = "package_${startTime}_BIS_${endTime}.csv"
+                val fileName = "package_${startTime}_TO_${endTime}.csv"
                 val file = File(getExternalFilesDir(null), fileName)
                 file.writeText(csvContent.toString())
 
@@ -311,7 +279,7 @@ class HistoryActivity : AppCompatActivity() {
                 val endTime = timeFormat.format(Date(packageRecords.last().timestamp))
 
                 timeRangeText.text = "$startTime - $endTime"
-                countText.text = "${packageRecords.size} Aufnahmen"
+                countText.text = "${packageRecords.size} ${itemView.context.getString(R.string.recordings)}"
 
                 // Batterie-Verbrauch berechnen und anzeigen
                 val firstRecord = packageRecords.first()
@@ -321,10 +289,10 @@ class HistoryActivity : AppCompatActivity() {
 
                 if (startBattery >= 0 && endBattery >= 0) {
                     val consumption = startBattery - endBattery
-                    batteryConsumptionText.text = "🔋 Verbrauch: ${consumption}% ($startBattery% → $endBattery%)"
+                    batteryConsumptionText.text = "${itemView.context.getString(R.string.battery_drain)}: ${consumption}% ($startBattery% → $endBattery%)"
                     batteryConsumptionText.visibility = View.VISIBLE
 
-                    // Rot färben wenn Verbrauch > 10%
+                    // Color red if consumption > 10%
                     if (consumption > 10) {
                         batteryConsumptionText.setTextColor(
                             itemView.context.getColor(android.R.color.holo_red_light)
@@ -335,7 +303,7 @@ class HistoryActivity : AppCompatActivity() {
                         )
                     }
                 } else {
-                    batteryConsumptionText.text = "🔋 Verbrauch: N/A"
+                    batteryConsumptionText.text = "${itemView.context.getString(R.string.battery_drain)}: N/A"
                     batteryConsumptionText.visibility = View.VISIBLE
                     batteryConsumptionText.setTextColor(
                         itemView.context.getColor(R.color.text_secondary)

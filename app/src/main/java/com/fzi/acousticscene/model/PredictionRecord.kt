@@ -51,7 +51,7 @@ data class PredictionRecord(
      */
     fun toCsvRow(): String {
         // Probabilities mit Klassennamen (statt Indizes)
-        val probHeaders = SceneClass.values().sortedBy { it.index }.map { it.name }
+        val probHeaders = SceneClass.entries.sortedBy { it.index }.map { it.name }
         val probsString = allProbabilities.joinToString(";") {
             String.format(Locale.US, "%.4f", it)
         }
@@ -97,7 +97,7 @@ data class PredictionRecord(
          */
         fun getCsvHeader(): String {
             // Probabilities mit Display-Namen (wie top3_display_name) - mit Anführungszeichen
-            val probHeaders = SceneClass.values().sortedBy { it.index }.joinToString(";") { "\"${it.label}\"" }
+            val probHeaders = SceneClass.entries.sortedBy { it.index }.joinToString(";") { "\"${it.label}\"" }
             return "id,timestamp,battery_percent,class_display_name,confidence_percent,inference_time_sec,recording_mode," +
                     "top1_display_name,top1_confidence_percent," +
                     "top2_display_name,top2_confidence_percent," +

@@ -6,22 +6,55 @@
     android:layout_height="match_parent"
     android:background="@color/background_dark">
 
-    <!-- App Bar -->
+    <!-- App Bar with Material 3 Back Button -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/surface_dark"
         app:elevation="0dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/surface_dark"
-            app:title="@string/history_title"
-            app:titleTextColor="@color/text_primary"
-            app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:navigationIconTint="@color/text_primary" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:background="@color/surface_dark">
+
+            <!-- Material 3 Back Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBack"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="@string/back"
+                app:icon="@drawable/ic_arrow_back"
+                app:iconSize="24dp"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <!-- Title -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/history_title"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <!-- Delete All Menu Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeleteAll"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/delete_all_history"
+                android:textColor="@color/status_error"
+                android:textSize="12sp" />
+
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
