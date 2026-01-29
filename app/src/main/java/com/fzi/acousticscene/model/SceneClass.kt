@@ -1,9 +1,11 @@
 package com.fzi.acousticscene.model
 
 /**
- * Enum for the 8 Acoustic Scene Classes (DCASE 2025)
+ * Enum for the Acoustic Scene Classes
  *
- * New classification with 8 categories instead of 10 DCASE classes
+ * Supports both 8-class (standard) and 9-class (experimental) models:
+ * - Classes 0-7: Standard DCASE 2025 classes
+ * - Class 8: Living Room (experimental, only in 9-class models)
  */
 enum class SceneClass(val label: String, val labelShort: String, val emoji: String, val index: Int) {
     TRANSIT_VEHICLES("Transit - Vehicles/Outdoor", "Transit/Vehicles", "🚗", 0),
@@ -13,7 +15,9 @@ enum class SceneClass(val label: String, val labelShort: String, val emoji: Stri
     WORK("Indoor - Work Environment", "Work", "💼", 4),
     COMMERCIAL("Indoor - Commercial/Busy", "Commercial", "🛒", 5),
     LEISURE_SPORT("Indoor - Leisure/Sports", "Leisure/Sports", "⚽", 6),
-    CULTURE_QUIET("Indoor - Culture/Quiet Leisure", "Culture/Quiet", "🎭", 7);
+    CULTURE_QUIET("Indoor - Culture/Quiet Leisure", "Culture/Quiet", "🎭", 7),
+    // 9th class for experimental models
+    LIVING_ROOM("Indoor - Living Room", "Living Room", "🏠", 8);
 
     companion object {
         /**
@@ -24,8 +28,39 @@ enum class SceneClass(val label: String, val labelShort: String, val emoji: Stri
         }
 
         /**
-         * Number of classes
+         * Standard number of classes (8)
          */
-        const val NUM_CLASSES = 8
+        const val NUM_CLASSES_STANDARD = 8
+
+        /**
+         * Extended number of classes (9) for experimental models
+         */
+        const val NUM_CLASSES_EXTENDED = 9
+
+        /**
+         * Default number of classes (for backward compatibility)
+         */
+        const val NUM_CLASSES = NUM_CLASSES_STANDARD
+
+        /**
+         * Returns the list of classes for a given class count
+         */
+        fun getClassesForCount(numClasses: Int): List<SceneClass> {
+            return entries.filter { it.index < numClasses }
+        }
+
+        /**
+         * Returns classes for standard 8-class model
+         */
+        fun getStandardClasses(): List<SceneClass> {
+            return getClassesForCount(NUM_CLASSES_STANDARD)
+        }
+
+        /**
+         * Returns classes for extended 9-class model
+         */
+        fun getExtendedClasses(): List<SceneClass> {
+            return getClassesForCount(NUM_CLASSES_EXTENDED)
+        }
     }
 }
