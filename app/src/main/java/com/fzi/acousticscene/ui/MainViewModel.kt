@@ -347,7 +347,9 @@ class MainViewModel(
                             inferenceTimeMs = result.inferenceTimeMs,
                             recordingMode = currentMode,
                             sessionStartTime = sessionStartTime,  // Session-Start-Zeit
-                            batteryLevel = currentBatteryLevel  // NEU: Akkustand
+                            batteryLevel = currentBatteryLevel,  // Akkustand
+                            modelName = modelName,  // Model Name für History
+                            isDevMode = isDevMode  // Development Mode Status
                         )
                         predictionRepository.addPrediction(record)
                         updateStatistics()
