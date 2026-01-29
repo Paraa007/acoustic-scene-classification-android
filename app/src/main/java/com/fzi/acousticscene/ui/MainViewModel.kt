@@ -1,6 +1,8 @@
 package com.fzi.acousticscene.ui
 
 import android.app.Application
+import android.content.Context
+import android.os.BatteryManager
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -61,6 +63,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun initializeSession() {
         sessionStartTime = System.currentTimeMillis()
         Log.d(TAG, "Session initialized: $sessionStartTime")
+    }
+
+    /**
+     * Ermittelt den aktuellen Akkustand in Prozent (0-100).
+     * Wird bei jeder Vorhersage aufgerufen, um den Verbrauch zu protokollieren.
+     *
+     * @return Akkustand in % oder -1 wenn nicht verfügbar
+     */
+    private fun getBatteryLevel(): Int {
+        return try {
+            val batteryManager = getApplication<Application>()
+                .getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not get battery level", e)
+            -1
+        }
     }
     
     // Dedizierter Thread-Pool für ML-Operationen
@@ -283,6 +302,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         // Speichere in Repository (ALLE Vorhersagen)
                         // Top 3 Predictions aus ClassificationResult extrahieren
                         val top3 = result.getTopPredictions(3)
+
+                        // Akkustand zum Zeitpunkt der Vorhersage erfassen
+                        val currentBatteryLevel = getBatteryLevel()
+
                         val record = PredictionRecord(
                             sceneClass = result.sceneClass,
                             confidence = result.confidence,
@@ -290,7 +313,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             topPredictions = top3,  // Top 3 Predictions für CSV
                             inferenceTimeMs = result.inferenceTimeMs,
                             recordingMode = currentMode,
-                            sessionStartTime = sessionStartTime  // Session-Start-Zeit
+                            sessionStartTime = sessionStartTime,  // Session-Start-Zeit
+                            batteryLevel = currentBatteryLevel  // NEU: Akkustand
                         )
                         predictionRepository.addPrediction(record)
                         updateStatistics()

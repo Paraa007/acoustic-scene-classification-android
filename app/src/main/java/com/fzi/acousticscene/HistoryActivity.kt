@@ -289,14 +289,44 @@ class HistoryActivity : AppCompatActivity() {
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val timeRangeText: TextView = itemView.findViewById(R.id.timeRangeText)
             private val countText: TextView = itemView.findViewById(R.id.countText)
+            private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
 
             fun bind(packageRecords: List<PredictionRecord>, onClick: (List<PredictionRecord>) -> Unit) {
                 val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
                 val startTime = timeFormat.format(Date(packageRecords.first().timestamp))
                 val endTime = timeFormat.format(Date(packageRecords.last().timestamp))
-                
+
                 timeRangeText.text = "$startTime - $endTime"
                 countText.text = "${packageRecords.size} Aufnahmen"
+
+                // Batterie-Verbrauch berechnen und anzeigen
+                val firstRecord = packageRecords.first()
+                val lastRecord = packageRecords.last()
+                val startBattery = firstRecord.batteryLevel
+                val endBattery = lastRecord.batteryLevel
+
+                if (startBattery >= 0 && endBattery >= 0) {
+                    val consumption = startBattery - endBattery
+                    batteryConsumptionText.text = "🔋 Verbrauch: ${consumption}% ($startBattery% → $endBattery%)"
+                    batteryConsumptionText.visibility = View.VISIBLE
+
+                    // Rot färben wenn Verbrauch > 10%
+                    if (consumption > 10) {
+                        batteryConsumptionText.setTextColor(
+                            itemView.context.getColor(android.R.color.holo_red_light)
+                        )
+                    } else {
+                        batteryConsumptionText.setTextColor(
+                            itemView.context.getColor(R.color.text_secondary)
+                        )
+                    }
+                } else {
+                    batteryConsumptionText.text = "🔋 Verbrauch: N/A"
+                    batteryConsumptionText.visibility = View.VISIBLE
+                    batteryConsumptionText.setTextColor(
+                        itemView.context.getColor(R.color.text_secondary)
+                    )
+                }
 
                 itemView.setOnClickListener {
                     onClick(packageRecords)
