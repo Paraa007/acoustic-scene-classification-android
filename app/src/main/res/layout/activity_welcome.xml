@@ -4,17 +4,17 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark"
-    android:padding="24dp">
+    android:background="@color/background_dark">
 
-    <!-- FZI Logo (oben, zentriert) -->
+    <!-- FZI Logo (top, centered) -->
     <ImageView
         android:id="@+id/fziLogo"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:src="@drawable/ic_launcher_foreground"
+        android:layout_width="wrap_content"
+        android:layout_height="150dp"
+        android:adjustViewBounds="true"
+        android:src="@drawable/fzi_logo"
         android:contentDescription="@string/app_name"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="48dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -28,7 +28,9 @@
         android:textSize="22sp"
         android:textStyle="bold"
         android:textColor="@color/text_primary"
-        android:layout_marginTop="16dp"
+        android:textAlignment="center"
+        android:layout_marginTop="24dp"
+        android:layout_marginHorizontal="24dp"
         app:layout_constraintTop_toBottomOf="@+id/fziLogo"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -51,11 +53,12 @@
         android:id="@+id/modeSelectionLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Select Mode"
+        android:text="@string/select_mode"
         android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="@color/text_primary"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="48dp"
+        android:layout_marginStart="24dp"
         app:layout_constraintTop_toBottomOf="@+id/appSubtitle"
         app:layout_constraintStart_toStartOf="parent" />
 
@@ -65,6 +68,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="24dp"
         app:cardBackgroundColor="@color/surface_dark"
         app:cardCornerRadius="16dp"
         app:cardElevation="4dp"
@@ -86,7 +90,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@android:drawable/ic_btn_speak_now"
-                android:contentDescription="User Mode"
+                android:contentDescription="@string/user_mode"
                 app:tint="@color/accent_green_light" />
 
             <!-- Text Container -->
@@ -100,7 +104,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="User Mode"
+                    android:text="@string/user_mode"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
@@ -108,7 +112,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Standard Classification"
+                    android:text="@string/user_mode_desc"
                     android:textSize="14sp"
                     android:textColor="@color/text_secondary"
                     android:layout_marginTop="4dp" />
@@ -120,7 +124,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_media_play"
-                android:contentDescription="Start"
+                android:contentDescription="@string/start_app"
                 app:tint="@color/accent_green_light" />
 
         </LinearLayout>
@@ -133,6 +137,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="24dp"
         app:cardBackgroundColor="@color/surface_dark"
         app:cardCornerRadius="16dp"
         app:cardElevation="4dp"
@@ -154,7 +159,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@android:drawable/ic_menu_manage"
-                android:contentDescription="Development Mode"
+                android:contentDescription="@string/dev_mode"
                 app:tint="@color/status_warning" />
 
             <!-- Text Container -->
@@ -168,7 +173,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Development Mode"
+                    android:text="@string/dev_mode"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
@@ -176,7 +181,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Experimental Models"
+                    android:text="@string/dev_mode_desc"
                     android:textSize="14sp"
                     android:textColor="@color/text_secondary"
                     android:layout_marginTop="4dp" />
@@ -188,7 +193,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_media_play"
-                android:contentDescription="Start"
+                android:contentDescription="@string/start_app"
                 app:tint="@color/status_warning" />
 
         </LinearLayout>
@@ -212,6 +217,7 @@
         app:backgroundTint="@android:color/transparent"
         android:textColor="@color/text_primary"
         android:layout_marginBottom="16dp"
+        android:layout_marginHorizontal="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

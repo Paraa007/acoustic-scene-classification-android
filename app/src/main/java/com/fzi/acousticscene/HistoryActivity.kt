@@ -6,14 +6,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.content.FileProvider
@@ -22,10 +19,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
-import com.fzi.acousticscene.model.SceneClass
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -142,130 +137,43 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     /**
-     * Zeigt professionellen Dialog mit Statistiken und CSV Export für ein Package
-     * Material Design 3 compliant mit custom layout
+     * Zeigt Dialog mit Statistiken und CSV Export für ein Package
      */
     private fun showPackageDialog(packageRecords: List<PredictionRecord>) {
         val stats = calculatePackageStatistics(packageRecords)
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        
+        val startTime = dateFormat.format(Date(packageRecords.first().timestamp))
+        val endTime = dateFormat.format(Date(packageRecords.last().timestamp))
+        
+        val message = """
+            Start: $startTime
+            Ende: $endTime
+            Anzahl: ${packageRecords.size}
+            Ø Konfidenz: ${String.format(Locale.US, "%.1f", stats.averageConfidence)}%
+            
+            Verteilung:
+            ${stats.classDistribution.entries.sortedByDescending { it.value }
+                .take(3)
+                .joinToString("\n") { "${it.key.emoji} ${it.key.labelShort}: ${it.value}" }}
+        """.trimIndent()
 
-        // Inflate custom dialog layout
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_history_details, null)
-
-        // Find views
-        val startTimeValue: TextView = dialogView.findViewById(R.id.startTimeValue)
-        val endTimeValue: TextView = dialogView.findViewById(R.id.endTimeValue)
-        val countValue: TextView = dialogView.findViewById(R.id.countValue)
-        val modelValue: TextView = dialogView.findViewById(R.id.modelValue)
-        val modeValue: TextView = dialogView.findViewById(R.id.modeValue)
-        val avgConfidenceValue: TextView = dialogView.findViewById(R.id.avgConfidenceValue)
-        val distributionContainer: LinearLayout = dialogView.findViewById(R.id.distributionContainer)
-        val btnClose: MaterialButton = dialogView.findViewById(R.id.btnClose)
-        val btnDelete: MaterialButton = dialogView.findViewById(R.id.btnDelete)
-        val btnExport: MaterialButton = dialogView.findViewById(R.id.btnExport)
-
-        // Populate metadata
-        startTimeValue.text = dateFormat.format(Date(packageRecords.first().timestamp))
-        endTimeValue.text = dateFormat.format(Date(packageRecords.last().timestamp))
-        countValue.text = "${packageRecords.size} Aufnahmen"
-
-        // Get model and mode from first record (constant per session)
-        val firstRecord = packageRecords.first()
-        val modelName = firstRecord.modelName
-        val isDevMode = firstRecord.isDevMode
-        val recordingMode = firstRecord.recordingMode
-
-        // Determine number of classes based on model
-        val numClasses = if (modelName.contains("model2") || isDevMode) 9 else 8
-        modelValue.text = "$modelName.pt ($numClasses Classes)"
-
-        // Mode display with recording mode
-        val modeText = if (isDevMode) getString(R.string.dev_mode) else getString(R.string.user_mode)
-        modeValue.text = "$modeText / ${recordingMode.name}"
-
-        avgConfidenceValue.text = "${String.format(Locale.US, "%.1f", stats.averageConfidence)}%"
-
-        // Populate distribution list with proper alignment
-        populateDistributionList(distributionContainer, stats, packageRecords.size)
-
-        // Create dialog
-        val dialog = MaterialAlertDialogBuilder(this)
-            .setView(dialogView)
-            .create()
-
-        // Button click handlers
-        btnClose.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        btnDelete.setOnClickListener {
-            dialog.dismiss()
-            showDeletePackageDialog(packageRecords)
-        }
-
-        btnExport.setOnClickListener {
-            dialog.dismiss()
-            exportPackageCsv(packageRecords)
-        }
-
-        dialog.show()
-    }
-
-    /**
-     * Populates the distribution container with properly aligned rows
-     */
-    private fun populateDistributionList(
-        container: LinearLayout,
-        stats: PredictionStatistics,
-        totalCount: Int
-    ) {
-        container.removeAllViews()
-
-        // Sort by count descending
-        val sortedDistribution = stats.classDistribution.entries.sortedByDescending { it.value }
-
-        // Scene color map
-        val sceneColors = mapOf(
-            SceneClass.TRANSIT_VEHICLES to R.color.transit_vehicles,
-            SceneClass.URBAN_WAITING to R.color.urban_waiting,
-            SceneClass.NATURE to R.color.nature,
-            SceneClass.SOCIAL to R.color.social,
-            SceneClass.WORK to R.color.work,
-            SceneClass.COMMERCIAL to R.color.commercial,
-            SceneClass.LEISURE_SPORT to R.color.leisure_sport,
-            SceneClass.CULTURE_QUIET to R.color.culture_quiet,
-            SceneClass.LIVING_ROOM to R.color.living_room
-        )
-
-        for ((sceneClass, count) in sortedDistribution) {
-            // Inflate row layout
-            val rowView = LayoutInflater.from(this)
-                .inflate(R.layout.item_distribution_row, container, false)
-
-            val emojiText: TextView = rowView.findViewById(R.id.emojiText)
-            val classNameText: TextView = rowView.findViewById(R.id.classNameText)
-            val countBadge: TextView = rowView.findViewById(R.id.countBadge)
-            val progressBar: ProgressBar = rowView.findViewById(R.id.progressBar)
-
-            // Set emoji
-            emojiText.text = sceneClass.emoji
-
-            // Set class name (short label)
-            classNameText.text = sceneClass.labelShort
-
-            // Set count badge
-            countBadge.text = count.toString()
-
-            // Calculate percentage and set progress
-            val percentage = if (totalCount > 0) (count * 100) / totalCount else 0
-            progressBar.progress = percentage
-
-            // Set progress bar color based on scene class
-            val colorRes = sceneColors[sceneClass] ?: R.color.accent_green
-            progressBar.progressTintList = ContextCompat.getColorStateList(this, colorRes)
-
-            container.addView(rowView)
-        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.package_details)
+            .setMessage(message)
+            .setPositiveButton(R.string.statistics) { _, _ ->
+                // Zeige erweiterte Statistiken
+                showDetailedStatistics(stats)
+            }
+            .setNeutralButton(R.string.export_csv) { _, _ ->
+                exportPackageCsv(packageRecords)
+            }
+            .setNegativeButton(R.string.delete) { _, _ ->
+                // Zeige Bestätigungsdialog für Löschen
+                showDeletePackageDialog(packageRecords)
+            }
+            .show()
     }
 
     private fun showDeletePackageDialog(packageRecords: List<PredictionRecord>) {

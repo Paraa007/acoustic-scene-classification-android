@@ -2,14 +2,16 @@ package com.fzi.acousticscene
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
+import android.view.LayoutInflater
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Welcome Screen / Landing Page
@@ -33,12 +35,12 @@ class WelcomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Edge-to-Edge aktivieren für moderne Geräte
+        // Enable Edge-to-Edge for modern devices
         enableEdgeToEdge()
 
         setContentView(R.layout.activity_welcome)
 
-        // Window Insets für dynamisches Padding (Status Bar, Navigation Bar)
+        // Window Insets for dynamic padding (Status Bar, Navigation Bar)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -63,7 +65,7 @@ class WelcomeActivity : AppCompatActivity() {
             showDevModelSelectionDialog()
         }
 
-        // Navigation zu HistoryActivity
+        // Navigate to HistoryActivity
         viewHistoryButton.setOnClickListener {
             val intent = Intent(this, HistoryActivity::class.java)
             startActivity(intent)
@@ -71,36 +73,94 @@ class WelcomeActivity : AppCompatActivity() {
     }
 
     /**
-     * Scans dev_models/ directory and shows a selection dialog
+     * Scans dev_models/ directory and shows a custom Material 3 selection dialog
      */
     private fun showDevModelSelectionDialog() {
         val devModels = getDevModels()
 
         if (devModels.isEmpty()) {
             // No models found - show info dialog
-            AlertDialog.Builder(this)
-                .setTitle("No Models Found")
-                .setMessage("No .pt model files found in assets/dev_models/.\n\nPlease add experimental models to the dev_models folder.")
-                .setPositiveButton("OK", null)
-                .show()
+            showNoModelsDialog()
             return
         }
 
-        // Show model selection dialog
-        val modelNames = devModels.map { it.removeSuffix(".pt") }.toTypedArray()
+        // Inflate custom dialog layout
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_model_selection, null)
+        val modelListContainer = dialogView.findViewById<LinearLayout>(R.id.modelListContainer)
 
-        AlertDialog.Builder(this)
-            .setTitle("Select Experimental Model")
-            .setItems(modelNames) { _, which ->
-                val selectedModel = devModels[which]
+        val dialog = MaterialAlertDialogBuilder(this, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+            .setView(dialogView)
+            .create()
+
+        // Add model rows
+        devModels.forEach { modelFile ->
+            val modelName = modelFile.removeSuffix(".pt")
+            val classCount = getModelClassCount(modelName)
+
+            val rowView = LayoutInflater.from(this).inflate(R.layout.item_model_row, modelListContainer, false)
+
+            rowView.findViewById<TextView>(R.id.modelName).text = "$modelName.pt"
+            rowView.findViewById<TextView>(R.id.modelClasses).text = getString(R.string.classes_count, classCount)
+
+            // Set click listener
+            rowView.setOnClickListener {
+                dialog.dismiss()
                 startMainActivityWithModel(
-                    modelPath = "$DEV_MODELS_DIR/$selectedModel",
-                    modelName = selectedModel.removeSuffix(".pt"),
+                    modelPath = "$DEV_MODELS_DIR/$modelFile",
+                    modelName = modelName,
                     isDevMode = true
                 )
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+
+            modelListContainer.addView(rowView)
+        }
+
+        // Cancel button
+        dialogView.findViewById<MaterialButton>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+    }
+
+    /**
+     * Shows a dialog when no models are found
+     */
+    private fun showNoModelsDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_confirmation, null)
+
+        dialogView.findViewById<TextView>(R.id.dialogTitle).text = getString(R.string.no_models_found)
+        dialogView.findViewById<TextView>(R.id.dialogMessage).text =
+            "No .pt model files found in assets/dev_models/.\n\nPlease add experimental models to the dev_models folder."
+
+        // Hide confirm button, only show cancel as OK
+        dialogView.findViewById<MaterialButton>(R.id.btnConfirm).visibility = android.view.View.GONE
+        dialogView.findViewById<MaterialButton>(R.id.btnCancel).text = getString(R.string.ok)
+
+        val dialog = MaterialAlertDialogBuilder(this, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+            .setView(dialogView)
+            .create()
+
+        dialogView.findViewById<MaterialButton>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+    }
+
+    /**
+     * Gets the class count for a model based on its name
+     * model1 -> 8 Classes, model2 -> 9 Classes
+     */
+    private fun getModelClassCount(modelName: String): Int {
+        val name = modelName.lowercase()
+        return when {
+            name.contains("model2") -> 9
+            name.contains("model1") -> 8
+            else -> 8 // Default
+        }
     }
 
     /**
@@ -128,6 +188,6 @@ class WelcomeActivity : AppCompatActivity() {
             putExtra(EXTRA_IS_DEV_MODE, isDevMode)
         }
         startActivity(intent)
-        finish() // WelcomeActivity nicht im Back Stack behalten
+        finish() // Don't keep WelcomeActivity in back stack
     }
 }

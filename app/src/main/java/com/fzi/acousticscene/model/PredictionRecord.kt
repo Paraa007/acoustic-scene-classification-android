@@ -8,8 +8,6 @@ import java.util.*
  *
  * @param topPredictions Top 3 Predictions (Klasse, Konfidenz) für CSV Export
  * @param batteryLevel Akkustand in % (0-100) zum Zeitpunkt der Vorhersage
- * @param modelName Name des verwendeten Models (z.B. "model1", "model2")
- * @param isDevMode Ob die Vorhersage im Development Mode gemacht wurde
  */
 data class PredictionRecord(
     val id: Long = System.currentTimeMillis(),
@@ -21,9 +19,7 @@ data class PredictionRecord(
     val topPredictions: List<Pair<SceneClass, Float>>,  // Top 3 Predictions
     val inferenceTimeMs: Long,
     val recordingMode: RecordingMode,
-    val batteryLevel: Int = -1,  // Akkustand in % (0-100), -1 = unbekannt
-    val modelName: String = "model1",  // Name des verwendeten Models
-    val isDevMode: Boolean = false  // Ob Development Mode aktiv war
+    val batteryLevel: Int = -1  // Akkustand in % (0-100), -1 = unbekannt
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige
