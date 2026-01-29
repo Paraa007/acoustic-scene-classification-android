@@ -17,18 +17,20 @@ import java.io.FileOutputStream
 
 /**
  * ModelInference Klasse für PyTorch Mobile Model
- * 
+ *
  * Lädt das PyTorch Model und führt Inferenz durch.
- * 
+ *
  * Das Modell erwartet Log-Mel-Spectrogram Input mit Shape [1, 1, 256, 641]
  * MelSpectrogram wird auf Android berechnet (nicht im Modell).
- * 
+ *
  * @param context Android Context
- * @param modelAssetName Name der Model-Datei in assets (Standard: "model1.pt")
+ * @param modelAssetPath Full path to model in assets (e.g., "user_models/model1.pt")
+ * @param numClasses Number of output classes (8 for standard, 9 for extended)
  */
 class ModelInference(
     private val context: Context,
-    private val modelAssetName: String = "model1.pt"
+    private val modelAssetPath: String = "user_models/model1.pt",
+    val numClasses: Int = 8
 ) {
     companion object {
         private const val TAG = "ModelInference"
@@ -36,6 +38,9 @@ class ModelInference(
         private const val N_MELS = 256
         private const val EXPECTED_TIME_FRAMES = 641 // Für 10 Sekunden Audio
     }
+
+    // Extract model name from path for display purposes
+    val modelName: String = modelAssetPath.substringAfterLast("/").removeSuffix(".pt")
     
     private var module: Module? = null
     private var isLoaded = false
@@ -75,28 +80,33 @@ class ModelInference(
                 Log.d(TAG, "Model already loaded")
                 return true
             }
-            
-            Log.d(TAG, "Loading model from assets: $modelAssetName")
-            
-            // Kopiere Model aus assets zu einem temporären File
-            val modelFile = File(context.cacheDir, modelAssetName)
-            if (!modelFile.exists()) {
-                context.assets.open(modelAssetName).use { input ->
-                    FileOutputStream(modelFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                Log.d(TAG, "Model copied to cache directory")
+
+            Log.d(TAG, "Loading model from assets: $modelAssetPath (${numClasses} classes)")
+
+            // Use filename for cache (to allow multiple models)
+            val cacheFileName = modelAssetPath.replace("/", "_")
+            val modelFile = File(context.cacheDir, cacheFileName)
+
+            // Always re-copy to ensure we have the correct model
+            if (modelFile.exists()) {
+                modelFile.delete()
             }
-            
+
+            context.assets.open(modelAssetPath).use { input ->
+                FileOutputStream(modelFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            Log.d(TAG, "Model copied to cache directory: ${modelFile.absolutePath}")
+
             // Lade Model mit Module.load() (funktioniert mit Standard TorchScript .pt Dateien)
             module = Module.load(modelFile.absolutePath)
             isLoaded = true
-            
-            Log.d(TAG, "Model loaded successfully")
+
+            Log.d(TAG, "Model loaded successfully: $modelName ($numClasses classes)")
             true
         } catch (e: FileNotFoundException) {
-            Log.e(TAG, "Model file not found: $modelAssetName", e)
+            Log.e(TAG, "Model file not found: $modelAssetPath", e)
             isLoaded = false
             module = null
             false
@@ -259,7 +269,7 @@ class ModelInference(
      */
     fun getModelInfo(): String {
         return if (isLoaded) {
-            "Model loaded: $modelAssetName"
+            "Model: $modelName ($numClasses Classes)"
         } else {
             "Model not loaded"
         }

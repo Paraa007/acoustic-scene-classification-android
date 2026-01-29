@@ -27,11 +27,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
+import com.fzi.acousticscene.model.LabelProvider
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.ui.AppState
 import com.fzi.acousticscene.service.ClassificationService
 import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.MainViewModelFactory
 import com.fzi.acousticscene.ui.UiState
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -57,13 +59,22 @@ import com.fzi.acousticscene.data.PredictionStatistics
  * @author FZI
  */
 class MainActivity : AppCompatActivity() {
-    
+
     companion object {
         private const val TAG = "MainActivity"
         private const val PERMISSION_REQUEST_CODE = 1001
+        private const val DEFAULT_MODEL_PATH = "user_models/model1.pt"
+        private const val DEFAULT_MODEL_NAME = "model1"
     }
-    
-    private val viewModel: MainViewModel by viewModels()
+
+    // Model configuration from Intent
+    private lateinit var modelPath: String
+    private lateinit var modelName: String
+    private var isDevMode: Boolean = false
+
+    private val viewModel: MainViewModel by viewModels {
+        MainViewModelFactory(application, modelPath, modelName, isDevMode)
+    }
     
     // Service für Hintergrund-Betrieb
     private var classificationService: ClassificationService? = null
@@ -114,7 +125,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noHistoryText: TextView
     private lateinit var saveHistoryButton: MaterialButton
     
-    // Scene Color Map (DCASE 2025 - 8 Klassen)
+    // Scene Color Map (Extended DCASE 2025 - 9 classes)
     private val sceneColors = mapOf(
         SceneClass.TRANSIT_VEHICLES to R.color.transit_vehicles,
         SceneClass.URBAN_WAITING to R.color.urban_waiting,
@@ -123,11 +134,51 @@ class MainActivity : AppCompatActivity() {
         SceneClass.WORK to R.color.work,
         SceneClass.COMMERCIAL to R.color.commercial,
         SceneClass.LEISURE_SPORT to R.color.leisure_sport,
-        SceneClass.CULTURE_QUIET to R.color.culture_quiet
+        SceneClass.CULTURE_QUIET to R.color.culture_quiet,
+        SceneClass.LIVING_ROOM to R.color.living_room
     )
+
+    // Color map for dynamic classes (including 9th class LIVING_ROOM)
+    private val dynamicSceneColors = mapOf(
+        "TRANSIT_VEHICLES" to R.color.transit_vehicles,
+        "URBAN_WAITING" to R.color.urban_waiting,
+        "NATURE" to R.color.nature,
+        "SOCIAL" to R.color.social,
+        "WORK" to R.color.work,
+        "COMMERCIAL" to R.color.commercial,
+        "LEISURE_SPORT" to R.color.leisure_sport,
+        "CULTURE_QUIET" to R.color.culture_quiet,
+        "LIVING_ROOM" to R.color.living_room
+    )
+
+    /**
+     * Gets the color resource for a dynamic scene class
+     */
+    private fun getColorForDynamicClass(classId: String): Int {
+        return dynamicSceneColors[classId] ?: R.color.accent_green
+    }
+
+    /**
+     * Gets the color resource for a dynamic scene class by index
+     */
+    private fun getColorForClassIndex(index: Int): Int {
+        val dynamicClass = viewModel.getClassByIndex(index)
+        return if (dynamicClass != null) {
+            getColorForDynamicClass(dynamicClass.id)
+        } else {
+            R.color.accent_green
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Extract model configuration from Intent BEFORE accessing viewModel
+        modelPath = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_PATH) ?: DEFAULT_MODEL_PATH
+        modelName = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_NAME) ?: DEFAULT_MODEL_NAME
+        isDevMode = intent.getBooleanExtra(WelcomeActivity.EXTRA_IS_DEV_MODE, false)
+
+        android.util.Log.d(TAG, "Starting with model: $modelName, path: $modelPath, devMode: $isDevMode")
 
         // Edge-to-Edge aktivieren für moderne Geräte
         enableEdgeToEdge()
@@ -141,16 +192,19 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-            
+
             // Session initialisieren (neues Package startet hier)
             viewModel.initializeSession()
-            
+
             // Service binden
             bindClassificationService()
-            
+
             initializeViews()
             setupObservers()
             checkPermissions()
+
+            // Show model info Toast
+            showModelInfoToast()
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error in onCreate", e)
             // Zeige Fehler-Dialog statt zu crashen
@@ -160,6 +214,14 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton(R.string.ok) { _, _ -> finish() }
                 .show()
         }
+    }
+
+    /**
+     * Shows a Toast with model information
+     */
+    private fun showModelInfoToast() {
+        val modelInfo = viewModel.getModelInfoString()
+        Toast.makeText(this, modelInfo, Toast.LENGTH_LONG).show()
     }
     
     override fun onDestroy() {
@@ -470,7 +532,8 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateModelStatus(isLoaded: Boolean) {
         if (isLoaded) {
-            modelStatusLabel.text = getString(R.string.model_loaded)
+            // Show model name and class count instead of generic "Model loaded"
+            modelStatusLabel.text = viewModel.getModelInfoString()
             modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_recording))
         } else {
             modelStatusLabel.text = getString(R.string.loading_model)

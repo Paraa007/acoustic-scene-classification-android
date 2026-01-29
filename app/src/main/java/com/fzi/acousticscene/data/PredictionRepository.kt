@@ -15,8 +15,14 @@ import java.util.*
 /**
  * Repository für alle Vorhersagen
  * Speichert persistent in SharedPreferences und exportiert als CSV
+ *
+ * @param context Android Context
+ * @param modelName Model name for CSV export filename
  */
-class PredictionRepository(private val context: Context) {
+class PredictionRepository(
+    private val context: Context,
+    private val modelName: String = "model1"
+) {
     companion object {
         private const val TAG = "PredictionRepository"
         private const val PREFS_NAME = "predictions_prefs"
@@ -151,28 +157,23 @@ class PredictionRepository(private val context: Context) {
     
     /**
      * Exportiert Vorhersagen als CSV-Datei
+     * Format: recording_[MODEL_NAME]_[TIMESTAMP].csv
+     * Example: recording_model2_2026-01-29_1400.csv
+     *
      * @return File object der erstellten Datei
      */
     suspend fun exportToCsvFile(): File = withContext(Dispatchers.IO) {
-        // Berechne Start- und Endzeit der Vorhersagen
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
-        val startTime = if (predictions.isNotEmpty()) {
-            dateFormat.format(Date(predictions.minOfOrNull { it.timestamp } ?: System.currentTimeMillis()))
-        } else {
-            dateFormat.format(Date())
-        }
-        val endTime = if (predictions.isNotEmpty()) {
-            dateFormat.format(Date(predictions.maxOfOrNull { it.timestamp } ?: System.currentTimeMillis()))
-        } else {
-            dateFormat.format(Date())
-        }
-        
-        val fileName = "acoustic_scene_predictions_${startTime}_BIS_${endTime}.csv"
+        // Timestamp format: yyyy-MM-dd_HHmm
+        val timestampFormat = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.getDefault())
+        val timestamp = timestampFormat.format(Date())
+
+        // Format: recording_[MODEL_NAME]_[TIMESTAMP].csv
+        val fileName = "recording_${modelName}_${timestamp}.csv"
         val file = File(context.getExternalFilesDir(null), fileName)
-        
+
         file.writeText(exportToCsvString())
-        Log.d(TAG, "Exported ${predictions.size} predictions to ${file.absolutePath}")
-        
+        Log.d(TAG, "Exported ${predictions.size} predictions to ${file.absolutePath} (model: $modelName)")
+
         file
     }
     
