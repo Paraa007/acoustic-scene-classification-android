@@ -85,6 +85,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     // UI Components
+    private lateinit var backButton: android.widget.ImageButton
     private lateinit var modeStandardButton: MaterialButton
     private lateinit var modeFastButton: MaterialButton
     private lateinit var modeMediumButton: MaterialButton
@@ -204,7 +205,13 @@ class MainActivity : AppCompatActivity() {
     
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // Navigiere zurück zu WelcomeActivity
+        navigateToWelcome()
+    }
+
+    /**
+     * Navigiert zurück zur WelcomeActivity
+     */
+    private fun navigateToWelcome() {
         val intent = Intent(this, WelcomeActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(intent)
@@ -215,6 +222,12 @@ class MainActivity : AppCompatActivity() {
      * Initialisiert alle UI-Komponenten
      */
     private fun initializeViews() {
+        // Zurück-Button
+        backButton = findViewById(R.id.backButton)
+        backButton.setOnClickListener {
+            navigateToWelcome()
+        }
+
         modeStandardButton = findViewById(R.id.modeStandardButton)
         modeFastButton = findViewById(R.id.modeFastButton)
         modeMediumButton = findViewById(R.id.modeMediumButton)
