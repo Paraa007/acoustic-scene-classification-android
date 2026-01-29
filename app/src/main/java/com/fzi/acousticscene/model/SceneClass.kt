@@ -8,16 +8,17 @@ package com.fzi.acousticscene.model
  * - Class 8: Living Room (experimental, only in 9-class models)
  */
 enum class SceneClass(val label: String, val labelShort: String, val emoji: String, val index: Int) {
-    TRANSIT_VEHICLES("Transit - Vehicles/Outdoor", "Transit/Vehicles", "🚗", 0),
-    URBAN_WAITING("Outdoor-Urban & Transit Buildings/Waiting", "Urban/Waiting", "🏙️", 1),
-    NATURE("Outdoor - Nature", "Nature", "🌲", 2),
-    SOCIAL("Indoor - Social Environment", "Social", "👥", 3),
-    WORK("Indoor - Work Environment", "Work", "💼", 4),
-    COMMERCIAL("Indoor - Commercial/Busy", "Commercial", "🛒", 5),
-    LEISURE_SPORT("Indoor - Leisure/Sports", "Leisure/Sports", "⚽", 6),
-    CULTURE_QUIET("Indoor - Culture/Quiet Leisure", "Culture/Quiet", "🎭", 7),
-    // 9th class for experimental models
-    LIVING_ROOM("Indoor - Living Room", "Living Room", "🏠", 8);
+    // German labels as specified - DO NOT TRANSLATE
+    TRANSIT_VEHICLES("Transit - Fahrzeuge/draußen", "Transit/Fahrzeuge", "🚗", 0),
+    URBAN_WAITING("Außen - urban & Transit-Gebäude/Wartezonen", "Urban/Wartezonen", "🏙️", 1),
+    NATURE("Außen - naturbetont", "Naturbetont", "🌲", 2),
+    SOCIAL("Innen - Soziale Umgebung", "Sozial", "👥", 3),
+    WORK("Innen - Arbeitsumgebung", "Arbeit", "💼", 4),
+    COMMERCIAL("Innen - Kommerzielle/ belebte Umgebung", "Kommerziell", "🛒", 5),
+    LEISURE_SPORT("Innen - Freizeit/Sport", "Freizeit/Sport", "⚽", 6),
+    CULTURE_QUIET("Innen - Kultur/ Freizeit ruhig", "Kultur/Ruhig", "🎭", 7),
+    // 9th class for experimental 9-class models only
+    LIVING_ROOM("Innen - Wohnbereich", "Wohnbereich", "🏠", 8);
 
     companion object {
         /**
