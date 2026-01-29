@@ -15,6 +15,7 @@ import com.fzi.acousticscene.ml.ModelInference
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -237,13 +238,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         audioRecorder.startRecording()
                             .catch { e: Throwable ->
+                                if (e is CancellationException) {
+                                    // Expected when user stops - rethrow to be handled by outer catch
+                                    throw e
+                                }
                                 Log.e(TAG, "Recording error", e)
                                 recordingError = e.message ?: "Unknown error"
-                                _uiState.update { 
+                                _uiState.update {
                                     it.copy(
                                         appState = AppState.Error("Recording failed: ${recordingError}"),
                                         errorMessage = "Recording failed: ${recordingError}"
-                                    ) 
+                                    )
                                 }
                             }
                             .collect { state ->
@@ -277,17 +282,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     }
                                 }
                             }
+                    } catch (e: CancellationException) {
+                        // Expected when user clicks Stop - NOT an error
+                        Log.d(TAG, "Recording collection cancelled by user")
+                        // Don't set error - this is normal stop behavior
                     } catch (e: Exception) {
                         Log.e(TAG, "Error during recording collection", e)
                         recordingError = e.message ?: "Unknown error"
-                        _uiState.update { 
+                        _uiState.update {
                             it.copy(
                                 appState = AppState.Error("Recording failed: ${recordingError}"),
                                 errorMessage = "Recording failed: ${recordingError}"
-                            ) 
+                            )
                         }
                     }
-                    
+
                     if (!isRecording) {
                         Log.d(TAG, "Recording stopped, skipping inference")
                         delay(1000) // Kurze Pause vor nächster Iteration
@@ -382,6 +391,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             delay(1000) // Kurze Pause bei Fehler
                         }
                     }
+                } catch (e: CancellationException) {
+                    // Expected when user clicks Stop - NOT an error
+                    Log.d(TAG, "Recording stopped by user (CancellationException)")
+                    // Don't update UI state here - stopClassification() handles it
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during classification", e)
                     _uiState.update {
@@ -395,7 +408,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    
+
     /**
      * Stoppt kontinuierliche Klassifikation
      */
@@ -403,7 +416,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isRecording = false
         recordingJob?.cancel()
         audioRecorder.stopRecording()
-        _uiState.update { it.copy(appState = AppState.Ready) }
+        _uiState.update { it.copy(appState = AppState.Ready, errorMessage = null) }
         Log.d(TAG, "Classification stopped")
     }
     
