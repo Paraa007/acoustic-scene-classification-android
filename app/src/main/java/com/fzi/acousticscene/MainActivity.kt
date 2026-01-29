@@ -103,8 +103,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ripplePulseView: com.fzi.acousticscene.ui.RipplePulseView
     private lateinit var volumeLevelText: TextView
     private lateinit var currentSceneLabel: TextView
-    private lateinit var infoCard: MaterialCardView
-    private lateinit var recordingDurationText: TextView
     private lateinit var predictionsCard: MaterialCardView
     private lateinit var predictionsContainer: LinearLayout
     private lateinit var statisticsCard: MaterialCardView
@@ -288,8 +286,6 @@ class MainActivity : AppCompatActivity() {
         ripplePulseView = findViewById(R.id.ripplePulseView)
         volumeLevelText = findViewById(R.id.volumeLevelText)
         currentSceneLabel = findViewById(R.id.currentSceneLabel)
-        infoCard = findViewById(R.id.infoCard)
-        recordingDurationText = findViewById(R.id.recordingDurationText)
         predictionsCard = findViewById(R.id.predictionsCard)
         predictionsContainer = findViewById(R.id.predictionsContainer)
         statisticsCard = findViewById(R.id.statisticsCard)
@@ -490,11 +486,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateModelStatus(isLoaded: Boolean) {
         if (isLoaded) {
-            modelStatusLabel.text = getString(R.string.model_loaded)
-            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_recording))
+            modelStatusLabel.text = "✓ ${getString(R.string.model_loaded)}"
+            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
         } else {
-            modelStatusLabel.text = getString(R.string.loading_model)
-            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
+            modelStatusLabel.text = "⚠ ${getString(R.string.loading_model)}"
+            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.error))
         }
     }
     
@@ -505,20 +501,14 @@ class MainActivity : AppCompatActivity() {
         if (result != null) {
             // Circular Progress Indicator aktualisieren
             confidenceCircleView.setConfidence(result.confidence, animate = true)
-            
+
             // Scene Label mit Emoji
             currentSceneLabel.text = "${result.sceneClass.emoji} ${result.sceneClass.label}"
             currentSceneLabel.visibility = View.VISIBLE
             val colorRes = sceneColors[result.sceneClass] ?: R.color.accent_green
             currentSceneLabel.setTextColor(ContextCompat.getColor(this, colorRes))
-            
-            // Info Card anzeigen
-            infoCard.visibility = View.VISIBLE
-            val currentMode = viewModel.getRecordingMode()
-            recordingDurationText.text = "${currentMode.durationSeconds}.0 s"
         } else {
             currentSceneLabel.visibility = View.GONE
-            infoCard.visibility = View.GONE
             confidenceCircleView.setConfidence(0f, animate = false)
         }
     }

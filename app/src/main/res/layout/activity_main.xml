@@ -118,44 +118,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Info Card: Recording Duration -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/infoCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            app:cardBackgroundColor="@color/surface_dark"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/recording_duration"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_secondary"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
-                    android:id="@+id/recordingDurationText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="10.0 s"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
         <!-- Top 3 Predictions Card -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/predictionsCard"
