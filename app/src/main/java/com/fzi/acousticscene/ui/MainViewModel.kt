@@ -13,6 +13,7 @@ import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.ml.ModelInference
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LabelProvider
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import kotlinx.coroutines.Dispatchers
@@ -33,26 +34,44 @@ import java.util.concurrent.Executors
 
 /**
  * ViewModel für MainActivity
- * 
+ *
  * Verwaltet:
  * - Model Loading
  * - Audio Recording
  * - Model Inference
  * - State Management
  * - History
- * 
+ *
  * @param application Android Application Context
+ * @param modelPath Full path to model in assets (e.g., "user_models/model1.pt")
+ * @param modelName Model name for display (e.g., "model1")
+ * @param isDevMode Whether the app is in development mode
  */
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(
+    application: Application,
+    private val modelPath: String = "user_models/model1.pt",
+    val modelName: String = "model1",
+    val isDevMode: Boolean = false
+) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "MainViewModel"
         private const val HISTORY_SIZE = 5
     }
-    
-    private val modelInference = ModelInference(application.applicationContext)
-    
-    // Repository für alle Vorhersagen
-    private val predictionRepository = PredictionRepository(application)
+
+    // Determine number of classes based on model name and mode
+    val numClasses: Int = LabelProvider.getNumClasses(modelName, isDevMode)
+
+    // Get the dynamic class list
+    val dynamicClasses = LabelProvider.getClasses(modelName, isDevMode)
+
+    private val modelInference = ModelInference(
+        application.applicationContext,
+        modelPath,
+        numClasses
+    )
+
+    // Repository für alle Vorhersagen (with model name for CSV export)
+    private val predictionRepository = PredictionRepository(application, modelName)
     
     // Session-Start-Zeit (wird beim App-Start gesetzt)
     private var sessionStartTime: Long = System.currentTimeMillis()
@@ -63,6 +82,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun initializeSession() {
         sessionStartTime = System.currentTimeMillis()
         Log.d(TAG, "Session initialized: $sessionStartTime")
+    }
+
+    /**
+     * Returns the model info string for UI display
+     */
+    fun getModelInfoString(): String {
+        return LabelProvider.getModelInfoString(modelName, isDevMode)
+    }
+
+    /**
+     * Gets a dynamic class by index
+     */
+    fun getClassByIndex(index: Int): LabelProvider.DynamicSceneClass? {
+        return LabelProvider.getClassByIndex(index, modelName, isDevMode)
     }
 
     /**

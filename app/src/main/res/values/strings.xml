@@ -19,7 +19,7 @@
     <string name="status_recording">Aufnahme läuft</string>
     <string name="status_processing">Verarbeitung</string>
     
-    <!-- Scene Labels (8 Classes - DCASE 2025) -->
+    <!-- Scene Labels (9 Classes - Extended DCASE 2025) -->
     <string name="scene_transit_vehicles">Transit - Fahrzeuge/draußen</string>
     <string name="scene_urban_waiting">Außen-urban &amp; Transit-Gebäude/Wartezonen</string>
     <string name="scene_nature">Außen - naturbetont</string>
@@ -28,6 +28,7 @@
     <string name="scene_commercial">Innen - Kommerzielle/belebte Umgebung</string>
     <string name="scene_leisure_sport">Innen - Freizeit/Sport</string>
     <string name="scene_culture_quiet">Innen - Kultur/Freizeit ruhig</string>
+    <string name="scene_living_room">Innen - Wohnbereich</string>
     <string name="scene_unknown">Unbekannt</string>
     
     <!-- Scene Labels Short (für UI) -->
@@ -39,6 +40,7 @@
     <string name="scene_commercial_short">Kommerziell</string>
     <string name="scene_leisure_sport_short">Freizeit/Sport</string>
     <string name="scene_culture_quiet_short">Kultur/Ruhig</string>
+    <string name="scene_living_room_short">Wohnbereich</string>
     
     <!-- UI Labels -->
     <string name="current_scene">Aktuelle Szene</string>
