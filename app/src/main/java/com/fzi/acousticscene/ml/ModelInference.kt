@@ -3,7 +3,6 @@ package com.fzi.acousticscene.ml
 import android.content.Context
 import android.util.Log
 import com.fzi.acousticscene.audio.MelSpectrogramProcessor
-import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
@@ -28,7 +27,7 @@ import java.io.FileOutputStream
  */
 class ModelInference(
     private val context: Context,
-    private val modelAssetName: String = "model1.pt"
+    private val modelAssetName: String = "user_model/model1.pt"
 ) {
     companion object {
         private const val TAG = "ModelInference"
