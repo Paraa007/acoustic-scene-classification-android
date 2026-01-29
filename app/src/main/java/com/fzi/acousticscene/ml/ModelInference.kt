@@ -24,11 +24,11 @@ import java.io.FileOutputStream
  * MelSpectrogram is computed on Android (not in the model).
  *
  * @param context Android Context
- * @param modelAssetPath Full path to model in assets (e.g., "user_models/model1.pt")
+ * @param modelAssetPath Full path to model in assets (e.g., "user_model/model1.pt")
  */
 class ModelInference(
     private val context: Context,
-    private var modelAssetPath: String = "user_models/model1.pt"
+    private var modelAssetPath: String = "user_model/model1.pt"
 ) {
     companion object {
         private const val TAG = "ModelInference"
