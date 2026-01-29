@@ -44,7 +44,6 @@ import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.fzi.acousticscene.data.PredictionStatistics
 
 /**
  * MainActivity für Acoustic Scene Classification App
@@ -94,7 +93,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var modeLongButton: MaterialButton
     private lateinit var startStopButton: MaterialButton
     private lateinit var exportButton: MaterialButton
-    private lateinit var statsButton: MaterialButton
     private lateinit var statusLabel: TextView
     private lateinit var modelStatusLabel: TextView
     private lateinit var timerProgress: LinearProgressIndicator
@@ -302,18 +300,13 @@ class MainActivity : AppCompatActivity() {
         noHistoryText = findViewById(R.id.noHistoryText)
         saveHistoryButton = findViewById(R.id.saveHistoryButton)
         exportButton = findViewById(R.id.exportButton)
-        statsButton = findViewById(R.id.statsButton)
-        
+
         saveHistoryButton.setOnClickListener {
             saveHistoryToFile()
         }
-        
+
         exportButton.setOnClickListener {
             exportAllPredictions()
-        }
-        
-        statsButton.setOnClickListener {
-            showStatisticsDialog()
         }
         
         startStopButton.setOnClickListener {
@@ -817,36 +810,6 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.e(TAG, "Share failed", e)
             Toast.makeText(this, getString(R.string.share_failed, e.message), Toast.LENGTH_LONG).show()
         }
-    }
-    
-    /**
-     * Shows modern statistics dialog
-     */
-    private fun showStatisticsDialog() {
-        val stats = viewModel.statistics.value
-
-        ModernDialogHelper.showStatisticsDialog(
-            context = this,
-            stats = stats,
-            onExport = { exportAllPredictions() },
-            onClear = { showClearDialog() }
-        )
-    }
-
-    /**
-     * Shows modern delete confirmation dialog
-     */
-    private fun showClearDialog() {
-        ModernDialogHelper.showDeleteDialog(
-            context = this,
-            title = getString(R.string.clear_predictions),
-            message = getString(R.string.clear_predictions_message),
-            deleteText = getString(R.string.clear_all),
-            onDelete = {
-                viewModel.clearAllPredictions()
-                Toast.makeText(this, getString(R.string.predictions_cleared), Toast.LENGTH_SHORT).show()
-            }
-        )
     }
     
     /**
