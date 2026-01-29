@@ -32,10 +32,12 @@ import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.ui.AppState
 import com.fzi.acousticscene.service.ClassificationService
 import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.ui.UiState
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import androidx.activity.OnBackPressedCallback
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileWriter
@@ -85,7 +87,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     // UI Components
-    private lateinit var backButton: android.widget.ImageButton
+    private lateinit var backButton: MaterialButton
     private lateinit var modeStandardButton: MaterialButton
     private lateinit var modeFastButton: MaterialButton
     private lateinit var modeMediumButton: MaterialButton
@@ -144,10 +146,13 @@ class MainActivity : AppCompatActivity() {
             
             // Session initialisieren (neues Package startet hier)
             viewModel.initializeSession()
-            
+
             // Service binden
             bindClassificationService()
-            
+
+            // Setup modern back press handler
+            setupBackPressHandler()
+
             initializeViews()
             setupObservers()
             checkPermissions()
@@ -156,7 +161,7 @@ class MainActivity : AppCompatActivity() {
             // Zeige Fehler-Dialog statt zu crashen
             AlertDialog.Builder(this)
                 .setTitle(R.string.error_processing)
-                .setMessage("Fehler beim Initialisieren der App: ${e.message}")
+                .setMessage(getString(R.string.error_init_app, e.message))
                 .setPositiveButton(R.string.ok) { _, _ -> finish() }
                 .show()
         }
@@ -203,13 +208,19 @@ class MainActivity : AppCompatActivity() {
         startService(intent)
     }
     
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        navigateToWelcome()
+    /**
+     * Registers the back press callback using the modern OnBackPressedDispatcher
+     */
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                navigateToWelcome()
+            }
+        })
     }
 
     /**
-     * Navigiert zurück zur WelcomeActivity
+     * Navigate back to WelcomeActivity
      */
     private fun navigateToWelcome() {
         val intent = Intent(this, WelcomeActivity::class.java)
@@ -344,7 +355,7 @@ class MainActivity : AppCompatActivity() {
                 ripplePulseView.setVolume(volume)
                 volumeLevelText.visibility = View.VISIBLE
                 val volumePercent = (volume * 100).toInt()
-                volumeLevelText.text = "Vol: $volumePercent"
+                volumeLevelText.text = "${getString(R.string.volume)}: $volumePercent"
             }
             else -> {
                 ripplePulseView.clear()
@@ -446,12 +457,12 @@ class MainActivity : AppCompatActivity() {
             }
             is AppState.Paused -> {
                 val minutes = appState.minutesRemaining
-                statusLabel.text = "Pause: $minutes Min. bis zur nächsten Aufnahme"
+                statusLabel.text = getString(R.string.pause_minutes, minutes)
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
                 timerProgress.visibility = View.GONE
-                timerText.text = "$minutes Min."
+                timerText.text = "$minutes ${getString(R.string.min)}"
                 timerText.visibility = View.VISIBLE
             }
             is AppState.Error -> {
@@ -779,7 +790,7 @@ class MainActivity : AppCompatActivity() {
                 type = "text/csv"
                 putExtra(Intent.EXTRA_STREAM, uri)
                 putExtra(Intent.EXTRA_SUBJECT, "Acoustic Scene Predictions - ${file.nameWithoutExtension}")
-                putExtra(Intent.EXTRA_TEXT, "Anbei die exportierten Vorhersagen.\n\nGesamt: ${viewModel.totalPredictionsCount.value} Vorhersagen")
+                putExtra(Intent.EXTRA_TEXT, getString(R.string.export_email_body, viewModel.totalPredictionsCount.value ?: 0))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             
@@ -793,54 +804,33 @@ class MainActivity : AppCompatActivity() {
     }
     
     /**
-     * Zeigt Statistik-Dialog
+     * Shows modern statistics dialog
      */
     private fun showStatisticsDialog() {
         val stats = viewModel.statistics.value
-        
-        val message = buildString {
-            append("📊 Statistiken\n\n")
-            append("Gesamt: ${stats.totalCount} Vorhersagen\n")
-            append("Heute: ${stats.todayCount} Vorhersagen\n\n")
-            append("Ø Konfidenz: ${String.format("%.1f", stats.averageConfidence)}%\n")
-            append("Ø Inferenz: ${String.format("%.0f", stats.averageInferenceTimeMs)}ms\n\n")
-            append("Erste: ${stats.getFormattedFirstPrediction()}\n")
-            append("Letzte: ${stats.getFormattedLastPrediction()}\n\n")
-            
-            if (stats.classDistribution.isNotEmpty()) {
-                append("Verteilung:\n")
-                stats.classDistribution.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
-                    append("${scene.emoji} ${scene.labelShort}: $count\n")
-                }
-            }
-        }
-        
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.statistics))
-            .setMessage(message)
-            .setPositiveButton(getString(R.string.ok), null)
-            .setNeutralButton(getString(R.string.export)) { _, _ -> exportAllPredictions() }
-            .setNegativeButton(getString(R.string.clear)) { _, _ -> showClearDialog() }
-            .show()
+
+        ModernDialogHelper.showStatisticsDialog(
+            context = this,
+            stats = stats,
+            onExport = { exportAllPredictions() },
+            onClear = { showClearDialog() }
+        )
     }
-    
+
     /**
-     * Zeigt Dialog zum Löschen von Vorhersagen
+     * Shows modern delete confirmation dialog
      */
     private fun showClearDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.clear_predictions))
-            .setMessage(getString(R.string.clear_predictions_message))
-            .setPositiveButton(getString(R.string.clear_all)) { _, _ ->
+        ModernDialogHelper.showDeleteDialog(
+            context = this,
+            title = getString(R.string.clear_predictions),
+            message = getString(R.string.clear_predictions_message),
+            deleteText = getString(R.string.clear_all),
+            onDelete = {
                 viewModel.clearAllPredictions()
                 Toast.makeText(this, getString(R.string.predictions_cleared), Toast.LENGTH_SHORT).show()
             }
-            .setNeutralButton(getString(R.string.clear_old)) { _, _ ->
-                viewModel.clearOldPredictions(7)
-                Toast.makeText(this, getString(R.string.old_predictions_cleared), Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
+        )
     }
     
     /**
@@ -897,28 +887,21 @@ class MainActivity : AppCompatActivity() {
      * Zeigt einen Dialog, der den Benutzer bittet, die Batterie-Optimierung zu deaktivieren.
      */
     private fun showBatteryOptimizationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Wichtig: Batterie-Optimierung")
-            .setMessage(
-                "Für lückenlose Aufnahmen im Hintergrund muss die Batterie-Optimierung " +
-                "für diese App deaktiviert werden.\n\n" +
-                "Ohne diese Einstellung wird Android die App nach einiger Zeit einschränken " +
-                "und es entstehen Datenlücken.\n\n" +
-                "Möchtest du die Einstellung jetzt ändern?"
-            )
-            .setPositiveButton("Ja, deaktivieren") { _, _ ->
-                requestBatteryOptimizationExemption()
-            }
-            .setNegativeButton("Später") { dialog, _ ->
-                dialog.dismiss()
+        ModernDialogHelper.showConfirmDialog(
+            context = this,
+            title = getString(R.string.battery_optimization_title),
+            message = getString(R.string.battery_optimization_message),
+            confirmText = getString(R.string.yes_disable),
+            cancelText = getString(R.string.later),
+            onConfirm = { requestBatteryOptimizationExemption() },
+            onCancel = {
                 Toast.makeText(
                     this,
-                    "Hinweis: Ohne diese Einstellung können Datenlücken entstehen!",
+                    getString(R.string.battery_warning),
                     Toast.LENGTH_LONG
                 ).show()
             }
-            .setCancelable(false)
-            .show()
+        )
     }
 
     /**
@@ -940,14 +923,14 @@ class MainActivity : AppCompatActivity() {
                     startActivity(intent)
                     Toast.makeText(
                         this,
-                        "Bitte suche '${getString(R.string.app_name)}' und wähle 'Nicht optimieren'",
+                        getString(R.string.battery_search_app, getString(R.string.app_name)),
                         Toast.LENGTH_LONG
                     ).show()
                 } catch (e2: Exception) {
                     android.util.Log.e(TAG, "Could not open battery settings", e2)
                     Toast.makeText(
                         this,
-                        "Bitte deaktiviere die Batterie-Optimierung manuell in den Einstellungen",
+                        getString(R.string.battery_manual_disable),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -956,7 +939,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     /**
-     * Fordert Audio-Permission an
+     * Requests audio permission
      */
     private fun requestAudioPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(
@@ -964,19 +947,19 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.RECORD_AUDIO
             )
         ) {
-            // Zeige Erklärung
-            AlertDialog.Builder(this)
-                .setTitle(R.string.permission_audio_required)
-                .setMessage(R.string.permission_audio_explanation)
-                .setPositiveButton(R.string.ok) { _, _ ->
+            // Show explanation using modern dialog
+            ModernDialogHelper.showConfirmDialog(
+                context = this,
+                title = getString(R.string.permission_audio_required),
+                message = getString(R.string.permission_audio_explanation),
+                onConfirm = {
                     ActivityCompat.requestPermissions(
                         this,
                         arrayOf(Manifest.permission.RECORD_AUDIO),
                         PERMISSION_REQUEST_CODE
                     )
                 }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
+            )
         } else {
             ActivityCompat.requestPermissions(
                 this,
@@ -985,9 +968,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
-    
+
     /**
-     * Callback für Permission-Request
+     * Callback for Permission-Request
      */
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -995,18 +978,21 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
+
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, starte Klassifikation
+                // Permission granted, start classification
                 viewModel.startClassification()
             } else {
-                // Permission denied
-                AlertDialog.Builder(this)
-                    .setTitle(R.string.permission_denied)
-                    .setMessage(R.string.permission_audio_explanation)
-                    .setPositiveButton(R.string.ok, null)
-                    .show()
+                // Permission denied - show modern dialog
+                ModernDialogHelper.showConfirmDialog(
+                    context = this,
+                    title = getString(R.string.permission_denied),
+                    message = getString(R.string.permission_audio_explanation),
+                    confirmText = getString(R.string.ok),
+                    cancelText = "",
+                    onConfirm = {}
+                )
             }
         }
     }
