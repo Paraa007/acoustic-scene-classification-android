@@ -100,6 +100,9 @@
     <string name="export">Export</string>
     <string name="clear">Löschen</string>
     
+    <!-- Navigation -->
+    <string name="back">Zurück</string>
+
     <!-- Welcome Screen -->
     <string name="start_app">App starten</string>
     <string name="view_history">Verlauf anzeigen</string>
