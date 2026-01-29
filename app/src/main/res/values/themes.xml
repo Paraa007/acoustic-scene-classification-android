@@ -6,4 +6,31 @@
     </style>
 
     <style name="Theme.AcousticSceneClassifier" parent="Base.Theme.AcousticSceneClassifier" />
+
+    <!-- Modern Dialog Theme (Material 3 Dark) -->
+    <style name="ModernDialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowMinWidthMajor">80%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+    </style>
+
+    <!-- Modern Dialog Button Styles -->
+    <style name="ModernDialogButton.Confirm" parent="Widget.Material3.Button">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="backgroundTint">@color/accent_green</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="ModernDialogButton.Cancel" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="ModernDialogButton.Destructive" parent="Widget.Material3.Button">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="backgroundTint">@color/status_error</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
 </resources>
