@@ -116,7 +116,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noHistoryText: TextView
     private lateinit var saveHistoryButton: MaterialButton
     
-    // Scene Color Map (DCASE 2025 - 8 Klassen)
+    // Model configuration from Intent
+    private var modelPath: String = "user_models/model1.pt"
+    private var modelName: String = "model1.pt"
+    private var numClasses: Int = 8
+    private var isDevMode: Boolean = false
+
+    // Scene Color Map (DCASE 2025 - 8+1 Classes)
     private val sceneColors = mapOf(
         SceneClass.TRANSIT_VEHICLES to R.color.transit_vehicles,
         SceneClass.URBAN_WAITING to R.color.urban_waiting,
@@ -125,7 +131,8 @@ class MainActivity : AppCompatActivity() {
         SceneClass.WORK to R.color.work,
         SceneClass.COMMERCIAL to R.color.commercial,
         SceneClass.LEISURE_SPORT to R.color.leisure_sport,
-        SceneClass.CULTURE_QUIET to R.color.culture_quiet
+        SceneClass.CULTURE_QUIET to R.color.culture_quiet,
+        SceneClass.LIVING_ROOM to R.color.living_room  // 9th class
     )
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -144,6 +151,15 @@ class MainActivity : AppCompatActivity() {
             insets
         }
             
+            // Read model configuration from Intent
+            modelPath = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_PATH) ?: "user_models/model1.pt"
+            modelName = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_NAME) ?: "model1.pt"
+            numClasses = intent.getIntExtra(WelcomeActivity.EXTRA_NUM_CLASSES, 8)
+            isDevMode = intent.getBooleanExtra(WelcomeActivity.EXTRA_IS_DEV_MODE, false)
+
+            // Configure the ViewModel with model settings
+            viewModel.setModelConfig(modelPath, modelName, numClasses, isDevMode)
+
             // Session initialisieren (neues Package startet hier)
             viewModel.initializeSession()
 

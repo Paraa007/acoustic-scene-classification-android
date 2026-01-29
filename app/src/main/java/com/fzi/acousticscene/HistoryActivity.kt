@@ -129,18 +129,17 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     /**
-     * Shows modern dialog with statistics and CSV export for a package
+     * Shows modern dialog with statistics, model/mode info, and CSV export for a package
      */
     private fun showPackageDialog(packageRecords: List<PredictionRecord>) {
         val stats = calculatePackageStatistics(packageRecords)
 
-        ModernDialogHelper.showPackageDetailsDialog(
+        ModernDialogHelper.showHistoryDetailsDialog(
             context = this,
             packageRecords = packageRecords,
             stats = stats,
             onDelete = { showDeletePackageDialog(packageRecords) },
-            onExport = { exportPackageCsv(packageRecords) },
-            onStats = { showDetailedStatistics(stats) }
+            onExport = { exportPackageCsv(packageRecords) }
         )
     }
 

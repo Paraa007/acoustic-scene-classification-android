@@ -5,21 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark"
-    android:padding="32dp">
-
-    <!-- FZI Logo (oben, zentriert) -->
-    <ImageView
-        android:id="@+id/fziLogo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:src="@drawable/ic_launcher_foreground"
-        android:contentDescription="@string/app_name"
-        android:layout_marginTop="48dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/appTitle"
-        app:layout_constraintVertical_chainStyle="packed" />
+    android:padding="24dp">
 
     <!-- App Title -->
     <TextView
@@ -30,8 +16,8 @@
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="@color/text_primary"
-        android:layout_marginTop="24dp"
-        app:layout_constraintTop_toBottomOf="@+id/fziLogo"
+        android:layout_marginTop="48dp"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -41,51 +27,187 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/welcome_subtitle"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="@color/text_secondary"
         android:layout_marginTop="8dp"
         app:layout_constraintTop_toBottomOf="@+id/appTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Primary Button - App starten -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/startAppButton"
-        android:layout_width="0dp"
+    <!-- Mode Selection Cards Container -->
+    <LinearLayout
+        android:id="@+id/modeCardsContainer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/start_app"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:padding="20dp"
-        app:icon="@android:drawable/ic_btn_speak_now"
-        app:iconGravity="start"
-        app:iconPadding="12dp"
-        app:cornerRadius="12dp"
-        app:backgroundTint="@color/accent_green"
-        android:textColor="@color/text_primary"
-        android:layout_marginTop="64dp"
+        android:orientation="vertical"
+        android:layout_marginTop="48dp"
         app:layout_constraintTop_toBottomOf="@+id/appSubtitle"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- Secondary Button - Verlauf anzeigen -->
+        <!-- User Mode Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/userModeCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeColor="@color/accent_green"
+            app:strokeWidth="2dp"
+            app:rippleColor="@color/accent_green">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:gravity="center_vertical">
+
+                <!-- Icon -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="👤"
+                    android:textSize="28sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_background_green"
+                    android:layout_marginEnd="16dp" />
+
+                <!-- Text Content -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/user_mode"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/user_mode_subtitle"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginTop="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="8 Classes"
+                        android:textSize="12sp"
+                        android:textColor="@color/accent_green"
+                        android:layout_marginTop="4dp" />
+                </LinearLayout>
+
+                <!-- Arrow -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="→"
+                    android:textSize="24sp"
+                    android:textColor="@color/accent_green" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Development Mode Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/devModeCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/surface_dark"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeColor="@color/accent_blue"
+            app:strokeWidth="1dp"
+            app:rippleColor="@color/accent_blue">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:gravity="center_vertical">
+
+                <!-- Icon -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="🔬"
+                    android:textSize="28sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_background_blue"
+                    android:layout_marginEnd="16dp" />
+
+                <!-- Text Content -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dev_mode"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dev_mode_subtitle"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginTop="4dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="8-9 Classes"
+                        android:textSize="12sp"
+                        android:textColor="@color/accent_blue"
+                        android:layout_marginTop="4dp" />
+                </LinearLayout>
+
+                <!-- Arrow -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="→"
+                    android:textSize="24sp"
+                    android:textColor="@color/accent_blue" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- View History Button (at bottom) -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/viewHistoryButton"
-        android:layout_width="0dp"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/view_history"
-        android:textSize="16sp"
-        android:padding="18dp"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
         app:icon="@android:drawable/ic_menu_recent_history"
         app:iconGravity="start"
-        app:iconPadding="12dp"
-        app:cornerRadius="12dp"
-        app:strokeColor="@color/text_primary"
-        app:strokeWidth="1dp"
-        app:backgroundTint="@android:color/transparent"
-        android:textColor="@color/text_primary"
-        android:layout_marginTop="24dp"
-        app:layout_constraintTop_toBottomOf="@+id/startAppButton"
+        app:iconPadding="8dp"
+        app:iconTint="@color/text_secondary"
+        android:layout_marginBottom="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
