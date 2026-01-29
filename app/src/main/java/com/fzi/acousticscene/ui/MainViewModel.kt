@@ -52,7 +52,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var modelInference = ModelInference(application.applicationContext)
 
     // Model configuration
-    private var _modelPath: String = "user_models/model1.pt"
+    private var _modelPath: String = "user_model/model1.pt"
     private var _modelName: String = "model1.pt"
     private var _numClasses: Int = 8
     private var _isDevMode: Boolean = false
