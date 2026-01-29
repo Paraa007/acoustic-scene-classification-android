@@ -120,5 +120,26 @@
     <string name="delete_package">Package löschen</string>
     <string name="delete_package_confirm">Möchtest du dieses Package wirklich löschen?</string>
     <string name="package_deleted">Package gelöscht</string>
-    <string name="delete">Löschen</string>
+    <string name="delete">Delete</string>
+
+    <!-- Welcome Screen Mode Selection -->
+    <string name="select_mode">Select Mode</string>
+    <string name="user_mode">User Mode</string>
+    <string name="user_mode_desc">Simple interface for everyday use</string>
+    <string name="dev_mode">Development Mode</string>
+    <string name="dev_mode_desc">Advanced features and statistics</string>
+
+    <!-- History Details Dialog -->
+    <string name="session_details">Session Details</string>
+    <string name="start_label">Start:</string>
+    <string name="end_label">End:</string>
+    <string name="count_label">Count:</string>
+    <string name="avg_confidence_label">Avg. Confidence:</string>
+    <string name="model_label">Model:</string>
+    <string name="mode_label">Mode:</string>
+    <string name="distribution_header">Class Distribution</string>
+    <string name="close">Close</string>
+
+    <!-- Model Selection Dialog -->
+    <string name="select_model">Select Model</string>
 </resources>
