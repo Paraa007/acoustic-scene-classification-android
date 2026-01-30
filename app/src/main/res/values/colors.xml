@@ -9,6 +9,14 @@
     <color name="accent_green">#1B5E20</color>     <!-- Dunkelgrün für Buttons -->
     <color name="accent_green_dark">#0D3E14</color> <!-- Noch dunkleres Grün -->
     <color name="accent_green_light">#4CAF50</color> <!-- Helles Grün -->
+
+    <!-- Akzentfarben (Blau für Dev Mode) -->
+    <color name="accent_blue">#2196F3</color>      <!-- Blau für Dev Mode -->
+    <color name="accent_blue_dark">#1565C0</color> <!-- Dunkleres Blau -->
+    <color name="accent_blue_light">#64B5F6</color> <!-- Helles Blau -->
+
+    <!-- Living Room color (9th class) -->
+    <color name="living_room">#795548</color>      <!-- Braun - Wohnbereich -->
     
     <!-- Text-Farben -->
     <color name="text_primary">#FFFFFF</color>     <!-- Weiß -->

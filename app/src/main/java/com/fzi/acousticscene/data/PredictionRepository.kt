@@ -150,29 +150,55 @@ class PredictionRepository(private val context: Context) {
     }
     
     /**
-     * Exportiert Vorhersagen als CSV-Datei
-     * @return File object der erstellten Datei
+     * Exports predictions as CSV file
+     * @param modelName Optional model name to include in filename
+     * @return File object of the created file
      */
-    suspend fun exportToCsvFile(): File = withContext(Dispatchers.IO) {
-        // Berechne Start- und Endzeit der Vorhersagen
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
-        val startTime = if (predictions.isNotEmpty()) {
-            dateFormat.format(Date(predictions.minOfOrNull { it.timestamp } ?: System.currentTimeMillis()))
-        } else {
-            dateFormat.format(Date())
-        }
-        val endTime = if (predictions.isNotEmpty()) {
-            dateFormat.format(Date(predictions.maxOfOrNull { it.timestamp } ?: System.currentTimeMillis()))
-        } else {
-            dateFormat.format(Date())
-        }
-        
-        val fileName = "acoustic_scene_predictions_${startTime}_BIS_${endTime}.csv"
+    suspend fun exportToCsvFile(modelName: String? = null): File = withContext(Dispatchers.IO) {
+        // Calculate start and end time of predictions
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
+        val timestamp = dateFormat.format(Date())
+
+        // Get model name from first prediction if not provided
+        val model = modelName
+            ?: predictions.firstOrNull()?.modelName?.replace(".pt", "")
+            ?: "model1"
+
+        // Format: recording_[MODEL_NAME]_[TIMESTAMP].csv
+        val fileName = "recording_${model}_${timestamp}.csv"
         val file = File(context.getExternalFilesDir(null), fileName)
-        
+
         file.writeText(exportToCsvString())
         Log.d(TAG, "Exported ${predictions.size} predictions to ${file.absolutePath}")
-        
+
+        file
+    }
+
+    /**
+     * Exports a specific package as CSV file
+     * @param records List of prediction records to export
+     * @return File object of the created file
+     */
+    suspend fun exportPackageToCsvFile(records: List<PredictionRecord>): File = withContext(Dispatchers.IO) {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
+        val startTime = records.firstOrNull()?.timestamp ?: System.currentTimeMillis()
+        val timestamp = dateFormat.format(Date(startTime))
+
+        // Get model name from first prediction
+        val model = records.firstOrNull()?.modelName?.replace(".pt", "") ?: "model1"
+
+        // Format: recording_[MODEL_NAME]_[TIMESTAMP].csv
+        val fileName = "recording_${model}_${timestamp}.csv"
+        val file = File(context.getExternalFilesDir(null), fileName)
+
+        val sb = StringBuilder()
+        sb.appendLine(PredictionRecord.getCsvHeader())
+        records.forEach { record ->
+            sb.appendLine(record.toCsvRow())
+        }
+        file.writeText(sb.toString())
+
+        Log.d(TAG, "Exported ${records.size} predictions to ${file.absolutePath}")
         file
     }
     
