@@ -15,6 +15,7 @@ import com.fzi.acousticscene.ml.ModelInference
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -48,17 +49,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private const val TAG = "MainViewModel"
         private const val HISTORY_SIZE = 5
     }
-    
-    private val modelInference = ModelInference(application.applicationContext)
-    
-    // Repository für alle Vorhersagen
+
+    private var modelInference = ModelInference(application.applicationContext)
+
+    // Model configuration
+    private var _modelPath: String = "user_model/model1.pt"
+    private var _modelName: String = "model1.pt"
+    private var _numClasses: Int = 8
+    private var _isDevMode: Boolean = false
+
+    val modelName: String get() = _modelName
+    val numClasses: Int get() = _numClasses
+    val isDevMode: Boolean get() = _isDevMode
+
+    // Repository for all predictions
     private val predictionRepository = PredictionRepository(application)
-    
-    // Session-Start-Zeit (wird beim App-Start gesetzt)
+
+    // Session start time (set on app start)
     private var sessionStartTime: Long = System.currentTimeMillis()
-    
+
     /**
-     * Setzt die Session-Start-Zeit (sollte beim App-Start aufgerufen werden)
+     * Sets the model configuration from Intent extras
+     */
+    fun setModelConfig(modelPath: String, modelName: String, numClasses: Int, isDevMode: Boolean) {
+        _modelPath = modelPath
+        _modelName = modelName
+        _numClasses = numClasses
+        _isDevMode = isDevMode
+
+        // Update the ModelInference with the new path
+        modelInference.setModelPath(modelPath)
+
+        Log.d(TAG, "Model config set: $modelName ($numClasses classes, devMode=$isDevMode)")
+    }
+
+    /**
+     * Sets the session start time (should be called on app start)
      */
     fun initializeSession() {
         sessionStartTime = System.currentTimeMillis()
@@ -212,13 +238,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         audioRecorder.startRecording()
                             .catch { e: Throwable ->
+                                if (e is CancellationException) {
+                                    // Expected when user stops - rethrow to be handled by outer catch
+                                    throw e
+                                }
                                 Log.e(TAG, "Recording error", e)
                                 recordingError = e.message ?: "Unknown error"
-                                _uiState.update { 
+                                _uiState.update {
                                     it.copy(
                                         appState = AppState.Error("Recording failed: ${recordingError}"),
                                         errorMessage = "Recording failed: ${recordingError}"
-                                    ) 
+                                    )
                                 }
                             }
                             .collect { state ->
@@ -252,17 +282,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     }
                                 }
                             }
+                    } catch (e: CancellationException) {
+                        // Expected when user clicks Stop - NOT an error
+                        Log.d(TAG, "Recording collection cancelled by user")
+                        // Don't set error - this is normal stop behavior
                     } catch (e: Exception) {
                         Log.e(TAG, "Error during recording collection", e)
                         recordingError = e.message ?: "Unknown error"
-                        _uiState.update { 
+                        _uiState.update {
                             it.copy(
                                 appState = AppState.Error("Recording failed: ${recordingError}"),
                                 errorMessage = "Recording failed: ${recordingError}"
-                            ) 
+                            )
                         }
                     }
-                    
+
                     if (!isRecording) {
                         Log.d(TAG, "Recording stopped, skipping inference")
                         delay(1000) // Kurze Pause vor nächster Iteration
@@ -310,11 +344,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             sceneClass = result.sceneClass,
                             confidence = result.confidence,
                             allProbabilities = result.allProbabilities,
-                            topPredictions = top3,  // Top 3 Predictions für CSV
+                            topPredictions = top3,  // Top 3 Predictions for CSV
                             inferenceTimeMs = result.inferenceTimeMs,
                             recordingMode = currentMode,
-                            sessionStartTime = sessionStartTime,  // Session-Start-Zeit
-                            batteryLevel = currentBatteryLevel  // NEU: Akkustand
+                            sessionStartTime = sessionStartTime,  // Session start time
+                            batteryLevel = currentBatteryLevel,  // Battery level
+                            modelName = _modelName,  // Model file name
+                            isDevMode = _isDevMode  // Whether Dev Mode is active
                         )
                         predictionRepository.addPrediction(record)
                         updateStatistics()
@@ -355,6 +391,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             delay(1000) // Kurze Pause bei Fehler
                         }
                     }
+                } catch (e: CancellationException) {
+                    // Expected when user clicks Stop - NOT an error
+                    Log.d(TAG, "Recording stopped by user (CancellationException)")
+                    // Don't update UI state here - stopClassification() handles it
                 } catch (e: Exception) {
                     Log.e(TAG, "Error during classification", e)
                     _uiState.update {
@@ -368,7 +408,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    
+
     /**
      * Stoppt kontinuierliche Klassifikation
      */
@@ -376,7 +416,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isRecording = false
         recordingJob?.cancel()
         audioRecorder.stopRecording()
-        _uiState.update { it.copy(appState = AppState.Ready) }
+        _uiState.update { it.copy(appState = AppState.Ready, errorMessage = null) }
         Log.d(TAG, "Classification stopped")
     }
     

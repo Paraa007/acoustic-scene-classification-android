@@ -13,9 +13,11 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionStatistics
+import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.SceneClass
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -229,6 +231,117 @@ object ModernDialogHelper {
 
         dialog.show()
         return dialog
+    }
+
+    /**
+     * Shows a modern history details dialog with model/mode metadata and progress bars
+     */
+    fun showHistoryDetailsDialog(
+        context: Context,
+        packageRecords: List<PredictionRecord>,
+        stats: PredictionStatistics,
+        onDelete: () -> Unit,
+        onExport: () -> Unit
+    ): Dialog {
+        val dialog = Dialog(context, R.style.ModernDialog)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_history_details)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val firstRecord = packageRecords.firstOrNull()
+        val lastRecord = packageRecords.lastOrNull()
+
+        // Time info
+        dialog.findViewById<TextView>(R.id.startTimeText).text =
+            firstRecord?.let { dateFormat.format(Date(it.timestamp)) } ?: "N/A"
+        dialog.findViewById<TextView>(R.id.endTimeText).text =
+            lastRecord?.let { dateFormat.format(Date(it.timestamp)) } ?: "N/A"
+
+        // Model info
+        val modelName = firstRecord?.modelName ?: "model1.pt"
+        val numClasses = ModelConfig.getClassCountForModel(modelName)
+        dialog.findViewById<TextView>(R.id.modelText).text = "$modelName ($numClasses Classes)"
+
+        // Mode info
+        val isDevMode = firstRecord?.isDevMode ?: false
+        val recordingMode = firstRecord?.recordingMode?.label ?: "Standard"
+        val modeText = if (isDevMode) "Development / $recordingMode" else "User / $recordingMode"
+        dialog.findViewById<TextView>(R.id.modeText).text = modeText
+
+        // Count and confidence
+        dialog.findViewById<TextView>(R.id.countText).text = "${packageRecords.size} ${context.getString(R.string.recordings)}"
+        dialog.findViewById<TextView>(R.id.avgConfidenceText).text =
+            String.format(Locale.US, "%.1f%%", stats.averageConfidence)
+
+        // Fill distribution container with progress bars
+        val distributionContainer = dialog.findViewById<LinearLayout>(R.id.distributionContainer)
+        val totalCount = packageRecords.size.toFloat()
+
+        stats.classDistribution.entries
+            .sortedByDescending { it.value }
+            .forEach { (scene, count) ->
+                val percentage = if (totalCount > 0) (count / totalCount * 100).toInt() else 0
+                val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
+                distributionContainer.addView(itemView)
+            }
+
+        dialog.findViewById<MaterialButton>(R.id.btnDelete).setOnClickListener {
+            dialog.dismiss()
+            onDelete()
+        }
+
+        dialog.findViewById<MaterialButton>(R.id.btnExport).setOnClickListener {
+            dialog.dismiss()
+            onExport()
+        }
+
+        dialog.findViewById<MaterialButton>(R.id.btnClose).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+        return dialog
+    }
+
+    /**
+     * Creates a distribution item with emoji, name, count, and progress bar
+     */
+    private fun createDistributionItemWithProgress(
+        context: Context,
+        scene: SceneClass,
+        count: Int,
+        percentage: Int
+    ): View {
+        val inflater = LayoutInflater.from(context)
+        val itemView = inflater.inflate(R.layout.item_distribution_row, null)
+
+        itemView.findViewById<TextView>(R.id.emojiText).text = scene.emoji
+        itemView.findViewById<TextView>(R.id.classNameText).text = scene.labelShort
+        itemView.findViewById<TextView>(R.id.countText).text = "($count)"
+
+        val progressBar = itemView.findViewById<LinearProgressIndicator>(R.id.progressBar)
+        progressBar.progress = percentage
+
+        // Set progress color based on scene
+        val colorResId = when (scene) {
+            SceneClass.TRANSIT_VEHICLES -> R.color.transit_vehicles
+            SceneClass.URBAN_WAITING -> R.color.urban_waiting
+            SceneClass.NATURE -> R.color.nature
+            SceneClass.SOCIAL -> R.color.social
+            SceneClass.WORK -> R.color.work
+            SceneClass.COMMERCIAL -> R.color.commercial
+            SceneClass.LEISURE_SPORT -> R.color.leisure_sport
+            SceneClass.CULTURE_QUIET -> R.color.culture_quiet
+            SceneClass.LIVING_ROOM -> R.color.living_room
+        }
+        progressBar.setIndicatorColor(ContextCompat.getColor(context, colorResId))
+
+        return itemView
     }
 
     private fun createDistributionItem(context: Context, scene: SceneClass, count: Int): View {

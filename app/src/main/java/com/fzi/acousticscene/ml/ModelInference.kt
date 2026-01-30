@@ -16,29 +16,34 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 /**
- * ModelInference Klasse für PyTorch Mobile Model
- * 
- * Lädt das PyTorch Model und führt Inferenz durch.
- * 
- * Das Modell erwartet Log-Mel-Spectrogram Input mit Shape [1, 1, 256, 641]
- * MelSpectrogram wird auf Android berechnet (nicht im Modell).
- * 
+ * ModelInference Class for PyTorch Mobile Model
+ *
+ * Loads the PyTorch model and performs inference.
+ *
+ * The model expects Log-Mel-Spectrogram input with shape [1, 1, 256, 641]
+ * MelSpectrogram is computed on Android (not in the model).
+ *
  * @param context Android Context
- * @param modelAssetName Name der Model-Datei in assets (Standard: "model1.pt")
+ * @param modelAssetPath Full path to model in assets (e.g., "user_model/model1.pt")
  */
 class ModelInference(
     private val context: Context,
-    private val modelAssetName: String = "model1.pt"
+    private var modelAssetPath: String = "user_model/model1.pt"
 ) {
     companion object {
         private const val TAG = "ModelInference"
-        private const val INPUT_AUDIO_SIZE = 320000 // 10 Sekunden * 32000 Hz
+        private const val INPUT_AUDIO_SIZE = 320000 // 10 seconds * 32000 Hz
         private const val N_MELS = 256
-        private const val EXPECTED_TIME_FRAMES = 641 // Für 10 Sekunden Audio
+        private const val EXPECTED_TIME_FRAMES = 641 // For 10 seconds audio
     }
-    
+
+    // Extract model name from path
+    val modelName: String
+        get() = modelAssetPath.substringAfterLast("/")
+
     private var module: Module? = null
     private var isLoaded = false
+    private var currentModelPath: String? = null
     // Separate Processor pro Mode für optimale Performance
     private val standardProcessor = MelSpectrogramProcessor(
         nFft = RecordingMode.STANDARD.nFft,
@@ -66,39 +71,58 @@ class ModelInference(
     )
     
     /**
-     * Lädt das PyTorch Model asynchron
-     * @return true wenn erfolgreich geladen, false sonst
+     * Sets a new model path and reloads the model
+     * @param newPath Full path to model in assets (e.g., "dev_models/model2.pt")
+     */
+    fun setModelPath(newPath: String) {
+        if (newPath != modelAssetPath) {
+            modelAssetPath = newPath
+            isLoaded = false
+            module = null
+            currentModelPath = null
+        }
+    }
+
+    /**
+     * Loads the PyTorch model asynchronously
+     * @return true if successfully loaded, false otherwise
      */
     suspend fun loadModel(): Boolean {
         return try {
-            if (isLoaded && module != null) {
-                Log.d(TAG, "Model already loaded")
+            // Check if we need to reload (different path or not loaded)
+            if (isLoaded && module != null && currentModelPath == modelAssetPath) {
+                Log.d(TAG, "Model already loaded: $modelAssetPath")
                 return true
             }
-            
-            Log.d(TAG, "Loading model from assets: $modelAssetName")
-            
-            // Kopiere Model aus assets zu einem temporären File
-            val modelFile = File(context.cacheDir, modelAssetName)
-            if (!modelFile.exists()) {
-                context.assets.open(modelAssetName).use { input ->
+
+            Log.d(TAG, "Loading model from assets: $modelAssetPath")
+
+            // Create cache file name from full path (replace / with _)
+            val cacheFileName = modelAssetPath.replace("/", "_")
+            val modelFile = File(context.cacheDir, cacheFileName)
+
+            // Always copy if path changed or file doesn't exist
+            if (!modelFile.exists() || currentModelPath != modelAssetPath) {
+                context.assets.open(modelAssetPath).use { input ->
                     FileOutputStream(modelFile).use { output ->
                         input.copyTo(output)
                     }
                 }
-                Log.d(TAG, "Model copied to cache directory")
+                Log.d(TAG, "Model copied to cache directory: ${modelFile.absolutePath}")
             }
-            
-            // Lade Model mit Module.load() (funktioniert mit Standard TorchScript .pt Dateien)
+
+            // Load model with Module.load()
             module = Module.load(modelFile.absolutePath)
             isLoaded = true
-            
-            Log.d(TAG, "Model loaded successfully")
+            currentModelPath = modelAssetPath
+
+            Log.d(TAG, "Model loaded successfully: $modelName")
             true
         } catch (e: FileNotFoundException) {
-            Log.e(TAG, "Model file not found: $modelAssetName", e)
+            Log.e(TAG, "Model file not found: $modelAssetPath", e)
             isLoaded = false
             module = null
+            currentModelPath = null
             false
         } catch (e: Exception) {
             Log.e(TAG, "Error loading model: ${e.javaClass.simpleName}", e)
@@ -106,6 +130,7 @@ class ModelInference(
             e.printStackTrace()
             isLoaded = false
             module = null
+            currentModelPath = null
             false
         }
     }
@@ -255,15 +280,20 @@ class ModelInference(
     fun isModelLoaded(): Boolean = isLoaded
     
     /**
-     * Gibt die Modell-Informationen zurück
+     * Returns the model information
      */
     fun getModelInfo(): String {
         return if (isLoaded) {
-            "Model loaded: $modelAssetName"
+            "Model loaded: $modelName"
         } else {
             "Model not loaded"
         }
     }
+
+    /**
+     * Returns the current model path
+     */
+    fun getModelPath(): String = modelAssetPath
     
     /**
      * Gibt die erwartete Audio-Input-Größe zurück (in Samples)

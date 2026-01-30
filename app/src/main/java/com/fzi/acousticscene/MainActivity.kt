@@ -13,8 +13,11 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
+import android.animation.ObjectAnimator
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -36,7 +39,6 @@ import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.ui.UiState
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.progressindicator.LinearProgressIndicator
 import androidx.activity.OnBackPressedCallback
 import kotlinx.coroutines.launch
 import java.io.File
@@ -44,7 +46,6 @@ import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.fzi.acousticscene.data.PredictionStatistics
 
 /**
  * MainActivity für Acoustic Scene Classification App
@@ -94,18 +95,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var modeLongButton: MaterialButton
     private lateinit var startStopButton: MaterialButton
     private lateinit var exportButton: MaterialButton
-    private lateinit var statsButton: MaterialButton
     private lateinit var statusLabel: TextView
     private lateinit var modelStatusLabel: TextView
-    private lateinit var timerProgress: LinearProgressIndicator
+    private lateinit var recordingProgressBar: ProgressBar
     private lateinit var timerText: TextView
     private lateinit var confidenceCircleView: com.fzi.acousticscene.ui.ConfidenceCircleView
     private lateinit var ripplePulseView: com.fzi.acousticscene.ui.RipplePulseView
     private lateinit var volumeLevelText: TextView
     private lateinit var currentSceneLabel: TextView
-    private lateinit var infoCard: MaterialCardView
-    private lateinit var recordingDurationText: TextView
-    private lateinit var modelConfidenceText: TextView
     private lateinit var predictionsCard: MaterialCardView
     private lateinit var predictionsContainer: LinearLayout
     private lateinit var statisticsCard: MaterialCardView
@@ -116,7 +113,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noHistoryText: TextView
     private lateinit var saveHistoryButton: MaterialButton
     
-    // Scene Color Map (DCASE 2025 - 8 Klassen)
+    // Model configuration from Intent
+    private var modelPath: String = "user_models/model1.pt"
+    private var modelName: String = "model1.pt"
+    private var numClasses: Int = 8
+    private var isDevMode: Boolean = false
+
+    // Scene Color Map (DCASE 2025 - 8+1 Classes)
     private val sceneColors = mapOf(
         SceneClass.TRANSIT_VEHICLES to R.color.transit_vehicles,
         SceneClass.URBAN_WAITING to R.color.urban_waiting,
@@ -125,7 +128,8 @@ class MainActivity : AppCompatActivity() {
         SceneClass.WORK to R.color.work,
         SceneClass.COMMERCIAL to R.color.commercial,
         SceneClass.LEISURE_SPORT to R.color.leisure_sport,
-        SceneClass.CULTURE_QUIET to R.color.culture_quiet
+        SceneClass.CULTURE_QUIET to R.color.culture_quiet,
+        SceneClass.LIVING_ROOM to R.color.living_room  // 9th class
     )
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -144,6 +148,15 @@ class MainActivity : AppCompatActivity() {
             insets
         }
             
+            // Read model configuration from Intent
+            modelPath = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_PATH) ?: "user_models/model1.pt"
+            modelName = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_NAME) ?: "model1.pt"
+            numClasses = intent.getIntExtra(WelcomeActivity.EXTRA_NUM_CLASSES, 8)
+            isDevMode = intent.getBooleanExtra(WelcomeActivity.EXTRA_IS_DEV_MODE, false)
+
+            // Configure the ViewModel with model settings
+            viewModel.setModelConfig(modelPath, modelName, numClasses, isDevMode)
+
             // Session initialisieren (neues Package startet hier)
             viewModel.initializeSession()
 
@@ -267,15 +280,12 @@ class MainActivity : AppCompatActivity() {
             viewModel.setRecordingMode(RecordingMode.LONG)
             updateModeButtons(RecordingMode.LONG)
         }
-        timerProgress = findViewById(R.id.timerProgress)
+        recordingProgressBar = findViewById(R.id.recordingProgressBar)
         timerText = findViewById(R.id.timerText)
         confidenceCircleView = findViewById(R.id.confidenceCircleView)
         ripplePulseView = findViewById(R.id.ripplePulseView)
         volumeLevelText = findViewById(R.id.volumeLevelText)
         currentSceneLabel = findViewById(R.id.currentSceneLabel)
-        infoCard = findViewById(R.id.infoCard)
-        recordingDurationText = findViewById(R.id.recordingDurationText)
-        modelConfidenceText = findViewById(R.id.modelConfidenceText)
         predictionsCard = findViewById(R.id.predictionsCard)
         predictionsContainer = findViewById(R.id.predictionsContainer)
         statisticsCard = findViewById(R.id.statisticsCard)
@@ -286,18 +296,13 @@ class MainActivity : AppCompatActivity() {
         noHistoryText = findViewById(R.id.noHistoryText)
         saveHistoryButton = findViewById(R.id.saveHistoryButton)
         exportButton = findViewById(R.id.exportButton)
-        statsButton = findViewById(R.id.statsButton)
-        
+
         saveHistoryButton.setOnClickListener {
             saveHistoryToFile()
         }
-        
+
         exportButton.setOnClickListener {
             exportAllPredictions()
-        }
-        
-        statsButton.setOnClickListener {
-            showStatisticsDialog()
         }
         
         startStopButton.setOnClickListener {
@@ -413,14 +418,14 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.text = getString(R.string.status_idle)
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = false
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Loading -> {
                 statusLabel.text = getString(R.string.status_idle)
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = false
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Ready -> {
@@ -428,7 +433,7 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.start_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Recording -> {
@@ -444,15 +449,15 @@ class MainActivity : AppCompatActivity() {
                 // Progress basierend auf recordingProgress aus UiState (0.0 - 1.0)
                 val recordingProgress = viewModel.uiState.value.recordingProgress
                 val progress = (recordingProgress * 100).toInt()
-                timerProgress.progress = progress
-                timerProgress.visibility = View.VISIBLE
+                setProgressAnimated(recordingProgressBar, progress)
+                recordingProgressBar.visibility = View.VISIBLE
             }
             is AppState.Processing -> {
                 statusLabel.text = getString(R.string.status_processing)
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_processing))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
             is AppState.Paused -> {
@@ -461,7 +466,7 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.text = "$minutes ${getString(R.string.min)}"
                 timerText.visibility = View.VISIBLE
             }
@@ -470,7 +475,7 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.setTextColor(ContextCompat.getColor(this, R.color.error))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.start_recording)
-                timerProgress.visibility = View.GONE
+                recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
         }
@@ -481,11 +486,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateModelStatus(isLoaded: Boolean) {
         if (isLoaded) {
-            modelStatusLabel.text = getString(R.string.model_loaded)
-            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_recording))
+            modelStatusLabel.text = "✓ ${getString(R.string.model_loaded)}"
+            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
         } else {
-            modelStatusLabel.text = getString(R.string.loading_model)
-            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
+            modelStatusLabel.text = "⚠ ${getString(R.string.loading_model)}"
+            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.error))
         }
     }
     
@@ -496,21 +501,14 @@ class MainActivity : AppCompatActivity() {
         if (result != null) {
             // Circular Progress Indicator aktualisieren
             confidenceCircleView.setConfidence(result.confidence, animate = true)
-            
+
             // Scene Label mit Emoji
             currentSceneLabel.text = "${result.sceneClass.emoji} ${result.sceneClass.label}"
             currentSceneLabel.visibility = View.VISIBLE
             val colorRes = sceneColors[result.sceneClass] ?: R.color.accent_green
             currentSceneLabel.setTextColor(ContextCompat.getColor(this, colorRes))
-            
-            // Info Card anzeigen
-            infoCard.visibility = View.VISIBLE
-            val currentMode = viewModel.getRecordingMode()
-            recordingDurationText.text = "${currentMode.durationSeconds}.0 s"
-            modelConfidenceText.text = "${(result.confidence * 100).toInt()}%"
         } else {
             currentSceneLabel.visibility = View.GONE
-            infoCard.visibility = View.GONE
             confidenceCircleView.setConfidence(0f, animate = false)
         }
     }
@@ -610,7 +608,19 @@ class MainActivity : AppCompatActivity() {
     private fun Int.dpToPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }
-    
+
+    /**
+     * Animates progress bar smoothly to a target value
+     */
+    private fun setProgressAnimated(progressBar: ProgressBar, progressTo: Int) {
+        ObjectAnimator.ofInt(progressBar, "progress", progressBar.progress, progressTo)
+            .setDuration(300) // 300ms smooth transition
+            .apply {
+                interpolator = DecelerateInterpolator()
+                start()
+            }
+    }
+
     /**
      * Aktualisiert die Statistiken
      */
@@ -801,36 +811,6 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.e(TAG, "Share failed", e)
             Toast.makeText(this, getString(R.string.share_failed, e.message), Toast.LENGTH_LONG).show()
         }
-    }
-    
-    /**
-     * Shows modern statistics dialog
-     */
-    private fun showStatisticsDialog() {
-        val stats = viewModel.statistics.value
-
-        ModernDialogHelper.showStatisticsDialog(
-            context = this,
-            stats = stats,
-            onExport = { exportAllPredictions() },
-            onClear = { showClearDialog() }
-        )
-    }
-
-    /**
-     * Shows modern delete confirmation dialog
-     */
-    private fun showClearDialog() {
-        ModernDialogHelper.showDeleteDialog(
-            context = this,
-            title = getString(R.string.clear_predictions),
-            message = getString(R.string.clear_predictions_message),
-            deleteText = getString(R.string.clear_all),
-            onDelete = {
-                viewModel.clearAllPredictions()
-                Toast.makeText(this, getString(R.string.predictions_cleared), Toast.LENGTH_SHORT).show()
-            }
-        )
     }
     
     /**
