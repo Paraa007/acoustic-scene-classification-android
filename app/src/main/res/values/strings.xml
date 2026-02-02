@@ -167,4 +167,10 @@
     <string name="volume">Vol</string>
     <string name="error_init_app">Error initializing app: %1$s</string>
     <string name="export_email_body">Attached are the exported predictions.\n\nTotal: %1$d predictions</string>
+
+    <!-- Volume Graph Card -->
+    <string name="volume_analysis">Volume Analysis</string>
+    <string name="show_live_data">Show Live Data</string>
+    <string name="volume_graph_disabled">Toggle switch to enable</string>
+    <string name="volume_graph_waiting">Waiting for recording…</string>
 </resources>
