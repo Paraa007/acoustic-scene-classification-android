@@ -39,7 +39,10 @@ import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.ui.UiState
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.materialswitch.MaterialSwitch
 import androidx.activity.OnBackPressedCallback
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileWriter
@@ -112,7 +115,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var historyContainer: LinearLayout
     private lateinit var noHistoryText: TextView
     private lateinit var saveHistoryButton: MaterialButton
-    
+
+    // Volume Graph Components
+    private lateinit var volumeGraphCard: MaterialCardView
+    private lateinit var switchVolumeGraph: MaterialSwitch
+    private lateinit var volumeLineChartView: com.fzi.acousticscene.ui.VolumeLineChartView
+    private var volumeGraphJob: Job? = null
+    private var isVolumeGraphActive: Boolean = false
+
     // Model configuration from Intent
     private var modelPath: String = "user_models/model1.pt"
     private var modelName: String = "model1.pt"
@@ -187,6 +197,23 @@ class MainActivity : AppCompatActivity() {
             unbindService(serviceConnection)
             serviceBound = false
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Resume volume graph collection if it was active
+        if (isVolumeGraphActive && switchVolumeGraph.isChecked) {
+            volumeLineChartView.setDrawingEnabled(true)
+            startVolumeGraphCollection()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // CRITICAL: Stop volume graph collection when app goes to background
+        // This saves battery even if the switch is ON
+        stopVolumeGraphCollection()
+        volumeLineChartView.setDrawingEnabled(false)
     }
     
     /**
@@ -264,21 +291,25 @@ class MainActivity : AppCompatActivity() {
         modeStandardButton.setOnClickListener {
             viewModel.setRecordingMode(RecordingMode.STANDARD)
             updateModeButtons(RecordingMode.STANDARD)
+            updateVolumeGraphForMode(RecordingMode.STANDARD)
         }
-        
+
         modeFastButton.setOnClickListener {
             viewModel.setRecordingMode(RecordingMode.FAST)
             updateModeButtons(RecordingMode.FAST)
+            updateVolumeGraphForMode(RecordingMode.FAST)
         }
-        
+
         modeMediumButton.setOnClickListener {
             viewModel.setRecordingMode(RecordingMode.MEDIUM)
             updateModeButtons(RecordingMode.MEDIUM)
+            updateVolumeGraphForMode(RecordingMode.MEDIUM)
         }
-        
+
         modeLongButton.setOnClickListener {
             viewModel.setRecordingMode(RecordingMode.LONG)
             updateModeButtons(RecordingMode.LONG)
+            updateVolumeGraphForMode(RecordingMode.LONG)
         }
         recordingProgressBar = findViewById(R.id.recordingProgressBar)
         timerText = findViewById(R.id.timerText)
@@ -304,7 +335,29 @@ class MainActivity : AppCompatActivity() {
         exportButton.setOnClickListener {
             exportAllPredictions()
         }
-        
+
+        // Volume Graph Components
+        volumeGraphCard = findViewById(R.id.volumeGraphCard)
+        switchVolumeGraph = findViewById(R.id.switchVolumeGraph)
+        volumeLineChartView = findViewById(R.id.volumeLineChartView)
+
+        // Initialize volume graph with current recording mode duration
+        volumeLineChartView.setMaxDuration(viewModel.getRecordingMode().durationSeconds.toFloat())
+
+        // Switch listener for enabling/disabling volume graph
+        switchVolumeGraph.setOnCheckedChangeListener { _, isChecked ->
+            isVolumeGraphActive = isChecked
+            if (isChecked) {
+                volumeLineChartView.visibility = View.VISIBLE
+                volumeLineChartView.setDrawingEnabled(true)
+                startVolumeGraphCollection()
+            } else {
+                stopVolumeGraphCollection()
+                volumeLineChartView.setDrawingEnabled(false)
+                volumeLineChartView.visibility = View.GONE
+            }
+        }
+
         startStopButton.setOnClickListener {
             if (viewModel.isClassifying()) {
                 viewModel.stopClassification()
@@ -819,6 +872,37 @@ class MainActivity : AppCompatActivity() {
     private fun showError(message: String) {
         // Fehlermeldung wird bereits im Status-Label angezeigt
         // Optional: Snackbar oder Toast für zusätzliches Feedback
+    }
+
+    /**
+     * Starts collecting volume data for the graph
+     * Collects at ~50ms intervals (20 FPS) for smooth visualization
+     */
+    private fun startVolumeGraphCollection() {
+        volumeGraphJob?.cancel()
+        volumeGraphJob = lifecycleScope.launch {
+            while (isVolumeGraphActive) {
+                val currentVolume = viewModel.uiState.value.currentVolume
+                volumeLineChartView.addDataPoint(currentVolume)
+                delay(com.fzi.acousticscene.ui.VolumeLineChartView.DATA_INTERVAL_MS)
+            }
+        }
+    }
+
+    /**
+     * Stops collecting volume data for the graph
+     */
+    private fun stopVolumeGraphCollection() {
+        volumeGraphJob?.cancel()
+        volumeGraphJob = null
+    }
+
+    /**
+     * Updates the volume graph X-axis when recording mode changes
+     */
+    private fun updateVolumeGraphForMode(mode: RecordingMode) {
+        volumeLineChartView.setMaxDuration(mode.durationSeconds.toFloat())
+        volumeLineChartView.clearData()
     }
     
     /**

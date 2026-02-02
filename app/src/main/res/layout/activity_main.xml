@@ -153,6 +153,62 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Volume Graph Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/volumeGraphCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="@color/surface_dark">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Header Row with Title and Switch -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/volume_analysis"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchVolumeGraph"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/show_live_data"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:checked="false"
+                        app:thumbTint="@color/accent_green"
+                        app:trackTint="@color/surface_variant" />
+                </LinearLayout>
+
+                <!-- Volume Line Chart View -->
+                <com.fzi.acousticscene.ui.VolumeLineChartView
+                    android:id="@+id/volumeLineChartView"
+                    android:layout_width="match_parent"
+                    android:layout_height="160dp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Recording Mode Selection -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
