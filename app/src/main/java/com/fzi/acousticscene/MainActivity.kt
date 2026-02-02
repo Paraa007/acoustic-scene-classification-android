@@ -201,8 +201,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        // Resume volume graph collection if it was active
-        if (isVolumeGraphActive && switchVolumeGraph.isChecked) {
+        // Resume volume graph collection ONLY if:
+        // 1. Switch is ON (isVolumeGraphActive)
+        // 2. Recording is actually running (viewModel.isClassifying())
+        if (isVolumeGraphActive && viewModel.isClassifying()) {
             volumeLineChartView.setDrawingEnabled(true)
             startVolumeGraphCollection()
         }
@@ -345,28 +347,42 @@ class MainActivity : AppCompatActivity() {
         volumeLineChartView.setMaxDuration(viewModel.getRecordingMode().durationSeconds.toFloat())
 
         // Switch listener for enabling/disabling volume graph
+        // NOTE: Switch only prepares the view. Data collection starts with recording!
         switchVolumeGraph.setOnCheckedChangeListener { _, isChecked ->
             isVolumeGraphActive = isChecked
             if (isChecked) {
+                // Prepare view - but don't start collecting data yet
                 volumeLineChartView.visibility = View.VISIBLE
                 volumeLineChartView.setDrawingEnabled(true)
-                startVolumeGraphCollection()
+                volumeLineChartView.clearData()
+                // Data collection starts when recording begins
             } else {
+                // Stop everything and hide
                 stopVolumeGraphCollection()
                 volumeLineChartView.setDrawingEnabled(false)
+                volumeLineChartView.clearData()
                 volumeLineChartView.visibility = View.GONE
             }
         }
 
         startStopButton.setOnClickListener {
             if (viewModel.isClassifying()) {
+                // STOP recording
                 viewModel.stopClassification()
                 stopClassificationService()
+                // Stop volume graph collection and clear data
+                stopVolumeGraphCollection()
+                volumeLineChartView.clearData()
             } else {
                 if (hasAudioPermission()) {
-                    // Starte Service für Hintergrund-Betrieb
+                    // START recording
                     startClassificationService()
                     viewModel.startClassification()
+                    // Start volume graph collection if switch is ON
+                    if (isVolumeGraphActive) {
+                        volumeLineChartView.clearData()
+                        startVolumeGraphCollection()
+                    }
                 } else {
                     requestAudioPermission()
                 }
