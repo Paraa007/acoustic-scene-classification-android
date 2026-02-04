@@ -173,4 +173,8 @@
     <string name="show_live_data">Show Live Data</string>
     <string name="volume_graph_disabled">Toggle switch to enable</string>
     <string name="volume_graph_waiting">Waiting for recording…</string>
+
+    <!-- Time Analysis / Live Data Messages -->
+    <string name="live_analysis_late_open">To view live analysis, open this window before recording.</string>
+    <string name="live_analysis_close_warning">Please do not close this window during an active recording.</string>
 </resources>

@@ -128,6 +128,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var currentMode: RecordingMode = RecordingMode.STANDARD
     private var audioRecorder: AudioRecorder = AudioRecorder(durationSeconds = currentMode.durationSeconds)
 
+    // Time Analysis: Tracks whether the analysis view was opened BEFORE recording started
+    // This flag is set when recording starts and checked to gate time analysis calculations
+    private val _isAnalysisViewEnabledAtRecordingStart = MutableStateFlow(false)
+    val isAnalysisViewEnabledAtRecordingStart: StateFlow<Boolean> = _isAnalysisViewEnabledAtRecordingStart.asStateFlow()
+
+    /**
+     * Called by MainActivity to record whether the analysis view was enabled when recording starts.
+     * This gates whether time analysis calculations should run.
+     */
+    fun setAnalysisViewStateAtRecordingStart(isEnabled: Boolean) {
+        _isAnalysisViewEnabledAtRecordingStart.value = isEnabled
+        Log.d(TAG, "Analysis view state at recording start: $isEnabled")
+    }
+
+    /**
+     * Resets the analysis view state when recording stops.
+     */
+    private fun resetAnalysisViewState() {
+        _isAnalysisViewEnabledAtRecordingStart.value = false
+    }
+
     init {
         loadModel()
         updateStatistics()
@@ -416,6 +437,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         isRecording = false
         recordingJob?.cancel()
         audioRecorder.stopRecording()
+        resetAnalysisViewState()
         _uiState.update { it.copy(appState = AppState.Ready, errorMessage = null) }
         Log.d(TAG, "Classification stopped")
     }

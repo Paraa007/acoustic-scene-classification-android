@@ -346,9 +346,37 @@ class MainActivity : AppCompatActivity() {
         // Initialize volume graph with current recording mode duration
         volumeLineChartView.setMaxDuration(viewModel.getRecordingMode().durationSeconds.toFloat())
 
-        // Switch listener for enabling/disabling volume graph
-        // NOTE: Switch only prepares the view. Data collection starts with recording!
-        switchVolumeGraph.setOnCheckedChangeListener { _, isChecked ->
+        // Switch listener for enabling/disabling volume graph (Time Analysis)
+        // STRICT LOGIC: Analysis must be opened BEFORE recording starts
+        switchVolumeGraph.setOnCheckedChangeListener { buttonView, isChecked ->
+            // Check if recording is currently active
+            val isRecordingActive = viewModel.isClassifying()
+
+            if (isRecordingActive) {
+                if (isChecked) {
+                    // Scenario 2 (Late Open): User tries to enable during recording
+                    // Revert switch and show error
+                    buttonView.isChecked = false
+                    Toast.makeText(
+                        this,
+                        getString(R.string.live_analysis_late_open),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnCheckedChangeListener
+                } else {
+                    // Scenario 3 (Early Close): User tries to disable during recording
+                    // Revert switch and show warning
+                    buttonView.isChecked = true
+                    Toast.makeText(
+                        this,
+                        getString(R.string.live_analysis_close_warning),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnCheckedChangeListener
+                }
+            }
+
+            // Recording is NOT active - allow normal toggle
             isVolumeGraphActive = isChecked
             if (isChecked) {
                 // Prepare view - but don't start collecting data yet
@@ -376,9 +404,15 @@ class MainActivity : AppCompatActivity() {
             } else {
                 if (hasAudioPermission()) {
                     // START recording
+                    // IMPORTANT: Capture analysis view state BEFORE recording starts
+                    // This gates whether time analysis calculations will run
+                    viewModel.setAnalysisViewStateAtRecordingStart(isVolumeGraphActive)
+
                     startClassificationService()
                     viewModel.startClassification()
-                    // Start volume graph collection if switch is ON
+
+                    // Start volume graph collection ONLY if switch was ON before recording started
+                    // (Scenario 1: Happy Path - view opened before recording)
                     if (isVolumeGraphActive) {
                         volumeLineChartView.clearData()
                         startVolumeGraphCollection()
@@ -1062,7 +1096,17 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission granted, start classification
+                // Capture analysis view state BEFORE recording starts
+                viewModel.setAnalysisViewStateAtRecordingStart(isVolumeGraphActive)
+
+                startClassificationService()
                 viewModel.startClassification()
+
+                // Start volume graph collection if switch was ON
+                if (isVolumeGraphActive) {
+                    volumeLineChartView.clearData()
+                    startVolumeGraphCollection()
+                }
             } else {
                 // Permission denied - show modern dialog
                 ModernDialogHelper.showConfirmDialog(
