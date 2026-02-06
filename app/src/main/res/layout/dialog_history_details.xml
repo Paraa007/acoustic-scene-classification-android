@@ -249,6 +249,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/close"
+                android:textColor="@color/on_primary"
                 app:backgroundTint="@color/accent_green" />
         </LinearLayout>
     </LinearLayout>

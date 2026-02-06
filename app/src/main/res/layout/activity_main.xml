@@ -293,7 +293,7 @@
                         android:padding="10dp"
                         app:cornerRadius="12dp"
                         app:backgroundTint="@color/accent_green"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="@color/on_primary" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -312,7 +312,7 @@
             app:iconPadding="12dp"
             app:cornerRadius="16dp"
             app:backgroundTint="@color/accent_green"
-            android:textColor="@color/text_primary" />
+            android:textColor="@color/on_primary" />
 
         <!-- Recording Progress Bar - Modern Gradient Capsule -->
         <ProgressBar

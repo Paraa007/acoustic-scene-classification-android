@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -18,8 +19,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.materialswitch.MaterialSwitch
 
 /**
  * Welcome Screen / Landing Page
@@ -35,6 +38,9 @@ class WelcomeActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply saved theme BEFORE super.onCreate()
+        ThemeHelper.applySavedTheme(this)
+
         super.onCreate(savedInstanceState)
 
         // Enable Edge-to-Edge for modern devices
@@ -48,6 +54,8 @@ class WelcomeActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
+        setupThemeToggle()
 
         val userModeCard: MaterialCardView = findViewById(R.id.userModeCard)
         val devModeCard: MaterialCardView = findViewById(R.id.devModeCard)
@@ -68,6 +76,34 @@ class WelcomeActivity : AppCompatActivity() {
             val intent = Intent(this, HistoryActivity::class.java)
             startActivity(intent)
         }
+    }
+
+    /**
+     * Sets up the Light/Dark mode slide switch toggle
+     */
+    private fun setupThemeToggle() {
+        val themeSwitch: MaterialSwitch = findViewById(R.id.themeSwitch)
+        val iconLight: ImageView = findViewById(R.id.iconLightMode)
+        val iconDark: ImageView = findViewById(R.id.iconDarkMode)
+
+        // Switch ON = Dark Mode, OFF = Light Mode
+        val isDark = ThemeHelper.isDarkMode(this)
+        themeSwitch.isChecked = isDark
+        updateThemeIcons(iconLight, iconDark, isDark)
+
+        themeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            updateThemeIcons(iconLight, iconDark, isChecked)
+            ThemeHelper.setDarkMode(this, isChecked)
+            // Activity will be recreated by AppCompatDelegate
+        }
+    }
+
+    /**
+     * Updates the opacity of sun/moon icons based on current theme
+     */
+    private fun updateThemeIcons(iconLight: ImageView, iconDark: ImageView, isDarkMode: Boolean) {
+        iconLight.alpha = if (isDarkMode) 0.4f else 1.0f
+        iconDark.alpha = if (isDarkMode) 1.0f else 0.4f
     }
 
     /**

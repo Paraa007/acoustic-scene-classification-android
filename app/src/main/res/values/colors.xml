@@ -1,72 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark Theme - Primärfarben -->
-    <color name="background_dark">#0D0D0D</color>  <!-- Fast schwarz -->
-    <color name="surface_dark">#1A1A1A</color>    <!-- Dunkelgrau für Cards -->
-    <color name="surface_variant">#2A2A2A</color> <!-- Noch heller für Progress -->
-    
-    <!-- Akzentfarben (Grün) -->
-    <color name="accent_green">#1B5E20</color>     <!-- Dunkelgrün für Buttons -->
-    <color name="accent_green_dark">#0D3E14</color> <!-- Noch dunkleres Grün -->
-    <color name="accent_green_light">#4CAF50</color> <!-- Helles Grün -->
+    <!-- Light Theme - Primary Colors -->
+    <color name="background_dark">#F5F5F5</color>   <!-- Light grey background -->
+    <color name="surface_dark">#FFFFFF</color>       <!-- White for Cards -->
+    <color name="surface_variant">#E8E8E8</color>    <!-- Slightly darker for variants -->
 
-    <!-- Akzentfarben (Blau für Dev Mode) -->
-    <color name="accent_blue">#2196F3</color>      <!-- Blau für Dev Mode -->
-    <color name="accent_blue_dark">#1565C0</color> <!-- Dunkleres Blau -->
-    <color name="accent_blue_light">#64B5F6</color> <!-- Helles Blau -->
+    <!-- Accent Colors (Green) -->
+    <color name="accent_green">#2E7D32</color>       <!-- Green for Buttons -->
+    <color name="accent_green_dark">#1B5E20</color>  <!-- Darker Green -->
+    <color name="accent_green_light">#4CAF50</color> <!-- Light Green -->
+
+    <!-- Accent Colors (Blue for Dev Mode) -->
+    <color name="accent_blue">#1976D2</color>        <!-- Blue for Dev Mode -->
+    <color name="accent_blue_dark">#1565C0</color>   <!-- Darker Blue -->
+    <color name="accent_blue_light">#42A5F5</color>  <!-- Light Blue -->
 
     <!-- Living Room color (9th class) -->
-    <color name="living_room">#795548</color>      <!-- Braun - Wohnbereich -->
-    
-    <!-- Text-Farben -->
-    <color name="text_primary">#FFFFFF</color>     <!-- Weiß -->
-    <color name="text_secondary">#B0B0B0</color>   <!-- Hellgrau -->
-    <color name="text_disabled">#666666</color>    <!-- Grau -->
-    
-    <!-- Status-Farben -->
-    <color name="status_success">#1B5E20</color>   <!-- Dunkelgrün -->
-    <color name="status_warning">#FFA000</color>   <!-- Orange -->
-    <color name="status_error">#D32F2F</color>     <!-- Rot -->
-    <color name="status_info">#2196F3</color>      <!-- Blau -->
-    
-    <!-- Scene Classification Colors (9 Classes - DCASE 2025) -->
-    <color name="transit_vehicles">#2196F3</color>  <!-- Blau - Transit/Fahrzeuge -->
-    <color name="urban_waiting">#FFC107</color>     <!-- Gelb - Urban/Wartezonen -->
-    <color name="nature">#4CAF50</color>            <!-- Grün - Natur -->
-    <color name="social">#E91E63</color>            <!-- Pink - Sozial -->
-    <color name="work">#9C27B0</color>              <!-- Lila - Arbeit -->
-    <color name="commercial">#FF9800</color>        <!-- Orange - Kommerziell -->
-    <color name="leisure_sport">#F44336</color>     <!-- Rot - Freizeit/Sport -->
-    <color name="culture_quiet">#673AB7</color>     <!-- Dunkellila - Kultur/Ruhig -->
-    
-    <!-- Legacy colors (für Kompatibilität) -->
-    <color name="airport">#2196F3</color>
-    <color name="bus">#FFC107</color>
-    <color name="metro">#9C27B0</color>
-    <color name="metro_station">#673AB7</color>
-    <color name="park">#4CAF50</color>
-    <color name="public_square">#FF9800</color>
-    <color name="shopping_mall">#E91E63</color>
-    <color name="street_traffic">#F44336</color>
-    
-    <!-- UI Colors (Dark Theme) -->
-    <color name="primary">#1B5E20</color>           <!-- Dunkelgrün als Primary -->
-    <color name="primary_dark">#0D3E14</color>     <!-- Noch dunkleres Grün -->
-    <color name="accent">#1B5E20</color>            <!-- Dunkelgrün als Accent -->
-    <color name="background">#0D0D0D</color>        <!-- Dark Background -->
-    <color name="surface">#1A1A1A</color>           <!-- Dark Surface -->
-    <color name="error">#D32F2F</color>             <!-- Rot für Fehler -->
-    <color name="on_primary">#FFFFFF</color>        <!-- Weiß auf Grün -->
-    <color name="on_background">#FFFFFF</color>     <!-- Weiß auf Dark Background -->
-    <color name="on_surface">#FFFFFF</color>       <!-- Weiß auf Dark Surface -->
-    <color name="on_error">#FFFFFF</color>         <!-- Weiß auf Rot -->
-    
+    <color name="living_room">#795548</color>        <!-- Brown - Wohnbereich -->
+
+    <!-- Text Colors -->
+    <color name="text_primary">#1A1A1A</color>       <!-- Near black -->
+    <color name="text_secondary">#616161</color>     <!-- Medium grey -->
+    <color name="text_disabled">#BDBDBD</color>      <!-- Light grey -->
+
     <!-- Status Colors -->
-    <color name="status_idle">#666666</color>       <!-- Grau -->
-    <color name="status_recording">#D32F2F</color>  <!-- Rot für Recording -->
-    <color name="status_processing">#FFA000</color> <!-- Orange für Processing -->
+    <color name="status_success">#2E7D32</color>     <!-- Green -->
+    <color name="status_warning">#F57F17</color>     <!-- Orange -->
+    <color name="status_error">#C62828</color>       <!-- Red -->
+    <color name="status_info">#1565C0</color>        <!-- Blue -->
+
+    <!-- Scene Classification Colors (9 Classes - DCASE 2025) -->
+    <color name="transit_vehicles">#1565C0</color>   <!-- Blue - Transit/Fahrzeuge -->
+    <color name="urban_waiting">#F9A825</color>      <!-- Amber - Urban/Wartezonen -->
+    <color name="nature">#2E7D32</color>             <!-- Green - Natur -->
+    <color name="social">#C2185B</color>             <!-- Pink - Sozial -->
+    <color name="work">#7B1FA2</color>               <!-- Purple - Arbeit -->
+    <color name="commercial">#E65100</color>         <!-- Orange - Kommerziell -->
+    <color name="leisure_sport">#C62828</color>      <!-- Red - Freizeit/Sport -->
+    <color name="culture_quiet">#4527A0</color>      <!-- Deep Purple - Kultur/Ruhig -->
+
+    <!-- Legacy colors -->
+    <color name="airport">#1565C0</color>
+    <color name="bus">#F9A825</color>
+    <color name="metro">#7B1FA2</color>
+    <color name="metro_station">#4527A0</color>
+    <color name="park">#2E7D32</color>
+    <color name="public_square">#E65100</color>
+    <color name="shopping_mall">#C2185B</color>
+    <color name="street_traffic">#C62828</color>
+
+    <!-- UI Colors (Light Theme) -->
+    <color name="primary">#2E7D32</color>             <!-- Green as Primary -->
+    <color name="primary_dark">#1B5E20</color>       <!-- Darker Green -->
+    <color name="accent">#2E7D32</color>              <!-- Green as Accent -->
+    <color name="background">#F5F5F5</color>          <!-- Light Background -->
+    <color name="surface">#FFFFFF</color>             <!-- White Surface -->
+    <color name="error">#C62828</color>               <!-- Red for errors -->
+    <color name="on_primary">#FFFFFF</color>          <!-- White on Green -->
+    <color name="on_background">#1A1A1A</color>       <!-- Dark on Light Background -->
+    <color name="on_surface">#1A1A1A</color>         <!-- Dark on White Surface -->
+    <color name="on_error">#FFFFFF</color>           <!-- White on Red -->
+
+    <!-- Status Colors -->
+    <color name="status_idle">#9E9E9E</color>         <!-- Grey -->
+    <color name="status_recording">#C62828</color>    <!-- Red for Recording -->
+    <color name="status_processing">#F57F17</color>   <!-- Orange for Processing -->
 
     <!-- Dialog Colors -->
-    <color name="dialog_surface">#1E1E1E</color>    <!-- Dark Grey for Dialogs -->
-    <color name="dialog_surface_light">#2A2A2A</color> <!-- Lighter surface for items -->
+    <color name="dialog_surface">#FFFFFF</color>      <!-- White for Dialogs -->
+    <color name="dialog_surface_light">#F5F5F5</color> <!-- Light grey for items -->
 </resources>

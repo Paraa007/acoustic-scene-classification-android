@@ -191,4 +191,8 @@
     <string name="export_selected">Export Selected</string>
     <string name="delete_selected_confirm">Do you really want to delete %1$d sessions?</string>
     <string name="sessions_deleted">%1$d sessions deleted</string>
+
+    <!-- Theme Toggle -->
+    <string name="light_mode">Light Mode</string>
+    <string name="dark_mode">Dark Mode</string>
 </resources>
