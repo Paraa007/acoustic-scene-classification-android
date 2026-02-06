@@ -28,7 +28,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
@@ -45,11 +44,6 @@ import androidx.activity.OnBackPressedCallback
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileWriter
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * MainActivity für Acoustic Scene Classification App
@@ -98,7 +92,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var modeMediumButton: MaterialButton
     private lateinit var modeLongButton: MaterialButton
     private lateinit var startStopButton: MaterialButton
-    private lateinit var exportButton: MaterialButton
     private lateinit var statusLabel: TextView
     private lateinit var modelStatusLabel: TextView
     private lateinit var recordingProgressBar: ProgressBar
@@ -112,10 +105,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statisticsCard: MaterialCardView
     private lateinit var totalClassificationsText: TextView
     private lateinit var avgInferenceTimeText: TextView
-    private lateinit var historyCard: MaterialCardView
-    private lateinit var historyContainer: LinearLayout
-    private lateinit var noHistoryText: TextView
-    private lateinit var saveHistoryButton: MaterialButton
 
     // Volume Graph Components
     private lateinit var volumeGraphCard: MaterialCardView
@@ -328,19 +317,6 @@ class MainActivity : AppCompatActivity() {
         statisticsCard = findViewById(R.id.statisticsCard)
         totalClassificationsText = findViewById(R.id.totalClassificationsText)
         avgInferenceTimeText = findViewById(R.id.avgInferenceTimeText)
-        historyCard = findViewById(R.id.historyCard)
-        historyContainer = findViewById(R.id.historyContainer)
-        noHistoryText = findViewById(R.id.noHistoryText)
-        saveHistoryButton = findViewById(R.id.saveHistoryButton)
-        exportButton = findViewById(R.id.exportButton)
-
-        saveHistoryButton.setOnClickListener {
-            saveHistoryToFile()
-        }
-
-        exportButton.setOnClickListener {
-            exportAllPredictions()
-        }
 
         // Volume Graph Components
         volumeGraphCard = findViewById(R.id.volumeGraphCard)
@@ -448,7 +424,6 @@ class MainActivity : AppCompatActivity() {
         updateCurrentResult(state.currentResult)
         updatePredictions(state.currentResult)
         updateStatistics(state.totalClassifications, state.averageInferenceTime)
-        updateHistory(state.history)
         updateModeButtons(state.recordingMode)
         updateVolumeDisplay(state.currentVolume, state.appState)
 
@@ -740,183 +715,6 @@ class MainActivity : AppCompatActivity() {
             avgInferenceTimeText.text = String.format("%.2f s", seconds)
         } else {
             statisticsCard.visibility = View.GONE
-        }
-    }
-    
-    /**
-     * Aktualisiert die History
-     */
-    private fun updateHistory(history: List<com.fzi.acousticscene.model.ClassificationResult>) {
-        historyContainer.removeAllViews()
-        
-        if (history.isNotEmpty()) {
-            historyCard.visibility = View.VISIBLE
-            noHistoryText.visibility = View.GONE
-            
-            saveHistoryButton.isEnabled = true
-            
-            // Reverse, damit neueste zuerst
-            history.reversed().forEach { result ->
-                val historyItemView = createHistoryItemView(result)
-                val layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                layoutParams.setMargins(0, 0, 0, 12)
-                historyItemView.layoutParams = layoutParams
-                historyContainer.addView(historyItemView)
-            }
-        } else {
-            historyCard.visibility = View.VISIBLE  // Card immer sichtbar
-            noHistoryText.visibility = View.VISIBLE
-            saveHistoryButton.isEnabled = false
-        }
-    }
-    
-    /**
-     * Erstellt eine View für ein History-Item - Schöneres Design
-     */
-    private fun createHistoryItemView(result: com.fzi.acousticscene.model.ClassificationResult): View {
-        // Container Card für jedes History-Item
-        val card = com.google.android.material.card.MaterialCardView(this)
-        card.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        card.setPadding(16, 12, 16, 12)
-        card.cardElevation = 2f
-        card.radius = 12f
-        card.strokeWidth = 0
-        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface))
-        
-        val container = LinearLayout(this)
-        container.orientation = LinearLayout.VERTICAL
-        container.setPadding(0, 0, 0, 0)
-        
-        // Scene Name - Kleiner geschrieben
-        val sceneText = TextView(this)
-        sceneText.text = result.sceneClass.label  // Vollständiger Name
-        sceneText.textSize = 13f  // Kleiner geschrieben
-        val colorRes = sceneColors[result.sceneClass] ?: R.color.primary
-        sceneText.setTextColor(ContextCompat.getColor(this, colorRes))
-        sceneText.setPadding(0, 0, 0, 4)
-        sceneText.maxLines = 2
-        sceneText.setSingleLine(false)
-        
-        // Nur Zeit (ohne Konfidenz)
-        val timeText = TextView(this)
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        timeText.text = timeFormat.format(Date(result.timestamp))
-        timeText.textSize = 11f
-        timeText.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
-        
-        container.addView(sceneText)
-        container.addView(timeText)
-        card.addView(container)
-        
-        return card
-    }
-    
-    /**
-     * Speichert die History als CSV-Datei und teilt sie
-     */
-    private fun saveHistoryToFile() {
-        val history = viewModel.uiState.value.history
-        if (history.isEmpty()) {
-            Toast.makeText(this, getString(R.string.no_history), Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        try {
-            // Erstelle CSV-Inhalt
-            val csvContent = StringBuilder()
-            csvContent.append("Timestamp,Scene,Confidence,Inference Time (s)\n")
-            
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            history.forEach { result ->
-                csvContent.append("${dateFormat.format(Date(result.timestamp))},")
-                csvContent.append("\"${result.sceneClass.label}\",")
-                csvContent.append("${(result.confidence * 100).toFixed(2)},")
-                // Format: Sekunden statt Millisekunden
-                val seconds = result.inferenceTimeMs / 1000.0
-                csvContent.append("${String.format("%.2f", seconds)}\n")
-            }
-            
-            // Speichere in Datei
-            val fileName = "acoustic_scene_history_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.csv"
-            val file = File(getExternalFilesDir(null), fileName)
-            FileWriter(file).use { writer ->
-                writer.write(csvContent.toString())
-            }
-            
-            // Teile die Datei
-            val uri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
-                file
-            )
-            
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/csv"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Acoustic Scene Classification History")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            
-            startActivity(Intent.createChooser(shareIntent, getString(R.string.history_export)))
-            Toast.makeText(this, getString(R.string.history_saved), Toast.LENGTH_SHORT).show()
-            
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Error saving history", e)
-            Toast.makeText(this, getString(R.string.history_save_error), Toast.LENGTH_SHORT).show()
-        }
-    }
-    
-    /**
-     * Helper-Funktion für Float-Formatierung
-     */
-    private fun Float.toFixed(decimals: Int): String {
-        return String.format(Locale.getDefault(), "%.${decimals}f", this)
-    }
-    
-    /**
-     * Exportiert alle Vorhersagen als CSV und teilt sie (inkl. Email)
-     */
-    private fun exportAllPredictions() {
-        viewModel.exportPredictions { file ->
-            if (file != null) {
-                shareCsvFile(file)
-            } else {
-                Toast.makeText(this, getString(R.string.export_failed), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    
-    /**
-     * Teilt CSV-Datei (Email, Drive, etc.)
-     */
-    private fun shareCsvFile(file: File) {
-        try {
-            val uri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
-                file
-            )
-            
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/csv"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Acoustic Scene Predictions - ${file.nameWithoutExtension}")
-                putExtra(Intent.EXTRA_TEXT, getString(R.string.export_email_body, viewModel.totalPredictionsCount.value ?: 0))
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            
-            startActivity(Intent.createChooser(shareIntent, getString(R.string.share_csv)))
-            Toast.makeText(this, getString(R.string.csv_exported), Toast.LENGTH_SHORT).show()
-            
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Share failed", e)
-            Toast.makeText(this, getString(R.string.share_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
     
