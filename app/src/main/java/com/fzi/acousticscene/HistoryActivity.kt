@@ -140,16 +140,14 @@ class HistoryActivity : AppCompatActivity() {
 
     private fun onItemLongClick(packageRecords: List<PredictionRecord>) {
         if (!isSelectionMode) {
-            enterSelectionMode()
             val sessionStartTime = packageRecords.first().sessionStartTime
-            adapter.toggleSelection(sessionStartTime)
-            updateSelectionCount()
+            enterSelectionMode(sessionStartTime)
         }
     }
 
-    private fun enterSelectionMode() {
+    private fun enterSelectionMode(firstSelectedSession: Long) {
         isSelectionMode = true
-        adapter.setSelectionMode(true)
+        adapter.startSelectionWithItem(firstSelectedSession)
         normalToolbar.visibility = View.GONE
         selectionToolbar.visibility = View.VISIBLE
         updateSelectionCount()
@@ -411,6 +409,12 @@ class HistoryActivity : AppCompatActivity() {
         fun submitList(newList: List<List<PredictionRecord>>, sessionStartTimes: List<Long>) {
             packages = newList
             allSessionStartTimes = sessionStartTimes
+            notifyDataSetChanged()
+        }
+
+        fun startSelectionWithItem(sessionStartTime: Long) {
+            selectionMode = true
+            selectedSessions.add(sessionStartTime)
             notifyDataSetChanged()
         }
 
