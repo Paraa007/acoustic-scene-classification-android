@@ -195,4 +195,7 @@
     <!-- Theme Toggle -->
     <string name="light_mode">Light Mode</string>
     <string name="dark_mode">Dark Mode</string>
+
+    <!-- Recent Predictions -->
+    <string name="recent_predictions">Last Predictions</string>
 </resources>
