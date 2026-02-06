@@ -47,16 +47,6 @@
                 android:textStyle="bold"
                 android:textColor="@color/text_primary" />
 
-            <!-- Delete All Menu Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeleteAll"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/delete_all_history"
-                android:textColor="@color/status_error"
-                android:textSize="12sp" />
-
         </LinearLayout>
 
         <!-- Selection Mode Toolbar (hidden by default) -->

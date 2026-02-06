@@ -43,7 +43,6 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
     private lateinit var btnBack: MaterialButton
-    private lateinit var btnDeleteAll: MaterialButton
     private lateinit var adapter: PackageAdapter
 
     // Selection Mode UI
@@ -85,7 +84,6 @@ class HistoryActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.historyRecyclerView)
         emptyStateText = findViewById(R.id.emptyStateText)
         btnBack = findViewById(R.id.btnBack)
-        btnDeleteAll = findViewById(R.id.btnDeleteAll)
         normalToolbar = findViewById(R.id.normalToolbar)
 
         // Selection toolbar views
@@ -99,11 +97,6 @@ class HistoryActivity : AppCompatActivity() {
         // Material 3 Back Button
         btnBack.setOnClickListener {
             finish()
-        }
-
-        // Delete All Button
-        btnDeleteAll.setOnClickListener {
-            showDeleteAllDialog()
         }
 
         // Selection toolbar actions
@@ -251,20 +244,6 @@ class HistoryActivity : AppCompatActivity() {
         return packagesBySession.values
             .map { it.sortedBy { record -> record.timestamp } }  // Innerhalb eines Packages nach Timestamp sortieren
             .sortedBy { it.first().sessionStartTime }  // Packages nach Session-Start sortieren
-    }
-
-    private fun showDeleteAllDialog() {
-        ModernDialogHelper.showDeleteDialog(
-            context = this,
-            title = getString(R.string.delete_all_history),
-            message = getString(R.string.delete_all_confirm),
-            deleteText = getString(R.string.clear_all),
-            onDelete = {
-                repository.clearAll()
-                Toast.makeText(this, R.string.predictions_cleared, Toast.LENGTH_SHORT).show()
-                loadHistory()
-            }
-        )
     }
 
     /**
