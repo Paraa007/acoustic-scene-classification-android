@@ -106,6 +106,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var totalClassificationsText: TextView
     private lateinit var avgInferenceTimeText: TextView
 
+    // Recent Predictions
+    private lateinit var recentPredictionsCard: MaterialCardView
+    private lateinit var recentPredictionsContainer: LinearLayout
+
     // Volume Graph Components
     private lateinit var volumeGraphCard: MaterialCardView
     private lateinit var switchVolumeGraph: MaterialSwitch
@@ -317,6 +321,8 @@ class MainActivity : AppCompatActivity() {
         statisticsCard = findViewById(R.id.statisticsCard)
         totalClassificationsText = findViewById(R.id.totalClassificationsText)
         avgInferenceTimeText = findViewById(R.id.avgInferenceTimeText)
+        recentPredictionsCard = findViewById(R.id.recentPredictionsCard)
+        recentPredictionsContainer = findViewById(R.id.recentPredictionsContainer)
 
         // Volume Graph Components
         volumeGraphCard = findViewById(R.id.volumeGraphCard)
@@ -424,6 +430,7 @@ class MainActivity : AppCompatActivity() {
         updateCurrentResult(state.currentResult)
         updatePredictions(state.currentResult)
         updateStatistics(state.totalClassifications, state.averageInferenceTime)
+        updateRecentPredictions(state.history)
         updateModeButtons(state.recordingMode)
         updateVolumeDisplay(state.currentVolume, state.appState)
 
@@ -718,6 +725,49 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    /**
+     * Shows the last 5 predictions inline
+     */
+    private fun updateRecentPredictions(history: List<com.fzi.acousticscene.model.ClassificationResult>) {
+        recentPredictionsContainer.removeAllViews()
+
+        if (history.isNotEmpty()) {
+            recentPredictionsCard.visibility = View.VISIBLE
+            val last5 = history.reversed().take(5)
+
+            last5.forEach { result ->
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    setPadding(0, 8, 0, 8)
+                }
+
+                val sceneText = TextView(this).apply {
+                    text = "${result.sceneClass.emoji} ${result.sceneClass.label}"
+                    textSize = 13f
+                    val colorRes = sceneColors[result.sceneClass] ?: R.color.primary
+                    setTextColor(ContextCompat.getColor(context, colorRes))
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    maxLines = 1
+                }
+
+                val confText = TextView(this).apply {
+                    text = "${(result.confidence * 100).toInt()}%"
+                    textSize = 13f
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setPadding(16, 0, 0, 0)
+                }
+
+                row.addView(sceneText)
+                row.addView(confText)
+                recentPredictionsContainer.addView(row)
+            }
+        } else {
+            recentPredictionsCard.visibility = View.GONE
+        }
+    }
+
     /**
      * Zeigt eine Fehlermeldung an
      */
