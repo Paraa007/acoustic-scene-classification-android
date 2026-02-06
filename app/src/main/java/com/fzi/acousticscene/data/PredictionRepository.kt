@@ -21,11 +21,15 @@ class PredictionRepository(private val context: Context) {
         private const val TAG = "PredictionRepository"
         private const val PREFS_NAME = "predictions_prefs"
         private const val KEY_PREDICTIONS = "all_predictions"
+        private const val KEY_SESSION_NAMES = "session_names"
         private const val MAX_PREDICTIONS = 10000  // Sicherheitslimit
     }
-    
+
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val gson = Gson()
+
+    // Session-Namen Cache
+    private val sessionNames = mutableMapOf<Long, String>()
     
     // In-Memory Cache für schnellen Zugriff
     private val predictions = mutableListOf<PredictionRecord>()
@@ -33,6 +37,7 @@ class PredictionRepository(private val context: Context) {
     init {
         // Lade gespeicherte Vorhersagen beim Start
         loadFromPrefs()
+        loadSessionNames()
     }
     
     /**
@@ -111,6 +116,8 @@ class PredictionRepository(private val context: Context) {
     fun clearAll() {
         predictions.clear()
         saveToPrefs()
+        sessionNames.clear()
+        saveSessionNames()
         Log.d(TAG, "All predictions cleared")
     }
     
@@ -134,6 +141,10 @@ class PredictionRepository(private val context: Context) {
         predictions.removeAll { it.sessionStartTime == sessionStartTime }
         val removed = before - predictions.size
         saveToPrefs()
+        // Session-Name ebenfalls entfernen
+        if (sessionNames.remove(sessionStartTime) != null) {
+            saveSessionNames()
+        }
         Log.d(TAG, "Deleted package with sessionStartTime=$sessionStartTime, removed $removed predictions")
     }
     
@@ -202,6 +213,62 @@ class PredictionRepository(private val context: Context) {
         file
     }
     
+    // --- Session-Namen Persistenz ---
+
+    private fun loadSessionNames() {
+        try {
+            val json = prefs.getString(KEY_SESSION_NAMES, null)
+            if (json != null) {
+                val type = object : TypeToken<Map<String, String>>() {}.type
+                val loaded: Map<String, String> = gson.fromJson(json, type)
+                sessionNames.clear()
+                loaded.forEach { (key, value) ->
+                    sessionNames[key.toLongOrNull() ?: return@forEach] = value
+                }
+                Log.d(TAG, "Loaded ${sessionNames.size} session names")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading session names", e)
+        }
+    }
+
+    private fun saveSessionNames() {
+        try {
+            val stringKeyMap = sessionNames.mapKeys { it.key.toString() }
+            val json = gson.toJson(stringKeyMap)
+            prefs.edit().putString(KEY_SESSION_NAMES, json).apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving session names", e)
+        }
+    }
+
+    /**
+     * Setzt einen benutzerdefinierten Namen für eine Session
+     */
+    fun setSessionName(sessionStartTime: Long, name: String) {
+        sessionNames[sessionStartTime] = name
+        saveSessionNames()
+        Log.d(TAG, "Session $sessionStartTime renamed to '$name'")
+    }
+
+    /**
+     * Gibt den benutzerdefinierten Namen einer Session zurück, oder null
+     */
+    fun getSessionName(sessionStartTime: Long): String? {
+        return sessionNames[sessionStartTime]
+    }
+
+    /**
+     * Löst den Anzeigenamen einer Session auf:
+     * Custom Name falls vorhanden, sonst "Session #X" (chronologisch, älteste = 1)
+     */
+    fun resolveSessionDisplayName(sessionStartTime: Long, allSessionStartTimes: List<Long>): String {
+        sessionNames[sessionStartTime]?.let { return it }
+        val sorted = allSessionStartTimes.sorted()
+        val index = sorted.indexOf(sessionStartTime) + 1
+        return "Session $index"
+    }
+
     /**
      * Gibt Statistiken zurück
      */

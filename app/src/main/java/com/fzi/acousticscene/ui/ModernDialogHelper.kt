@@ -240,8 +240,10 @@ object ModernDialogHelper {
         context: Context,
         packageRecords: List<PredictionRecord>,
         stats: PredictionStatistics,
+        sessionName: String = context.getString(R.string.session_details),
         onDelete: () -> Unit,
-        onExport: () -> Unit
+        onExport: () -> Unit,
+        onRename: (() -> Unit)? = null
     ): Dialog {
         val dialog = Dialog(context, R.style.ModernDialog)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -251,6 +253,21 @@ object ModernDialogHelper {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
+
+        // Session name as dialog title
+        dialog.findViewById<TextView>(R.id.dialogTitle).text = sessionName
+
+        // Rename button
+        val btnRename = dialog.findViewById<MaterialButton>(R.id.btnRename)
+        if (onRename != null) {
+            btnRename.visibility = View.VISIBLE
+            btnRename.setOnClickListener {
+                dialog.dismiss()
+                onRename()
+            }
+        } else {
+            btnRename.visibility = View.GONE
+        }
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         val firstRecord = packageRecords.firstOrNull()

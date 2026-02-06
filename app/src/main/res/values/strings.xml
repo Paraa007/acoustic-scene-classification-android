@@ -177,4 +177,10 @@
     <!-- Time Analysis / Live Data Messages -->
     <string name="live_analysis_late_open">To view live analysis, open this window before recording.</string>
     <string name="live_analysis_close_warning">Please do not close this window during an active recording.</string>
+
+    <!-- Session Naming -->
+    <string name="session_rename">Session umbenennen</string>
+    <string name="session_name_hint">Neuer Name</string>
+    <string name="save">Speichern</string>
+    <string name="session_renamed">Session umbenannt</string>
 </resources>

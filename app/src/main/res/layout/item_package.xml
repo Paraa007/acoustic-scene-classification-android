@@ -17,9 +17,9 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Zeitbereich -->
+        <!-- Session Name (Title) -->
         <TextView
-            android:id="@+id/timeRangeText"
+            android:id="@+id/sessionNameText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="16sp"
@@ -27,9 +27,9 @@
             android:textColor="@color/text_primary"
             android:layout_marginBottom="4dp" />
 
-        <!-- Anzahl -->
+        <!-- Aufnahmen + Dauer -->
         <TextView
-            android:id="@+id/countText"
+            android:id="@+id/countAndDurationText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="14sp"

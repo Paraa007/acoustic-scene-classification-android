@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -41,6 +42,9 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var btnDeleteAll: MaterialButton
     private lateinit var adapter: PackageAdapter
 
+    /** All session start times sorted chronologically (oldest first) */
+    private var allSessionStartTimes: List<Long> = emptyList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -73,9 +77,10 @@ class HistoryActivity : AppCompatActivity() {
         }
 
         // RecyclerView Setup
-        adapter = PackageAdapter { packageRecords ->
-            showPackageDialog(packageRecords)
-        }
+        adapter = PackageAdapter(
+            repository = repository,
+            onPackageClick = { packageRecords -> showPackageDialog(packageRecords) }
+        )
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -86,8 +91,11 @@ class HistoryActivity : AppCompatActivity() {
     private fun loadHistory() {
         val predictions = repository.getAllPredictions().sortedBy { it.timestamp }
         val packages = groupIntoPackages(predictions)
-        
-        adapter.submitList(packages.reversed()) // Neueste zuerst
+
+        // Alle Session-Startzeiten chronologisch sammeln
+        allSessionStartTimes = packages.map { it.first().sessionStartTime }.sorted()
+
+        adapter.submitList(packages.reversed(), allSessionStartTimes) // Neueste zuerst
 
         if (packages.isEmpty()) {
             emptyStateText.visibility = View.VISIBLE
@@ -107,7 +115,7 @@ class HistoryActivity : AppCompatActivity() {
 
         // Gruppiere nach sessionStartTime
         val packagesBySession = predictions.groupBy { it.sessionStartTime }
-        
+
         // Sortiere Packages nach sessionStartTime (älteste zuerst)
         return packagesBySession.values
             .map { it.sortedBy { record -> record.timestamp } }  // Innerhalb eines Packages nach Timestamp sortieren
@@ -133,14 +141,49 @@ class HistoryActivity : AppCompatActivity() {
      */
     private fun showPackageDialog(packageRecords: List<PredictionRecord>) {
         val stats = calculatePackageStatistics(packageRecords)
+        val sessionStartTime = packageRecords.first().sessionStartTime
+        val sessionName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
 
         ModernDialogHelper.showHistoryDetailsDialog(
             context = this,
             packageRecords = packageRecords,
             stats = stats,
+            sessionName = sessionName,
             onDelete = { showDeletePackageDialog(packageRecords) },
-            onExport = { exportPackageCsv(packageRecords) }
+            onExport = { exportPackageCsv(packageRecords) },
+            onRename = { showRenameDialog(packageRecords) }
         )
+    }
+
+    /**
+     * Shows a rename dialog for the given session
+     */
+    private fun showRenameDialog(packageRecords: List<PredictionRecord>) {
+        val sessionStartTime = packageRecords.first().sessionStartTime
+        val currentName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
+
+        val input = EditText(this).apply {
+            setText(currentName)
+            setSelection(text.length)
+            setTextColor(getColor(R.color.text_primary))
+            setHintTextColor(getColor(R.color.text_secondary))
+            hint = getString(R.string.session_name_hint)
+            setPadding(48, 32, 48, 32)
+        }
+
+        AlertDialog.Builder(this, R.style.ModernDialog)
+            .setTitle(getString(R.string.session_rename))
+            .setView(input)
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isNotEmpty()) {
+                    repository.setSessionName(sessionStartTime, newName)
+                    Toast.makeText(this, R.string.session_renamed, Toast.LENGTH_SHORT).show()
+                    loadHistory()
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
     }
 
     private fun showDeletePackageDialog(packageRecords: List<PredictionRecord>) {
@@ -245,13 +288,16 @@ class HistoryActivity : AppCompatActivity() {
      * RecyclerView Adapter für Package Items
      */
     private class PackageAdapter(
+        private val repository: PredictionRepository,
         private val onPackageClick: (List<PredictionRecord>) -> Unit
     ) : RecyclerView.Adapter<PackageAdapter.ViewHolder>() {
 
         private var packages: List<List<PredictionRecord>> = emptyList()
+        private var allSessionStartTimes: List<Long> = emptyList()
 
-        fun submitList(newList: List<List<PredictionRecord>>) {
+        fun submitList(newList: List<List<PredictionRecord>>, sessionStartTimes: List<Long>) {
             packages = newList
+            allSessionStartTimes = sessionStartTimes
             notifyDataSetChanged()
         }
 
@@ -268,17 +314,19 @@ class HistoryActivity : AppCompatActivity() {
         override fun getItemCount(): Int = packages.size
 
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val timeRangeText: TextView = itemView.findViewById(R.id.timeRangeText)
-            private val countText: TextView = itemView.findViewById(R.id.countText)
+            private val sessionNameText: TextView = itemView.findViewById(R.id.sessionNameText)
+            private val countAndDurationText: TextView = itemView.findViewById(R.id.countAndDurationText)
             private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
 
             fun bind(packageRecords: List<PredictionRecord>, onClick: (List<PredictionRecord>) -> Unit) {
-                val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                val startTime = timeFormat.format(Date(packageRecords.first().timestamp))
-                val endTime = timeFormat.format(Date(packageRecords.last().timestamp))
+                val sessionStartTime = packageRecords.first().sessionStartTime
+                val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
+                sessionNameText.text = displayName
 
-                timeRangeText.text = "$startTime - $endTime"
-                countText.text = "${packageRecords.size} ${itemView.context.getString(R.string.recordings)}"
+                // Dauer berechnen
+                val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
+                val durationStr = formatDuration(durationMs)
+                countAndDurationText.text = "${packageRecords.size} ${itemView.context.getString(R.string.recordings)} • $durationStr"
 
                 // Batterie-Verbrauch berechnen und anzeigen
                 val firstRecord = packageRecords.first()
@@ -311,6 +359,33 @@ class HistoryActivity : AppCompatActivity() {
 
                 itemView.setOnClickListener {
                     onClick(packageRecords)
+                }
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Formatiert eine Dauer in Millisekunden als lesbaren deutschen String.
+         * Beispiele: "12 s", "5 min 30 s", "1 h 15 min"
+         */
+        fun formatDuration(durationMs: Long): String {
+            val totalSeconds = durationMs / 1000
+            if (totalSeconds < 1) return "< 1 s"
+
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds % 3600) / 60
+            val seconds = totalSeconds % 60
+
+            return buildString {
+                if (hours > 0) {
+                    append("$hours h")
+                    if (minutes > 0) append(" $minutes min")
+                } else if (minutes > 0) {
+                    append("$minutes min")
+                    if (seconds > 0) append(" $seconds s")
+                } else {
+                    append("$seconds s")
                 }
             }
         }
