@@ -29,7 +29,7 @@
     <color name="status_error">#D32F2F</color>     <!-- Rot -->
     <color name="status_info">#2196F3</color>      <!-- Blau -->
     
-    <!-- Scene Classification Colors (8 Classes - DCASE 2025) -->
+    <!-- Scene Classification Colors (9 Classes - DCASE 2025) -->
     <color name="transit_vehicles">#2196F3</color>  <!-- Blau - Transit/Fahrzeuge -->
     <color name="urban_waiting">#FFC107</color>     <!-- Gelb - Urban/Wartezonen -->
     <color name="nature">#4CAF50</color>            <!-- Grün - Natur -->

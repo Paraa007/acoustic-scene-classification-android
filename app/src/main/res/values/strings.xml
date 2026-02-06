@@ -19,7 +19,7 @@
     <string name="status_recording">Recording</string>
     <string name="status_processing">Processing</string>
 
-    <!-- Scene Labels (8 Classes - DCASE 2025) -->
+    <!-- Scene Labels (9 Classes - DCASE 2025) -->
     <string name="scene_transit_vehicles">Transit - Vehicles/Outdoor</string>
     <string name="scene_urban_waiting">Outdoor-Urban &amp; Transit Buildings/Waiting Areas</string>
     <string name="scene_nature">Outdoor - Nature</string>
