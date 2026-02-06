@@ -3,8 +3,8 @@ package com.fzi.acousticscene.model
 /**
  * Configuration for different model types and their class counts
  *
- * User Mode: Uses standard 8-class model from user_model/
- * Dev Mode: Uses experimental models from dev_models/ (8 or 9 classes)
+ * User Mode: Uses standard 9-class model from user_model/
+ * Dev Mode: Uses experimental models from dev_models/ (9 classes)
  */
 data class ModelConfig(
     val modelPath: String,
@@ -24,7 +24,7 @@ data class ModelConfig(
             return ModelConfig(
                 modelPath = "$USER_MODEL_DIR/$DEFAULT_USER_MODEL",
                 modelName = DEFAULT_USER_MODEL,
-                numClasses = 8,
+                numClasses = 9,
                 isDevMode = false
             )
         }
@@ -44,15 +44,10 @@ data class ModelConfig(
 
         /**
          * Determines the number of classes based on the model filename
-         * - model1 or User Mode: 8 classes
-         * - model2 or other dev models: 9 classes
+         * All current models use 9 classes
          */
         fun getClassCountForModel(modelFileName: String): Int {
-            return when {
-                modelFileName.contains("model1", ignoreCase = true) -> 8
-                modelFileName.contains("model2", ignoreCase = true) -> 9
-                else -> 9 // Default to 9 classes for unknown dev models
-            }
+            return 9
         }
     }
 
