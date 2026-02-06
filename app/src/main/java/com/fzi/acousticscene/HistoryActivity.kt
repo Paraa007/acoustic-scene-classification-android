@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -22,6 +24,7 @@ import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,6 +35,7 @@ import java.util.*
 
 /**
  * History Screen - Shows all saved classifications as packages
+ * Supports multi-selection mode with long-press trigger
  */
 class HistoryActivity : AppCompatActivity() {
 
@@ -42,8 +46,23 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var btnDeleteAll: MaterialButton
     private lateinit var adapter: PackageAdapter
 
+    // Selection Mode UI
+    private lateinit var normalToolbar: LinearLayout
+    private lateinit var selectionToolbar: LinearLayout
+    private lateinit var selectionCountText: TextView
+    private lateinit var btnCloseSelection: MaterialButton
+    private lateinit var btnSelectAll: MaterialButton
+    private lateinit var btnExportSelected: MaterialButton
+    private lateinit var btnDeleteSelected: MaterialButton
+
     /** All session start times sorted chronologically (oldest first) */
     private var allSessionStartTimes: List<Long> = emptyList()
+
+    /** All grouped packages (newest first for display) */
+    private var allPackages: List<List<PredictionRecord>> = emptyList()
+
+    /** Selection mode state */
+    private var isSelectionMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,10 +80,21 @@ class HistoryActivity : AppCompatActivity() {
         }
 
         repository = PredictionRepository(this)
+
+        // Normal toolbar views
         recyclerView = findViewById(R.id.historyRecyclerView)
         emptyStateText = findViewById(R.id.emptyStateText)
         btnBack = findViewById(R.id.btnBack)
         btnDeleteAll = findViewById(R.id.btnDeleteAll)
+        normalToolbar = findViewById(R.id.normalToolbar)
+
+        // Selection toolbar views
+        selectionToolbar = findViewById(R.id.selectionToolbar)
+        selectionCountText = findViewById(R.id.selectionCountText)
+        btnCloseSelection = findViewById(R.id.btnCloseSelection)
+        btnSelectAll = findViewById(R.id.btnSelectAll)
+        btnExportSelected = findViewById(R.id.btnExportSelected)
+        btnDeleteSelected = findViewById(R.id.btnDeleteSelected)
 
         // Material 3 Back Button
         btnBack.setOnClickListener {
@@ -76,10 +106,17 @@ class HistoryActivity : AppCompatActivity() {
             showDeleteAllDialog()
         }
 
+        // Selection toolbar actions
+        btnCloseSelection.setOnClickListener { exitSelectionMode() }
+        btnSelectAll.setOnClickListener { selectAll() }
+        btnExportSelected.setOnClickListener { exportSelected() }
+        btnDeleteSelected.setOnClickListener { deleteSelected() }
+
         // RecyclerView Setup
         adapter = PackageAdapter(
             repository = repository,
-            onPackageClick = { packageRecords -> showPackageDialog(packageRecords) }
+            onPackageClick = { packageRecords -> onItemClick(packageRecords) },
+            onPackageLongClick = { packageRecords -> onItemLongClick(packageRecords) }
         )
 
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -88,14 +125,108 @@ class HistoryActivity : AppCompatActivity() {
         loadHistory()
     }
 
+    override fun onBackPressed() {
+        if (isSelectionMode) {
+            exitSelectionMode()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    // --- Selection Mode ---
+
+    private fun onItemClick(packageRecords: List<PredictionRecord>) {
+        if (isSelectionMode) {
+            val sessionStartTime = packageRecords.first().sessionStartTime
+            adapter.toggleSelection(sessionStartTime)
+            updateSelectionCount()
+        } else {
+            showPackageDialog(packageRecords)
+        }
+    }
+
+    private fun onItemLongClick(packageRecords: List<PredictionRecord>) {
+        if (!isSelectionMode) {
+            enterSelectionMode()
+            val sessionStartTime = packageRecords.first().sessionStartTime
+            adapter.toggleSelection(sessionStartTime)
+            updateSelectionCount()
+        }
+    }
+
+    private fun enterSelectionMode() {
+        isSelectionMode = true
+        adapter.setSelectionMode(true)
+        normalToolbar.visibility = View.GONE
+        selectionToolbar.visibility = View.VISIBLE
+        updateSelectionCount()
+    }
+
+    private fun exitSelectionMode() {
+        isSelectionMode = false
+        adapter.clearSelection()
+        adapter.setSelectionMode(false)
+        selectionToolbar.visibility = View.GONE
+        normalToolbar.visibility = View.VISIBLE
+    }
+
+    private fun updateSelectionCount() {
+        val count = adapter.getSelectedCount()
+        selectionCountText.text = getString(R.string.n_selected, count)
+        if (count == 0 && isSelectionMode) {
+            exitSelectionMode()
+        }
+    }
+
+    private fun selectAll() {
+        adapter.selectAll()
+        updateSelectionCount()
+    }
+
+    private fun deleteSelected() {
+        val selectedIds = adapter.getSelectedSessionIds()
+        if (selectedIds.isEmpty()) return
+
+        ModernDialogHelper.showDeleteDialog(
+            context = this,
+            title = getString(R.string.delete_selected),
+            message = getString(R.string.delete_selected_confirm, selectedIds.size),
+            onDelete = {
+                repository.deletePackages(selectedIds)
+                Toast.makeText(this, getString(R.string.sessions_deleted, selectedIds.size), Toast.LENGTH_SHORT).show()
+                exitSelectionMode()
+                loadHistory()
+            }
+        )
+    }
+
+    private fun exportSelected() {
+        val selectedIds = adapter.getSelectedSessionIds()
+        if (selectedIds.isEmpty()) return
+
+        // Sammle alle Records der ausgewählten Sessions
+        val allRecords = allPackages
+            .filter { it.first().sessionStartTime in selectedIds }
+            .flatten()
+            .sortedBy { it.timestamp }
+
+        if (allRecords.isEmpty()) return
+
+        exitSelectionMode()
+        exportPackageCsv(allRecords)
+    }
+
+    // --- Existing functionality ---
+
     private fun loadHistory() {
         val predictions = repository.getAllPredictions().sortedBy { it.timestamp }
         val packages = groupIntoPackages(predictions)
 
         // Alle Session-Startzeiten chronologisch sammeln
         allSessionStartTimes = packages.map { it.first().sessionStartTime }.sorted()
+        allPackages = packages.reversed() // Neueste zuerst
 
-        adapter.submitList(packages.reversed(), allSessionStartTimes) // Neueste zuerst
+        adapter.submitList(allPackages, allSessionStartTimes)
 
         if (packages.isEmpty()) {
             emptyStateText.visibility = View.VISIBLE
@@ -285,21 +416,55 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     /**
-     * RecyclerView Adapter für Package Items
+     * RecyclerView Adapter für Package Items mit Multi-Selection Support
      */
     private class PackageAdapter(
         private val repository: PredictionRepository,
-        private val onPackageClick: (List<PredictionRecord>) -> Unit
+        private val onPackageClick: (List<PredictionRecord>) -> Unit,
+        private val onPackageLongClick: (List<PredictionRecord>) -> Unit
     ) : RecyclerView.Adapter<PackageAdapter.ViewHolder>() {
 
         private var packages: List<List<PredictionRecord>> = emptyList()
         private var allSessionStartTimes: List<Long> = emptyList()
+        private val selectedSessions = mutableSetOf<Long>()
+        private var selectionMode = false
 
         fun submitList(newList: List<List<PredictionRecord>>, sessionStartTimes: List<Long>) {
             packages = newList
             allSessionStartTimes = sessionStartTimes
             notifyDataSetChanged()
         }
+
+        fun setSelectionMode(enabled: Boolean) {
+            selectionMode = enabled
+            notifyDataSetChanged()
+        }
+
+        fun toggleSelection(sessionStartTime: Long) {
+            if (selectedSessions.contains(sessionStartTime)) {
+                selectedSessions.remove(sessionStartTime)
+            } else {
+                selectedSessions.add(sessionStartTime)
+            }
+            // Only update the affected item
+            val position = packages.indexOfFirst { it.first().sessionStartTime == sessionStartTime }
+            if (position >= 0) notifyItemChanged(position)
+        }
+
+        fun selectAll() {
+            selectedSessions.clear()
+            packages.forEach { selectedSessions.add(it.first().sessionStartTime) }
+            notifyDataSetChanged()
+        }
+
+        fun clearSelection() {
+            selectedSessions.clear()
+            notifyDataSetChanged()
+        }
+
+        fun getSelectedCount(): Int = selectedSessions.size
+
+        fun getSelectedSessionIds(): Set<Long> = selectedSessions.toSet()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val view = LayoutInflater.from(parent.context)
@@ -308,17 +473,19 @@ class HistoryActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.bind(packages[position], onPackageClick)
+            holder.bind(packages[position])
         }
 
         override fun getItemCount(): Int = packages.size
 
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val packageCard: MaterialCardView = itemView.findViewById(R.id.packageCard)
             private val sessionNameText: TextView = itemView.findViewById(R.id.sessionNameText)
             private val countAndDurationText: TextView = itemView.findViewById(R.id.countAndDurationText)
             private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
+            private val selectionCheckbox: CheckBox = itemView.findViewById(R.id.selectionCheckbox)
 
-            fun bind(packageRecords: List<PredictionRecord>, onClick: (List<PredictionRecord>) -> Unit) {
+            fun bind(packageRecords: List<PredictionRecord>) {
                 val sessionStartTime = packageRecords.first().sessionStartTime
                 val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
                 sessionNameText.text = displayName
@@ -357,8 +524,26 @@ class HistoryActivity : AppCompatActivity() {
                     )
                 }
 
+                // Selection mode UI
+                val isSelected = selectedSessions.contains(sessionStartTime)
+                selectionCheckbox.visibility = if (selectionMode) View.VISIBLE else View.GONE
+                selectionCheckbox.isChecked = isSelected
+                packageCard.isChecked = isSelected
+                packageCard.strokeWidth = if (isSelected) 2 else 0
+                packageCard.strokeColor = if (isSelected) {
+                    itemView.context.getColor(R.color.accent_green_light)
+                } else {
+                    0
+                }
+
+                // Click handlers
                 itemView.setOnClickListener {
-                    onClick(packageRecords)
+                    onPackageClick(packageRecords)
+                }
+
+                itemView.setOnLongClickListener {
+                    onPackageLongClick(packageRecords)
+                    true
                 }
             }
         }

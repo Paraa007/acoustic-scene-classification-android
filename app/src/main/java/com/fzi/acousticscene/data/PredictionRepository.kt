@@ -147,7 +147,25 @@ class PredictionRepository(private val context: Context) {
         }
         Log.d(TAG, "Deleted package with sessionStartTime=$sessionStartTime, removed $removed predictions")
     }
-    
+
+    /**
+     * Löscht mehrere Packages auf einmal (Batch-Delete)
+     */
+    fun deletePackages(sessionStartTimes: Set<Long>) {
+        val before = predictions.size
+        predictions.removeAll { it.sessionStartTime in sessionStartTimes }
+        val removed = before - predictions.size
+        saveToPrefs()
+        var namesRemoved = 0
+        sessionStartTimes.forEach { sessionStartTime ->
+            if (sessionNames.remove(sessionStartTime) != null) {
+                namesRemoved++
+            }
+        }
+        if (namesRemoved > 0) saveSessionNames()
+        Log.d(TAG, "Batch deleted ${sessionStartTimes.size} packages, removed $removed predictions")
+    }
+
     /**
      * Exportiert alle Vorhersagen als CSV-String
      */
