@@ -4,7 +4,7 @@
     <item android:id="@android:id/background">
         <shape>
             <corners android:radius="10dp" />
-            <solid android:color="#2D2D2D" />
+            <solid android:color="@color/surface_variant" />
         </shape>
     </item>
     <!-- Progress indicator with gradient -->

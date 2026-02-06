@@ -23,6 +23,7 @@ import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.ui.ModernDialogHelper
+import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +65,9 @@ class HistoryActivity : AppCompatActivity() {
     private var isSelectionMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply saved theme before super.onCreate()
+        ThemeHelper.applySavedTheme(this)
+
         super.onCreate(savedInstanceState)
 
         // Enable Edge-to-Edge for modern devices

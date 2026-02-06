@@ -34,6 +34,7 @@ import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.ui.AppState
 import com.fzi.acousticscene.service.ClassificationService
+import com.fzi.acousticscene.util.ThemeHelper
 import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.ui.UiState
@@ -143,6 +144,9 @@ class MainActivity : AppCompatActivity() {
     )
     
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply saved theme before super.onCreate()
+        ThemeHelper.applySavedTheme(this)
+
         super.onCreate(savedInstanceState)
 
         // Edge-to-Edge aktivieren für moderne Geräte
@@ -479,7 +483,7 @@ class MainActivity : AppCompatActivity() {
         // Reset alle Buttons zu inaktivem Zustand
         val activeColor = ContextCompat.getColor(this, R.color.accent_green)
         val inactiveColor = ContextCompat.getColor(this, R.color.surface_variant)
-        val activeTextColor = ContextCompat.getColor(this, R.color.text_primary)
+        val activeTextColor = ContextCompat.getColor(this, R.color.on_primary)
         val inactiveTextColor = ContextCompat.getColor(this, R.color.text_secondary)
         
         modeStandardButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
