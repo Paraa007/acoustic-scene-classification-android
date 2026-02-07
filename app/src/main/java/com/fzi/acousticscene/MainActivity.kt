@@ -1,75 +1,57 @@
 package com.fzi.acousticscene
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
-import android.animation.ObjectAnimator
-import android.view.View
-import android.view.animation.DecelerateInterpolator
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
-import com.fzi.acousticscene.model.RecordingMode
-import com.fzi.acousticscene.model.SceneClass
-import com.fzi.acousticscene.ui.AppState
+import androidx.navigation.NavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupWithNavController
 import com.fzi.acousticscene.service.ClassificationService
-import com.fzi.acousticscene.util.ThemeHelper
 import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.ModernDialogHelper
-import com.fzi.acousticscene.ui.UiState
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.materialswitch.MaterialSwitch
-import androidx.activity.OnBackPressedCallback
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.fzi.acousticscene.util.ThemeHelper
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 /**
- * MainActivity für Acoustic Scene Classification App
- * 
- * Features:
- * - Audio Recording Permission Handling
- * - Model Loading
- * - Kontinuierliche Klassifikation
- * - Echtzeit-Anzeige der Ergebnisse
- * - History und Statistiken
- * 
- * @author FZI
+ * MainActivity - Single Activity host with Bottom Navigation
+ *
+ * Hosts 4 fragments via NavHostFragment:
+ * - User Mode (RecordingFragment with isDevMode=false)
+ * - Dev Mode (RecordingFragment with isDevMode=true)
+ * - History (HistoryFragment)
+ * - Settings (SettingsFragment)
+ *
+ * Manages:
+ * - ClassificationService binding
+ * - Battery optimization
+ * - Edge-to-Edge display
  */
 class MainActivity : AppCompatActivity() {
-    
+
     companion object {
         private const val TAG = "MainActivity"
-        private const val PERMISSION_REQUEST_CODE = 1001
     }
-    
+
     private val viewModel: MainViewModel by viewModels()
-    
-    // Service für Hintergrund-Betrieb
+
+    // Service for background operation
     private var classificationService: ClassificationService? = null
     private var serviceBound = false
-    
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as ClassificationService.LocalBinder
@@ -77,156 +59,70 @@ class MainActivity : AppCompatActivity() {
             serviceBound = true
             android.util.Log.d(TAG, "Service connected")
         }
-        
+
         override fun onServiceDisconnected(name: ComponentName?) {
             classificationService = null
             serviceBound = false
             android.util.Log.d(TAG, "Service disconnected")
         }
     }
-    
-    // UI Components
-    private lateinit var backButton: MaterialButton
-    private lateinit var modeStandardButton: MaterialButton
-    private lateinit var modeFastButton: MaterialButton
-    private lateinit var modeMediumButton: MaterialButton
-    private lateinit var modeLongButton: MaterialButton
-    private lateinit var startStopButton: MaterialButton
-    private lateinit var statusLabel: TextView
-    private lateinit var modelStatusLabel: TextView
-    private lateinit var recordingProgressBar: ProgressBar
-    private lateinit var timerText: TextView
-    private lateinit var confidenceCircleView: com.fzi.acousticscene.ui.ConfidenceCircleView
-    private lateinit var ripplePulseView: com.fzi.acousticscene.ui.RipplePulseView
-    private lateinit var volumeLevelText: TextView
-    private lateinit var currentSceneLabel: TextView
-    private lateinit var predictionsCard: MaterialCardView
-    private lateinit var predictionsContainer: LinearLayout
-    private lateinit var statisticsCard: MaterialCardView
-    private lateinit var totalClassificationsText: TextView
-    private lateinit var avgInferenceTimeText: TextView
 
-    // Recent Predictions
-    private lateinit var recentPredictionsCard: MaterialCardView
-    private lateinit var recentPredictionsContainer: LinearLayout
+    private lateinit var navController: NavController
+    private lateinit var bottomNav: BottomNavigationView
 
-    // Volume Graph Components
-    private lateinit var volumeGraphCard: MaterialCardView
-    private lateinit var switchVolumeGraph: MaterialSwitch
-    private lateinit var volumeLineChartView: com.fzi.acousticscene.ui.VolumeLineChartView
-    private var volumeGraphJob: Job? = null
-    private var isVolumeGraphActive: Boolean = false
-
-    // Model configuration from Intent
-    private var modelPath: String = "user_models/model1.pt"
-    private var modelName: String = "model1.pt"
-    private var numClasses: Int = 8
-    private var isDevMode: Boolean = false
-
-    // Scene Color Map (DCASE 2025 - 8+1 Classes)
-    private val sceneColors = mapOf(
-        SceneClass.TRANSIT_VEHICLES to R.color.transit_vehicles,
-        SceneClass.URBAN_WAITING to R.color.urban_waiting,
-        SceneClass.NATURE to R.color.nature,
-        SceneClass.SOCIAL to R.color.social,
-        SceneClass.WORK to R.color.work,
-        SceneClass.COMMERCIAL to R.color.commercial,
-        SceneClass.LEISURE_SPORT to R.color.leisure_sport,
-        SceneClass.CULTURE_QUIET to R.color.culture_quiet,
-        SceneClass.LIVING_ROOM to R.color.living_room  // 9th class
-    )
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         // Apply saved theme before super.onCreate()
         ThemeHelper.applySavedTheme(this)
 
         super.onCreate(savedInstanceState)
 
-        // Edge-to-Edge aktivieren für moderne Geräte
         enableEdgeToEdge()
 
-        try {
         setContentView(R.layout.activity_main)
 
-        // Window Insets für dynamisches Padding (Status Bar, Navigation Bar)
+        // Window Insets for dynamic padding (don't add bottom padding - bottom nav handles it)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
             insets
         }
-            
-            // Read model configuration from Intent
-            modelPath = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_PATH) ?: "user_models/model1.pt"
-            modelName = intent.getStringExtra(WelcomeActivity.EXTRA_MODEL_NAME) ?: "model1.pt"
-            numClasses = intent.getIntExtra(WelcomeActivity.EXTRA_NUM_CLASSES, 8)
-            isDevMode = intent.getBooleanExtra(WelcomeActivity.EXTRA_IS_DEV_MODE, false)
 
-            // Configure the ViewModel with model settings
-            viewModel.setModelConfig(modelPath, modelName, numClasses, isDevMode)
+        // Setup Navigation
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        navController = navHostFragment.navController
 
-            // Session initialisieren (neues Package startet hier)
-            viewModel.initializeSession()
+        bottomNav = findViewById(R.id.bottom_navigation)
+        bottomNav.setupWithNavController(navController)
 
-            // Service binden
-            bindClassificationService()
+        // Bind service
+        bindClassificationService()
 
-            // Setup modern back press handler
-            setupBackPressHandler()
-
-            initializeViews()
-            setupObservers()
-            checkPermissions()
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Error in onCreate", e)
-            // Zeige Fehler-Dialog statt zu crashen
-            AlertDialog.Builder(this)
-                .setTitle(R.string.error_processing)
-                .setMessage(getString(R.string.error_init_app, e.message))
-                .setPositiveButton(R.string.ok) { _, _ -> finish() }
-                .show()
-        }
+        // Check battery optimization
+        checkBatteryOptimization()
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
-        // Service entbinden
         if (serviceBound) {
             unbindService(serviceConnection)
             serviceBound = false
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        // Resume volume graph collection ONLY if:
-        // 1. Switch is ON (isVolumeGraphActive)
-        // 2. Recording is actually running (viewModel.isClassifying())
-        if (isVolumeGraphActive && viewModel.isClassifying()) {
-            volumeLineChartView.setDrawingEnabled(true)
-            startVolumeGraphCollection()
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // CRITICAL: Stop volume graph collection when app goes to background
-        // This saves battery even if the switch is ON
-        stopVolumeGraphCollection()
-        volumeLineChartView.setDrawingEnabled(false)
-    }
-    
     /**
-     * Bindet den Classification Service
+     * Binds the ClassificationService
      */
     private fun bindClassificationService() {
         val intent = Intent(this, ClassificationService::class.java)
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
-    
+
     /**
-     * Startet den Classification Service (für Hintergrund-Betrieb)
+     * Starts the ClassificationService (for background operation)
+     * Called by RecordingFragment
      */
-    private fun startClassificationService() {
+    fun startClassificationService() {
         val intent = Intent(this, ClassificationService::class.java).apply {
             action = ClassificationService.ACTION_START
         }
@@ -236,622 +132,30 @@ class MainActivity : AppCompatActivity() {
             startService(intent)
         }
     }
-    
+
     /**
-     * Stoppt den Classification Service
+     * Stops the ClassificationService
+     * Called by RecordingFragment
      */
-    private fun stopClassificationService() {
+    fun stopClassificationService() {
         val intent = Intent(this, ClassificationService::class.java).apply {
             action = ClassificationService.ACTION_STOP
         }
         startService(intent)
     }
-    
-    /**
-     * Registers the back press callback using the modern OnBackPressedDispatcher
-     */
-    private fun setupBackPressHandler() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                navigateToWelcome()
-            }
-        })
-    }
 
     /**
-     * Navigate back to WelcomeActivity
-     */
-    private fun navigateToWelcome() {
-        val intent = Intent(this, WelcomeActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-        startActivity(intent)
-        finish()
-    }
-    
-    /**
-     * Initialisiert alle UI-Komponenten
-     */
-    private fun initializeViews() {
-        // Zurück-Button
-        backButton = findViewById(R.id.backButton)
-        backButton.setOnClickListener {
-            navigateToWelcome()
-        }
-
-        modeStandardButton = findViewById(R.id.modeStandardButton)
-        modeFastButton = findViewById(R.id.modeFastButton)
-        modeMediumButton = findViewById(R.id.modeMediumButton)
-        modeLongButton = findViewById(R.id.modeLongButton)
-        startStopButton = findViewById(R.id.startStopButton)
-        statusLabel = findViewById(R.id.statusLabel)
-        modelStatusLabel = findViewById(R.id.modelStatusLabel)
-        
-        // Modus-Auswahl Buttons
-        modeStandardButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.STANDARD)
-            updateModeButtons(RecordingMode.STANDARD)
-            updateVolumeGraphForMode(RecordingMode.STANDARD)
-        }
-
-        modeFastButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.FAST)
-            updateModeButtons(RecordingMode.FAST)
-            updateVolumeGraphForMode(RecordingMode.FAST)
-        }
-
-        modeMediumButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.MEDIUM)
-            updateModeButtons(RecordingMode.MEDIUM)
-            updateVolumeGraphForMode(RecordingMode.MEDIUM)
-        }
-
-        modeLongButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.LONG)
-            updateModeButtons(RecordingMode.LONG)
-            updateVolumeGraphForMode(RecordingMode.LONG)
-        }
-        recordingProgressBar = findViewById(R.id.recordingProgressBar)
-        timerText = findViewById(R.id.timerText)
-        confidenceCircleView = findViewById(R.id.confidenceCircleView)
-        ripplePulseView = findViewById(R.id.ripplePulseView)
-        volumeLevelText = findViewById(R.id.volumeLevelText)
-        currentSceneLabel = findViewById(R.id.currentSceneLabel)
-        predictionsCard = findViewById(R.id.predictionsCard)
-        predictionsContainer = findViewById(R.id.predictionsContainer)
-        statisticsCard = findViewById(R.id.statisticsCard)
-        totalClassificationsText = findViewById(R.id.totalClassificationsText)
-        avgInferenceTimeText = findViewById(R.id.avgInferenceTimeText)
-        recentPredictionsCard = findViewById(R.id.recentPredictionsCard)
-        recentPredictionsContainer = findViewById(R.id.recentPredictionsContainer)
-
-        // Volume Graph Components
-        volumeGraphCard = findViewById(R.id.volumeGraphCard)
-        switchVolumeGraph = findViewById(R.id.switchVolumeGraph)
-        volumeLineChartView = findViewById(R.id.volumeLineChartView)
-
-        // Initialize volume graph with current recording mode duration
-        volumeLineChartView.setMaxDuration(viewModel.getRecordingMode().durationSeconds.toFloat())
-
-        // Switch listener for enabling/disabling volume graph (Time Analysis)
-        // STRICT LOGIC: Analysis must be opened BEFORE recording starts
-        switchVolumeGraph.setOnCheckedChangeListener { buttonView, isChecked ->
-            // Check if recording is currently active
-            val isRecordingActive = viewModel.isClassifying()
-
-            if (isRecordingActive) {
-                if (isChecked) {
-                    // Scenario 2 (Late Open): User tries to enable during recording
-                    // Revert switch and show error
-                    buttonView.isChecked = false
-                    Toast.makeText(
-                        this,
-                        getString(R.string.live_analysis_late_open),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@setOnCheckedChangeListener
-                } else {
-                    // Scenario 3 (Early Close): User tries to disable during recording
-                    // Revert switch and show warning
-                    buttonView.isChecked = true
-                    Toast.makeText(
-                        this,
-                        getString(R.string.live_analysis_close_warning),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@setOnCheckedChangeListener
-                }
-            }
-
-            // Recording is NOT active - allow normal toggle
-            isVolumeGraphActive = isChecked
-            if (isChecked) {
-                // Prepare view - but don't start collecting data yet
-                volumeLineChartView.visibility = View.VISIBLE
-                volumeLineChartView.setDrawingEnabled(true)
-                volumeLineChartView.clearData()
-                // Data collection starts when recording begins
-            } else {
-                // Stop everything and hide
-                stopVolumeGraphCollection()
-                volumeLineChartView.setDrawingEnabled(false)
-                volumeLineChartView.clearData()
-                volumeLineChartView.visibility = View.GONE
-            }
-        }
-
-        startStopButton.setOnClickListener {
-            if (viewModel.isClassifying()) {
-                // STOP recording
-                viewModel.stopClassification()
-                stopClassificationService()
-                // Stop volume graph collection and clear data
-                stopVolumeGraphCollection()
-                volumeLineChartView.clearData()
-            } else {
-                if (hasAudioPermission()) {
-                    // START recording
-                    // IMPORTANT: Capture analysis view state BEFORE recording starts
-                    // This gates whether time analysis calculations will run
-                    viewModel.setAnalysisViewStateAtRecordingStart(isVolumeGraphActive)
-
-                    startClassificationService()
-                    viewModel.startClassification()
-
-                    // Start volume graph collection ONLY if switch was ON before recording started
-                    // (Scenario 1: Happy Path - view opened before recording)
-                    if (isVolumeGraphActive) {
-                        volumeLineChartView.clearData()
-                        startVolumeGraphCollection()
-                    }
-                } else {
-                    requestAudioPermission()
-                }
-            }
-        }
-    }
-    
-    /**
-     * Setzt die Observer für ViewModel State
-     */
-    private fun setupObservers() {
-        lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                updateUI(state)
-            }
-        }
-    }
-    
-    /**
-     * Aktualisiert die UI basierend auf dem aktuellen State
-     */
-    private fun updateUI(state: UiState) {
-        updateAppState(state.appState)
-        updateModelStatus(state.isModelLoaded)
-        updateCurrentResult(state.currentResult)
-        updatePredictions(state.currentResult)
-        updateStatistics(state.totalClassifications, state.averageInferenceTime)
-        updateRecentPredictions(state.history)
-        updateModeButtons(state.recordingMode)
-        updateVolumeDisplay(state.currentVolume, state.appState)
-
-        if (state.errorMessage != null) {
-            showError(state.errorMessage)
-        }
-    }
-
-    /**
-     * Aktualisiert die Lautstärke-Anzeige und Ripple-Animation
-     */
-    private fun updateVolumeDisplay(volume: Float, appState: AppState) {
-        // Ripple-Animation nur während der Aufnahme zeigen
-        when (appState) {
-            is AppState.Recording -> {
-                ripplePulseView.setVolume(volume)
-                volumeLevelText.visibility = View.VISIBLE
-                val volumePercent = (volume * 100).toInt()
-                volumeLevelText.text = "${getString(R.string.volume)}: $volumePercent"
-            }
-            else -> {
-                ripplePulseView.clear()
-                volumeLevelText.visibility = View.GONE
-            }
-        }
-    }
-    
-    /**
-     * Aktualisiert die Modus-Auswahl Buttons
-     */
-    private fun updateModeButtons(mode: RecordingMode) {
-        // Reset alle Buttons zu inaktivem Zustand
-        val activeColor = ContextCompat.getColor(this, R.color.accent_green)
-        val inactiveColor = ContextCompat.getColor(this, R.color.surface_variant)
-        val activeTextColor = ContextCompat.getColor(this, R.color.on_primary)
-        val inactiveTextColor = ContextCompat.getColor(this, R.color.text_secondary)
-        
-        modeStandardButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeStandardButton.setTextColor(inactiveTextColor)
-        modeFastButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeFastButton.setTextColor(inactiveTextColor)
-        modeMediumButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeMediumButton.setTextColor(inactiveTextColor)
-        modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeLongButton.setTextColor(inactiveTextColor)
-        
-        // Setze aktiven Button
-        when (mode) {
-            RecordingMode.STANDARD -> {
-                modeStandardButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeStandardButton.setTextColor(activeTextColor)
-            }
-            RecordingMode.FAST -> {
-                modeFastButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeFastButton.setTextColor(activeTextColor)
-            }
-            RecordingMode.MEDIUM -> {
-                modeMediumButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeMediumButton.setTextColor(activeTextColor)
-            }
-            RecordingMode.LONG -> {
-                modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeLongButton.setTextColor(activeTextColor)
-            }
-        }
-    }
-    
-    /**
-     * Aktualisiert den App-Status
-     */
-    private fun updateAppState(appState: AppState) {
-        when (appState) {
-            is AppState.Idle -> {
-                statusLabel.text = getString(R.string.status_idle)
-                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
-                startStopButton.isEnabled = false
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
-            }
-            is AppState.Loading -> {
-                statusLabel.text = getString(R.string.status_idle)
-                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
-                startStopButton.isEnabled = false
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
-            }
-            is AppState.Ready -> {
-                statusLabel.text = getString(R.string.status_idle)
-                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.start_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
-            }
-            is AppState.Recording -> {
-                statusLabel.text = getString(R.string.status_recording)
-                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_recording))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.stop_recording)
-                
-                val seconds = appState.secondsRemaining
-                timerText.text = getString(R.string.timer_countdown, seconds)
-                timerText.visibility = View.VISIBLE
-                
-                // Progress basierend auf recordingProgress aus UiState (0.0 - 1.0)
-                val recordingProgress = viewModel.uiState.value.recordingProgress
-                val progress = (recordingProgress * 100).toInt()
-                setProgressAnimated(recordingProgressBar, progress)
-                recordingProgressBar.visibility = View.VISIBLE
-            }
-            is AppState.Processing -> {
-                statusLabel.text = getString(R.string.status_processing)
-                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_processing))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.stop_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
-            }
-            is AppState.Paused -> {
-                val minutes = appState.minutesRemaining
-                statusLabel.text = getString(R.string.pause_minutes, minutes)
-                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.status_idle))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.stop_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.text = "$minutes ${getString(R.string.min)}"
-                timerText.visibility = View.VISIBLE
-            }
-            is AppState.Error -> {
-                statusLabel.text = appState.message
-                statusLabel.setTextColor(ContextCompat.getColor(this, R.color.error))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.start_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
-            }
-        }
-    }
-    
-    /**
-     * Aktualisiert den Model-Status
-     */
-    private fun updateModelStatus(isLoaded: Boolean) {
-        if (isLoaded) {
-            modelStatusLabel.text = "✓ ${getString(R.string.model_loaded)}"
-            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
-        } else {
-            modelStatusLabel.text = "⚠ ${getString(R.string.loading_model)}"
-            modelStatusLabel.setTextColor(ContextCompat.getColor(this, R.color.error))
-        }
-    }
-    
-    /**
-     * Aktualisiert das aktuelle Klassifikations-Ergebnis
-     */
-    private fun updateCurrentResult(result: com.fzi.acousticscene.model.ClassificationResult?) {
-        if (result != null) {
-            // Circular Progress Indicator aktualisieren
-            confidenceCircleView.setConfidence(result.confidence, animate = true)
-
-            // Scene Label mit Emoji
-            currentSceneLabel.text = "${result.sceneClass.emoji} ${result.sceneClass.label}"
-            currentSceneLabel.visibility = View.VISIBLE
-            val colorRes = sceneColors[result.sceneClass] ?: R.color.accent_green
-            currentSceneLabel.setTextColor(ContextCompat.getColor(this, colorRes))
-        } else {
-            currentSceneLabel.visibility = View.GONE
-            confidenceCircleView.setConfidence(0f, animate = false)
-        }
-    }
-    
-    /**
-     * Aktualisiert die Top-Predictions
-     */
-    private fun updatePredictions(result: com.fzi.acousticscene.model.ClassificationResult?) {
-        predictionsContainer.removeAllViews()
-        
-        if (result != null) {
-            predictionsCard.visibility = View.VISIBLE
-            val topPredictions = result.getTopPredictions(3)
-            
-            topPredictions.forEachIndexed { index, (scene, confidence) ->
-                val predictionView = createPredictionView(scene, confidence, index + 1)
-                predictionsContainer.addView(predictionView)
-            }
-        } else {
-            predictionsCard.visibility = View.GONE
-        }
-    }
-    
-    /**
-     * Erstellt eine View für eine Prediction mit Progress Bar
-     */
-    private fun createPredictionView(scene: SceneClass, confidence: Float, rank: Int): View {
-        val card = com.google.android.material.card.MaterialCardView(this)
-        card.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        card.setPadding(16, 12, 16, 12)
-        card.cardElevation = 0f
-        card.radius = 12f
-        card.strokeWidth = 0
-        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface_variant))
-        
-        val container = LinearLayout(this)
-        container.orientation = LinearLayout.VERTICAL
-        container.setPadding(0, 0, 0, 0)
-        
-        // Top Row: Rank, Emoji + Name, Confidence
-        val topRow = LinearLayout(this)
-        topRow.orientation = LinearLayout.HORIZONTAL
-        topRow.gravity = android.view.Gravity.CENTER_VERTICAL
-        
-        val rankText = TextView(this)
-        rankText.text = "$rank."
-        rankText.textSize = 16f
-        rankText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-        rankText.setPadding(0, 0, 12, 0)
-        
-        val sceneText = TextView(this)
-        sceneText.text = "${scene.emoji} ${scene.label}"
-        sceneText.textSize = 14f
-        val colorRes = sceneColors[scene] ?: R.color.accent_green
-        sceneText.setTextColor(ContextCompat.getColor(this, colorRes))
-        sceneText.layoutParams = LinearLayout.LayoutParams(
-            0,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            1f
-        )
-        
-        val confidenceText = TextView(this)
-        confidenceText.text = "${(confidence * 100).toInt()}%"
-        confidenceText.textSize = 16f
-        confidenceText.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
-        confidenceText.setTypeface(null, android.graphics.Typeface.BOLD)
-        confidenceText.setPadding(12, 0, 0, 0)
-        
-        topRow.addView(rankText)
-        topRow.addView(sceneText)
-        topRow.addView(confidenceText)
-        
-        // Progress Bar
-        val progressBar = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal)
-        progressBar.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            8.dpToPx()
-        )
-        progressBar.max = 100
-        progressBar.progress = (confidence * 100).toInt()
-        progressBar.progressDrawable = ContextCompat.getDrawable(this, android.R.drawable.progress_horizontal)
-        progressBar.progressTintList = android.content.res.ColorStateList.valueOf(
-            ContextCompat.getColor(this, colorRes)
-        )
-        progressBar.setPadding(0, 8, 0, 0)
-        
-        container.addView(topRow)
-        container.addView(progressBar)
-        card.addView(container)
-        
-        return card
-    }
-    
-    private fun Int.dpToPx(): Int {
-        return (this * resources.displayMetrics.density).toInt()
-    }
-
-    /**
-     * Animates progress bar smoothly to a target value
-     */
-    private fun setProgressAnimated(progressBar: ProgressBar, progressTo: Int) {
-        ObjectAnimator.ofInt(progressBar, "progress", progressBar.progress, progressTo)
-            .setDuration(300) // 300ms smooth transition
-            .apply {
-                interpolator = DecelerateInterpolator()
-                start()
-            }
-    }
-
-    /**
-     * Aktualisiert die Statistiken
-     */
-    private fun updateStatistics(total: Int, avgTime: Long) {
-        if (total > 0) {
-            statisticsCard.visibility = View.VISIBLE
-            totalClassificationsText.text = total.toString()
-            // Format: Sekunden statt Millisekunden
-            val seconds = avgTime / 1000.0
-            avgInferenceTimeText.text = String.format("%.2f s", seconds)
-        } else {
-            statisticsCard.visibility = View.GONE
-        }
-    }
-    
-    /**
-     * Shows the last 5 predictions inline
-     */
-    private fun updateRecentPredictions(history: List<com.fzi.acousticscene.model.ClassificationResult>) {
-        recentPredictionsContainer.removeAllViews()
-
-        if (history.isNotEmpty()) {
-            recentPredictionsCard.visibility = View.VISIBLE
-            val last5 = history.reversed().take(5)
-
-            last5.forEach { result ->
-                val row = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                    setPadding(0, 8, 0, 8)
-                }
-
-                val sceneText = TextView(this).apply {
-                    text = "${result.sceneClass.emoji} ${result.sceneClass.label}"
-                    textSize = 13f
-                    val colorRes = sceneColors[result.sceneClass] ?: R.color.primary
-                    setTextColor(ContextCompat.getColor(context, colorRes))
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                    maxLines = 1
-                }
-
-                val confText = TextView(this).apply {
-                    text = "${(result.confidence * 100).toInt()}%"
-                    textSize = 13f
-                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setPadding(16, 0, 0, 0)
-                }
-
-                row.addView(sceneText)
-                row.addView(confText)
-                recentPredictionsContainer.addView(row)
-            }
-        } else {
-            recentPredictionsCard.visibility = View.GONE
-        }
-    }
-
-    /**
-     * Zeigt eine Fehlermeldung an
-     */
-    private fun showError(message: String) {
-        // Fehlermeldung wird bereits im Status-Label angezeigt
-        // Optional: Snackbar oder Toast für zusätzliches Feedback
-    }
-
-    /**
-     * Starts collecting volume data for the graph
-     * Collects at ~50ms intervals (20 FPS) for smooth visualization
-     */
-    private fun startVolumeGraphCollection() {
-        volumeGraphJob?.cancel()
-        volumeGraphJob = lifecycleScope.launch {
-            while (isVolumeGraphActive) {
-                val currentVolume = viewModel.uiState.value.currentVolume
-                volumeLineChartView.addDataPoint(currentVolume)
-                delay(com.fzi.acousticscene.ui.VolumeLineChartView.DATA_INTERVAL_MS)
-            }
-        }
-    }
-
-    /**
-     * Stops collecting volume data for the graph
-     */
-    private fun stopVolumeGraphCollection() {
-        volumeGraphJob?.cancel()
-        volumeGraphJob = null
-    }
-
-    /**
-     * Updates the volume graph X-axis when recording mode changes
-     */
-    private fun updateVolumeGraphForMode(mode: RecordingMode) {
-        volumeLineChartView.setMaxDuration(mode.durationSeconds.toFloat())
-        volumeLineChartView.clearData()
-    }
-    
-    /**
-     * Prüft, ob Audio-Permission vorhanden ist
-     */
-    private fun hasAudioPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    /**
-     * Prüft Permissions beim Start
-     */
-    private fun checkPermissions() {
-        if (!hasAudioPermission()) {
-            // Permission wird beim Klick auf Start angefordert
-        }
-        // Prüfe Batterie-Optimierung
-        checkBatteryOptimization()
-    }
-
-    /**
-     * Prüft, ob die App von der Batterie-Optimierung ausgenommen ist.
-     * KRITISCH für lückenlose Hintergrund-Aufnahmen!
-     *
-     * Ohne diese Ausnahme wird Android die App im Doze-Mode einschränken,
-     * was zu Datenlücken führt.
+     * Checks battery optimization status
      */
     private fun checkBatteryOptimization() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-            val packageName = packageName
-
             if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                // App ist NICHT von Batterie-Optimierung ausgenommen
                 showBatteryOptimizationDialog()
-            } else {
-                android.util.Log.d(TAG, "Battery optimization already disabled - good!")
             }
         }
     }
 
-    /**
-     * Zeigt einen Dialog, der den Benutzer bittet, die Batterie-Optimierung zu deaktivieren.
-     */
     private fun showBatteryOptimizationDialog() {
         ModernDialogHelper.showConfirmDialog(
             context = this,
@@ -861,18 +165,11 @@ class MainActivity : AppCompatActivity() {
             cancelText = getString(R.string.later),
             onConfirm = { requestBatteryOptimizationExemption() },
             onCancel = {
-                Toast.makeText(
-                    this,
-                    getString(R.string.battery_warning),
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this, getString(R.string.battery_warning), Toast.LENGTH_LONG).show()
             }
         )
     }
 
-    /**
-     * Öffnet den System-Dialog zum Deaktivieren der Batterie-Optimierung.
-     */
     @SuppressLint("BatteryLife")
     private fun requestBatteryOptimizationExemption() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -882,8 +179,6 @@ class MainActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "Could not open battery optimization settings", e)
-                // Fallback: Öffne die allgemeinen Batterie-Einstellungen
                 try {
                     val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                     startActivity(intent)
@@ -893,82 +188,12 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                 } catch (e2: Exception) {
-                    android.util.Log.e(TAG, "Could not open battery settings", e2)
                     Toast.makeText(
                         this,
                         getString(R.string.battery_manual_disable),
                         Toast.LENGTH_LONG
                     ).show()
                 }
-            }
-        }
-    }
-    
-    /**
-     * Requests audio permission
-     */
-    private fun requestAudioPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            )
-        ) {
-            // Show explanation using modern dialog
-            ModernDialogHelper.showConfirmDialog(
-                context = this,
-                title = getString(R.string.permission_audio_required),
-                message = getString(R.string.permission_audio_explanation),
-                onConfirm = {
-                    ActivityCompat.requestPermissions(
-                        this,
-                        arrayOf(Manifest.permission.RECORD_AUDIO),
-                        PERMISSION_REQUEST_CODE
-                    )
-                }
-            )
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
-                PERMISSION_REQUEST_CODE
-            )
-        }
-    }
-
-    /**
-     * Callback for Permission-Request
-     */
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, start classification
-                // Capture analysis view state BEFORE recording starts
-                viewModel.setAnalysisViewStateAtRecordingStart(isVolumeGraphActive)
-
-                startClassificationService()
-                viewModel.startClassification()
-
-                // Start volume graph collection if switch was ON
-                if (isVolumeGraphActive) {
-                    volumeLineChartView.clearData()
-                    startVolumeGraphCollection()
-                }
-            } else {
-                // Permission denied - show modern dialog
-                ModernDialogHelper.showConfirmDialog(
-                    context = this,
-                    title = getString(R.string.permission_denied),
-                    message = getString(R.string.permission_audio_explanation),
-                    confirmText = getString(R.string.ok),
-                    cancelText = "",
-                    onConfirm = {}
-                )
             }
         }
     }
