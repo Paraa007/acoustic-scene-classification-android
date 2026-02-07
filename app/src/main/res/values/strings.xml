@@ -198,4 +198,12 @@
 
     <!-- Recent Predictions -->
     <string name="recent_predictions">Last Predictions</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme_description">Switch between light and dark theme</string>
+    <string name="settings_about">About</string>
+    <string name="settings_app_name_label">App</string>
+    <string name="settings_version_label">Version</string>
+    <string name="settings_classes_label">Scene Classes</string>
 </resources>
