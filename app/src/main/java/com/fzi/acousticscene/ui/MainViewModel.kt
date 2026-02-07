@@ -62,8 +62,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val numClasses: Int get() = _numClasses
     val isDevMode: Boolean get() = _isDevMode
 
-    // Repository for all predictions
-    private val predictionRepository = PredictionRepository(application)
+    // Repository for all predictions (singleton - shared with HistoryFragment)
+    private val predictionRepository = PredictionRepository.getInstance(application)
 
     // Session start time (set on app start)
     private var sessionStartTime: Long = System.currentTimeMillis()
