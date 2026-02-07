@@ -15,9 +15,11 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.ViewModelProvider
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
+import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -64,7 +66,7 @@ class HistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        repository = PredictionRepository(requireContext())
+        repository = PredictionRepository.getInstance(requireContext())
 
         // Normal toolbar views
         recyclerView = view.findViewById(R.id.historyRecyclerView)
@@ -153,6 +155,10 @@ class HistoryFragment : Fragment() {
     }
 
     private fun deleteSelected() {
+        if (isAnyRecordingActive()) {
+            Toast.makeText(requireContext(), R.string.cannot_delete_while_recording, Toast.LENGTH_LONG).show()
+            return
+        }
         val selectedIds = adapter.getSelectedSessionIds()
         if (selectedIds.isEmpty()) return
 
@@ -258,6 +264,10 @@ class HistoryFragment : Fragment() {
     }
 
     private fun showDeletePackageDialog(packageRecords: List<PredictionRecord>) {
+        if (isAnyRecordingActive()) {
+            Toast.makeText(requireContext(), R.string.cannot_delete_while_recording, Toast.LENGTH_LONG).show()
+            return
+        }
         ModernDialogHelper.showDeleteDialog(
             context = requireContext(),
             title = getString(R.string.delete_package),
@@ -335,6 +345,16 @@ class HistoryFragment : Fragment() {
         } catch (e: Exception) {
             Toast.makeText(ctx, getString(R.string.share_failed, e.message), Toast.LENGTH_LONG).show()
         }
+    }
+
+    /**
+     * Checks if any recording is active in either User Mode or Dev Mode.
+     */
+    private fun isAnyRecordingActive(): Boolean {
+        val activity = activity ?: return false
+        val userVm = ViewModelProvider(activity)["user_mode_vm", MainViewModel::class.java]
+        val devVm = ViewModelProvider(activity)["dev_mode_vm", MainViewModel::class.java]
+        return userVm.isClassifying() || devVm.isClassifying()
     }
 
     /**

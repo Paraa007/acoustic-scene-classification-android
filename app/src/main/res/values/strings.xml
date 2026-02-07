@@ -216,4 +216,5 @@
     <string name="model_display_name_hint">Display name</string>
     <string name="model_name_saved">Model name saved</string>
     <string name="recording_active_other_mode">A recording is already active in another mode. Please stop it first.</string>
+    <string name="cannot_delete_while_recording">Cannot delete sessions while a recording is active. Please stop the recording first.</string>
 </resources>
