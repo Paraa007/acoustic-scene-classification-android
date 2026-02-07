@@ -82,7 +82,7 @@ class HistoryActivity : AppCompatActivity() {
             insets
         }
 
-        repository = PredictionRepository(this)
+        repository = PredictionRepository.getInstance(this)
 
         // Normal toolbar views
         recyclerView = findViewById(R.id.historyRecyclerView)
