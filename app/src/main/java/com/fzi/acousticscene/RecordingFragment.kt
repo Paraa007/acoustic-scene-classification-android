@@ -19,7 +19,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.ModelConfig
@@ -47,7 +47,8 @@ class RecordingFragment : Fragment() {
         private const val ARG_IS_DEV_MODE = "is_dev_mode"
     }
 
-    private val viewModel: MainViewModel by activityViewModels()
+    // Separate ViewModel per mode - User Mode and Dev Mode don't share state
+    private lateinit var viewModel: MainViewModel
 
     // UI Components
     private lateinit var modeStandardButton: MaterialButton
@@ -96,6 +97,11 @@ class RecordingFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         isDevMode = arguments?.getBoolean(ARG_IS_DEV_MODE, false) ?: false
+
+        // Each mode gets its own ViewModel instance (keyed in Activity scope)
+        // so User Mode and Dev Mode are completely independent
+        val key = if (isDevMode) "dev_mode_vm" else "user_mode_vm"
+        viewModel = ViewModelProvider(requireActivity())[key, MainViewModel::class.java]
     }
 
     override fun onCreateView(
