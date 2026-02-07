@@ -167,11 +167,9 @@ class RecordingFragment : Fragment() {
         val models = listDevModels()
 
         if (models.isEmpty()) {
-            // No dev models found, use default
+            // No dev models found, navigate back to User Mode
             Toast.makeText(ctx, R.string.no_models_found, Toast.LENGTH_SHORT).show()
-            val defaultConfig = ModelConfig.createDevMode(ModelConfig.DEFAULT_USER_MODEL)
-            viewModel.setModelConfig(defaultConfig.modelPath, defaultConfig.modelName, defaultConfig.numClasses, true)
-            viewModel.initializeSession()
+            navigateToUserMode()
             return
         }
 
@@ -180,6 +178,9 @@ class RecordingFragment : Fragment() {
         dialog.setContentView(R.layout.dialog_model_selection)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        // User MUST choose a model - prevent dismissing by tapping outside or pressing back
+        dialog.setCancelable(false)
+        dialog.setCanceledOnTouchOutside(false)
 
         val modelListContainer = dialog.findViewById<LinearLayout>(R.id.modelListContainer)
         val emptyStateText = dialog.findViewById<TextView>(R.id.emptyStateText)
@@ -187,6 +188,9 @@ class RecordingFragment : Fragment() {
 
         emptyStateText.visibility = View.GONE
         modelListContainer.visibility = View.VISIBLE
+
+        // Change button text to "Back to User Mode"
+        btnCancel.text = getString(R.string.back_to_user_mode)
 
         models.forEach { modelFileName ->
             val modelItem = createModelItemView(modelFileName) {
@@ -201,13 +205,15 @@ class RecordingFragment : Fragment() {
 
         btnCancel.setOnClickListener {
             dialog.dismiss()
-            // Use default dev model
-            val defaultConfig = ModelConfig.createDevMode(ModelConfig.DEFAULT_USER_MODEL)
-            viewModel.setModelConfig(defaultConfig.modelPath, defaultConfig.modelName, defaultConfig.numClasses, true)
-            viewModel.initializeSession()
+            navigateToUserMode()
         }
 
         dialog.show()
+    }
+
+    private fun navigateToUserMode() {
+        val bottomNav = activity?.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        bottomNav?.selectedItemId = R.id.nav_user_mode
     }
 
     private fun createModelItemView(modelFileName: String, onClick: () -> Unit): View {
