@@ -62,8 +62,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val numClasses: Int get() = _numClasses
     val isDevMode: Boolean get() = _isDevMode
 
-    // Repository for all predictions
-    private val predictionRepository = PredictionRepository(application)
+    // Repository for all predictions (singleton - shared with HistoryFragment)
+    private val predictionRepository = PredictionRepository.getInstance(application)
 
     // Session start time (set on app start)
     private var sessionStartTime: Long = System.currentTimeMillis()
@@ -72,6 +72,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Sets the model configuration from Intent extras
      */
     fun setModelConfig(modelPath: String, modelName: String, numClasses: Int, isDevMode: Boolean) {
+        val pathChanged = _modelPath != modelPath
         _modelPath = modelPath
         _modelName = modelName
         _numClasses = numClasses
@@ -81,6 +82,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         modelInference.setModelPath(modelPath)
 
         Log.d(TAG, "Model config set: $modelName ($numClasses classes, devMode=$isDevMode)")
+
+        // (Re)load model if path changed or model not yet loaded
+        if (pathChanged || !_uiState.value.isModelLoaded) {
+            loadModel()
+        }
     }
 
     /**
@@ -150,10 +156,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        loadModel()
         updateStatistics()
         // Starte Volume-Beobachtung
         startVolumeObservation()
+        // Note: loadModel() is called from setModelConfig() when fragments configure the model
     }
 
     /**
@@ -463,6 +469,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
+    /**
+     * Resets the session UI state (history, results, statistics) while keeping the model loaded.
+     * Called when the user navigates away from a recording tab without an active recording.
+     */
+    fun resetSession() {
+        _uiState.update {
+            it.copy(
+                appState = if (it.isModelLoaded) AppState.Ready else AppState.Idle,
+                currentResult = null,
+                history = emptyList(),
+                totalClassifications = 0,
+                averageInferenceTime = 0L,
+                errorMessage = null,
+                recordingProgress = 0f,
+                currentVolume = 0f
+            )
+        }
+        Log.d(TAG, "Session reset")
+    }
+
     /**
      * Löscht die History
      */
