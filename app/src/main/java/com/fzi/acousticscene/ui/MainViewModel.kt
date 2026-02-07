@@ -72,6 +72,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Sets the model configuration from Intent extras
      */
     fun setModelConfig(modelPath: String, modelName: String, numClasses: Int, isDevMode: Boolean) {
+        val pathChanged = _modelPath != modelPath
         _modelPath = modelPath
         _modelName = modelName
         _numClasses = numClasses
@@ -81,6 +82,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         modelInference.setModelPath(modelPath)
 
         Log.d(TAG, "Model config set: $modelName ($numClasses classes, devMode=$isDevMode)")
+
+        // (Re)load model if path changed or model not yet loaded
+        if (pathChanged || !_uiState.value.isModelLoaded) {
+            loadModel()
+        }
     }
 
     /**
@@ -150,10 +156,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        loadModel()
         updateStatistics()
         // Starte Volume-Beobachtung
         startVolumeObservation()
+        // Note: loadModel() is called from setModelConfig() when fragments configure the model
     }
 
     /**
