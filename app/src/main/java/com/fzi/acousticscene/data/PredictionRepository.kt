@@ -20,7 +20,7 @@ import java.util.*
  * in-memory cache. Creating separate instances causes data loss when one
  * instance saves stale data that overwrites another instance's deletions.
  */
-class PredictionRepository private constructor(context: Context) {
+class PredictionRepository private constructor(private val context: Context) {
     companion object {
         private const val TAG = "PredictionRepository"
         private const val PREFS_NAME = "predictions_prefs"
