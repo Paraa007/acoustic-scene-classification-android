@@ -28,6 +28,7 @@ import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.ui.AppState
 import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.ModernDialogHelper
+import com.fzi.acousticscene.util.ModelDisplayNameHelper
 import com.fzi.acousticscene.ui.UiState
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -146,19 +147,19 @@ class RecordingFragment : Fragment() {
 
     private fun configureModel() {
         if (isDevMode) {
-            // If already configured for dev mode, don't show dialog again
-            if (viewModel.isDevMode && !viewModel.isClassifying()) {
-                viewModel.initializeSession()
-            } else {
-                showModelSelectionDialog()
+            // If already recording in dev mode, just resume showing the session (no dialog)
+            if (viewModel.isClassifying()) {
+                return
             }
+            // Must select a model before using Dev Mode
+            showModelSelectionDialog()
         } else {
             // User mode - auto-load default model
-            if (!viewModel.isDevMode || !viewModel.isClassifying()) {
+            if (!viewModel.isClassifying()) {
                 val userConfig = ModelConfig.createUserMode()
                 viewModel.setModelConfig(userConfig.modelPath, userConfig.modelName, userConfig.numClasses, false)
+                viewModel.initializeSession()
             }
-            viewModel.initializeSession()
         }
     }
 
@@ -216,9 +217,16 @@ class RecordingFragment : Fragment() {
         bottomNav?.selectedItemId = R.id.nav_user_mode
     }
 
+    private fun isOtherModeRecording(): Boolean {
+        val otherKey = if (isDevMode) "user_mode_vm" else "dev_mode_vm"
+        val otherVm = ViewModelProvider(requireActivity())[otherKey, MainViewModel::class.java]
+        return otherVm.isClassifying()
+    }
+
     private fun createModelItemView(modelFileName: String, onClick: () -> Unit): View {
         val ctx = requireContext()
         val numClasses = ModelConfig.getClassCountForModel(modelFileName)
+        val displayName = ModelDisplayNameHelper.getDisplayName(ctx, modelFileName)
 
         val card = MaterialCardView(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -256,7 +264,7 @@ class RecordingFragment : Fragment() {
         }
 
         val nameText = TextView(ctx).apply {
-            text = modelFileName
+            text = displayName
             textSize = 16f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
         }
@@ -384,6 +392,11 @@ class RecordingFragment : Fragment() {
                 stopVolumeGraphCollection()
                 volumeLineChartView.clearData()
             } else {
+                // Block if the other mode already has an active recording
+                if (isOtherModeRecording()) {
+                    Toast.makeText(requireContext(), R.string.recording_active_other_mode, Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
                 if (hasAudioPermission()) {
                     viewModel.setAnalysisViewStateAtRecordingStart(isVolumeGraphActive)
                     (activity as? MainActivity)?.startClassificationService()
@@ -553,7 +566,12 @@ class RecordingFragment : Fragment() {
     private fun updateModelStatus(isLoaded: Boolean) {
         val ctx = context ?: return
         if (isLoaded) {
-            modelStatusLabel.text = "\u2713 ${getString(R.string.model_loaded)}"
+            if (isDevMode) {
+                val displayName = ModelDisplayNameHelper.getDisplayName(ctx, viewModel.modelName)
+                modelStatusLabel.text = "\u2713 $displayName"
+            } else {
+                modelStatusLabel.text = "\u2713 ${getString(R.string.model_loaded)}"
+            }
             modelStatusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.accent_green))
         } else {
             modelStatusLabel.text = "\u26A0 ${getString(R.string.loading_model)}"
@@ -762,6 +780,10 @@ class RecordingFragment : Fragment() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (isOtherModeRecording()) {
+                    Toast.makeText(requireContext(), R.string.recording_active_other_mode, Toast.LENGTH_LONG).show()
+                    return
+                }
                 viewModel.setAnalysisViewStateAtRecordingStart(isVolumeGraphActive)
                 (activity as? MainActivity)?.startClassificationService()
                 viewModel.startClassification()
