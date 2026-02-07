@@ -138,6 +138,10 @@ class RecordingFragment : Fragment() {
         if (::volumeLineChartView.isInitialized) {
             volumeLineChartView.setDrawingEnabled(false)
         }
+        // Reset session state when navigating away without an active recording
+        if (!viewModel.isClassifying()) {
+            viewModel.resetSession()
+        }
     }
 
     private fun configureModel() {
