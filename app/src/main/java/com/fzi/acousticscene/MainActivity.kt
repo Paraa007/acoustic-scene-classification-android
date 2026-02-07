@@ -13,7 +13,6 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -21,7 +20,6 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.fzi.acousticscene.service.ClassificationService
-import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -45,8 +43,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
-
-    private val viewModel: MainViewModel by viewModels()
 
     // Service for background operation
     private var classificationService: ClassificationService? = null
