@@ -117,6 +117,7 @@
     <string name="no_models_found">No models found in dev_models/</string>
     <string name="model_classes">%1$d Classes</string>
     <string name="model_info">Model: %1$s (%2$d Classes)</string>
+    <string name="back_to_user_mode">Back to User Mode</string>
     <string name="session_details">Session Details</string>
     <string name="model_label">Model</string>
     <string name="mode_label">Mode</string>
@@ -198,4 +199,22 @@
 
     <!-- Recent Predictions -->
     <string name="recent_predictions">Last Predictions</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme_description">Switch between light and dark theme</string>
+    <string name="settings_about">About</string>
+    <string name="settings_app_name_label">App</string>
+    <string name="settings_version_label">Version</string>
+    <string name="settings_classes_label">Scene Classes</string>
+
+    <!-- Model Management -->
+    <string name="settings_models">Models</string>
+    <string name="settings_user_model">User Model</string>
+    <string name="settings_dev_models">Dev Models</string>
+    <string name="rename_model">Rename Model</string>
+    <string name="model_display_name_hint">Display name</string>
+    <string name="model_name_saved">Model name saved</string>
+    <string name="recording_active_other_mode">A recording is already active in another mode. Please stop it first.</string>
+    <string name="cannot_delete_while_recording">Cannot delete sessions while a recording is active. Please stop the recording first.</string>
 </resources>

@@ -15,14 +15,27 @@ import java.util.*
 /**
  * Repository für alle Vorhersagen
  * Speichert persistent in SharedPreferences und exportiert als CSV
+ *
+ * SINGLETON: Use getInstance(context) to ensure all components share the same
+ * in-memory cache. Creating separate instances causes data loss when one
+ * instance saves stale data that overwrites another instance's deletions.
  */
-class PredictionRepository(private val context: Context) {
+class PredictionRepository private constructor(private val context: Context) {
     companion object {
         private const val TAG = "PredictionRepository"
         private const val PREFS_NAME = "predictions_prefs"
         private const val KEY_PREDICTIONS = "all_predictions"
         private const val KEY_SESSION_NAMES = "session_names"
         private const val MAX_PREDICTIONS = 10000  // Sicherheitslimit
+
+        @Volatile
+        private var instance: PredictionRepository? = null
+
+        fun getInstance(context: Context): PredictionRepository {
+            return instance ?: synchronized(this) {
+                instance ?: PredictionRepository(context.applicationContext).also { instance = it }
+            }
+        }
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
