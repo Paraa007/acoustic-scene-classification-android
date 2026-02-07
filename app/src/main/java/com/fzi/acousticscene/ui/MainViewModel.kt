@@ -470,6 +470,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     /**
+     * Resets the session UI state (history, results, statistics) while keeping the model loaded.
+     * Called when the user navigates away from a recording tab without an active recording.
+     */
+    fun resetSession() {
+        _uiState.update {
+            it.copy(
+                appState = if (it.isModelLoaded) AppState.Ready else AppState.Idle,
+                currentResult = null,
+                history = emptyList(),
+                totalClassifications = 0,
+                averageInferenceTime = 0L,
+                errorMessage = null,
+                recordingProgress = 0f,
+                currentVolume = 0f
+            )
+        }
+        Log.d(TAG, "Session reset")
+    }
+
+    /**
      * Löscht die History
      */
     fun clearHistory() {
