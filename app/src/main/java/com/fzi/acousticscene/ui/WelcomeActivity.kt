@@ -1,4 +1,4 @@
-package com.fzi.acousticscene
+package com.fzi.acousticscene.ui
 
 import android.app.Dialog
 import android.content.Intent
@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.button.MaterialButton

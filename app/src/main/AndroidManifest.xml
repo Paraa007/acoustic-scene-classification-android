@@ -26,7 +26,7 @@
 
         <!-- Main Activity - Single Activity Host with Bottom Navigation (Launcher) -->
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.AcousticSceneClassifier">
             <intent-filter>

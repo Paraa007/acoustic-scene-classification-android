@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/nav_user_mode"
-        android:name="com.fzi.acousticscene.RecordingFragment"
+        android:name="com.fzi.acousticscene.ui.RecordingFragment"
         android:label="@string/user_mode">
         <argument
             android:name="is_dev_mode"
@@ -16,7 +16,7 @@
 
     <fragment
         android:id="@+id/nav_dev_mode"
-        android:name="com.fzi.acousticscene.RecordingFragment"
+        android:name="com.fzi.acousticscene.ui.RecordingFragment"
         android:label="@string/dev_mode">
         <argument
             android:name="is_dev_mode"
@@ -26,12 +26,12 @@
 
     <fragment
         android:id="@+id/nav_history"
-        android:name="com.fzi.acousticscene.HistoryFragment"
+        android:name="com.fzi.acousticscene.ui.HistoryFragment"
         android:label="@string/history" />
 
     <fragment
         android:id="@+id/nav_settings"
-        android:name="com.fzi.acousticscene.SettingsFragment"
+        android:name="com.fzi.acousticscene.ui.SettingsFragment"
         android:label="@string/settings" />
 
 </navigation>
