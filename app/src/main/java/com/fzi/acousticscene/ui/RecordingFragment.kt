@@ -1,4 +1,4 @@
-package com.fzi.acousticscene
+package com.fzi.acousticscene.ui
 
 import android.Manifest
 import android.animation.ObjectAnimator
@@ -21,15 +21,12 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
-import com.fzi.acousticscene.ui.AppState
-import com.fzi.acousticscene.ui.MainViewModel
-import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
-import com.fzi.acousticscene.ui.UiState
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.materialswitch.MaterialSwitch

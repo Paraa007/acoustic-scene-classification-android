@@ -1,4 +1,4 @@
-package com.fzi.acousticscene
+package com.fzi.acousticscene.ui
 
 import android.annotation.SuppressLint
 import android.content.ComponentName
@@ -19,8 +19,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.fzi.acousticscene.R
 import com.fzi.acousticscene.service.ClassificationService
-import com.fzi.acousticscene.ui.ModernDialogHelper
 import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
 

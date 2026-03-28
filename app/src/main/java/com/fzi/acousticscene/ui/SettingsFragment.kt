@@ -1,4 +1,4 @@
-package com.fzi.acousticscene
+package com.fzi.acousticscene.ui
 
 import android.content.res.AssetManager
 import android.graphics.Color
@@ -16,6 +16,7 @@ import android.widget.Toast
 import android.app.Dialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
 import com.fzi.acousticscene.util.ThemeHelper

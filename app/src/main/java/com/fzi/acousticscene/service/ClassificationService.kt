@@ -17,7 +17,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.fzi.acousticscene.MainActivity
+import com.fzi.acousticscene.ui.MainActivity
 import com.fzi.acousticscene.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

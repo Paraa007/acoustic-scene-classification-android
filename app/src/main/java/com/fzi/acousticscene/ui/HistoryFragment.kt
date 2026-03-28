@@ -1,7 +1,6 @@
-package com.fzi.acousticscene
+package com.fzi.acousticscene.ui
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,19 +10,16 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.content.FileProvider
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.ViewModelProvider
+import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
-import com.fzi.acousticscene.ui.ModernDialogHelper
-import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.CoroutineScope
@@ -35,15 +31,14 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * History Screen - Shows all saved classifications as packages
+ * HistoryFragment - Shows all saved classifications as packages
  * Supports multi-selection mode with long-press trigger
  */
-class HistoryActivity : AppCompatActivity() {
+class HistoryFragment : Fragment() {
 
     private lateinit var repository: PredictionRepository
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
-    private lateinit var btnBack: MaterialButton
     private lateinit var adapter: PackageAdapter
 
     // Selection Mode UI
@@ -55,53 +50,35 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var btnExportSelected: MaterialButton
     private lateinit var btnDeleteSelected: MaterialButton
 
-    /** All session start times sorted chronologically (oldest first) */
     private var allSessionStartTimes: List<Long> = emptyList()
-
-    /** All grouped packages (newest first for display) */
     private var allPackages: List<List<PredictionRecord>> = emptyList()
-
-    /** Selection mode state */
     private var isSelectionMode = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply saved theme before super.onCreate()
-        ThemeHelper.applySavedTheme(this)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_history, container, false)
+    }
 
-        super.onCreate(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        // Enable Edge-to-Edge for modern devices
-        enableEdgeToEdge()
-
-        setContentView(R.layout.activity_history)
-
-        // Window Insets for dynamic padding (Status Bar, Navigation Bar)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
-        repository = PredictionRepository.getInstance(this)
+        repository = PredictionRepository.getInstance(requireContext())
 
         // Normal toolbar views
-        recyclerView = findViewById(R.id.historyRecyclerView)
-        emptyStateText = findViewById(R.id.emptyStateText)
-        btnBack = findViewById(R.id.btnBack)
-        normalToolbar = findViewById(R.id.normalToolbar)
+        recyclerView = view.findViewById(R.id.historyRecyclerView)
+        emptyStateText = view.findViewById(R.id.emptyStateText)
+        normalToolbar = view.findViewById(R.id.normalToolbar)
 
         // Selection toolbar views
-        selectionToolbar = findViewById(R.id.selectionToolbar)
-        selectionCountText = findViewById(R.id.selectionCountText)
-        btnCloseSelection = findViewById(R.id.btnCloseSelection)
-        btnSelectAll = findViewById(R.id.btnSelectAll)
-        btnExportSelected = findViewById(R.id.btnExportSelected)
-        btnDeleteSelected = findViewById(R.id.btnDeleteSelected)
-
-        // Material 3 Back Button
-        btnBack.setOnClickListener {
-            finish()
-        }
+        selectionToolbar = view.findViewById(R.id.selectionToolbar)
+        selectionCountText = view.findViewById(R.id.selectionCountText)
+        btnCloseSelection = view.findViewById(R.id.btnCloseSelection)
+        btnSelectAll = view.findViewById(R.id.btnSelectAll)
+        btnExportSelected = view.findViewById(R.id.btnExportSelected)
+        btnDeleteSelected = view.findViewById(R.id.btnDeleteSelected)
 
         // Selection toolbar actions
         btnCloseSelection.setOnClickListener { exitSelectionMode() }
@@ -116,18 +93,16 @@ class HistoryActivity : AppCompatActivity() {
             onPackageLongClick = { packageRecords -> onItemLongClick(packageRecords) }
         )
 
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
 
         loadHistory()
     }
 
-    override fun onBackPressed() {
-        if (isSelectionMode) {
-            exitSelectionMode()
-        } else {
-            super.onBackPressed()
-        }
+    override fun onResume() {
+        super.onResume()
+        // Reload when returning to this fragment (e.g. new recordings might exist)
+        loadHistory()
     }
 
     // --- Selection Mode ---
@@ -179,16 +154,20 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun deleteSelected() {
+        if (isAnyRecordingActive()) {
+            Toast.makeText(requireContext(), R.string.cannot_delete_while_recording, Toast.LENGTH_LONG).show()
+            return
+        }
         val selectedIds = adapter.getSelectedSessionIds()
         if (selectedIds.isEmpty()) return
 
         ModernDialogHelper.showDeleteDialog(
-            context = this,
+            context = requireContext(),
             title = getString(R.string.delete_selected),
             message = getString(R.string.delete_selected_confirm, selectedIds.size),
             onDelete = {
                 repository.deletePackages(selectedIds)
-                Toast.makeText(this, getString(R.string.sessions_deleted, selectedIds.size), Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.sessions_deleted, selectedIds.size), Toast.LENGTH_SHORT).show()
                 exitSelectionMode()
                 loadHistory()
             }
@@ -199,7 +178,6 @@ class HistoryActivity : AppCompatActivity() {
         val selectedIds = adapter.getSelectedSessionIds()
         if (selectedIds.isEmpty()) return
 
-        // Sammle alle Records der ausgewählten Sessions
         val allRecords = allPackages
             .filter { it.first().sessionStartTime in selectedIds }
             .flatten()
@@ -217,9 +195,8 @@ class HistoryActivity : AppCompatActivity() {
         val predictions = repository.getAllPredictions().sortedBy { it.timestamp }
         val packages = groupIntoPackages(predictions)
 
-        // Alle Session-Startzeiten chronologisch sammeln
         allSessionStartTimes = packages.map { it.first().sessionStartTime }.sorted()
-        allPackages = packages.reversed() // Neueste zuerst
+        allPackages = packages.reversed()
 
         adapter.submitList(allPackages, allSessionStartTimes)
 
@@ -232,32 +209,21 @@ class HistoryActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Gruppiert Predictions zu Packages basierend auf App-Sessions
-     * Alle Predictions mit derselben sessionStartTime gehören zu einem Package
-     */
     private fun groupIntoPackages(predictions: List<PredictionRecord>): List<List<PredictionRecord>> {
         if (predictions.isEmpty()) return emptyList()
-
-        // Gruppiere nach sessionStartTime
         val packagesBySession = predictions.groupBy { it.sessionStartTime }
-
-        // Sortiere Packages nach sessionStartTime (älteste zuerst)
         return packagesBySession.values
-            .map { it.sortedBy { record -> record.timestamp } }  // Innerhalb eines Packages nach Timestamp sortieren
-            .sortedBy { it.first().sessionStartTime }  // Packages nach Session-Start sortieren
+            .map { it.sortedBy { record -> record.timestamp } }
+            .sortedBy { it.first().sessionStartTime }
     }
 
-    /**
-     * Shows modern dialog with statistics, model/mode info, and CSV export for a package
-     */
     private fun showPackageDialog(packageRecords: List<PredictionRecord>) {
         val stats = calculatePackageStatistics(packageRecords)
         val sessionStartTime = packageRecords.first().sessionStartTime
         val sessionName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
 
         ModernDialogHelper.showHistoryDetailsDialog(
-            context = this,
+            context = requireContext(),
             packageRecords = packageRecords,
             stats = stats,
             sessionName = sessionName,
@@ -267,30 +233,28 @@ class HistoryActivity : AppCompatActivity() {
         )
     }
 
-    /**
-     * Shows a rename dialog for the given session
-     */
     private fun showRenameDialog(packageRecords: List<PredictionRecord>) {
+        val ctx = requireContext()
         val sessionStartTime = packageRecords.first().sessionStartTime
         val currentName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
 
-        val input = EditText(this).apply {
+        val input = EditText(ctx).apply {
             setText(currentName)
             setSelection(text.length)
-            setTextColor(getColor(R.color.text_primary))
-            setHintTextColor(getColor(R.color.text_secondary))
+            setTextColor(ctx.getColor(R.color.text_primary))
+            setHintTextColor(ctx.getColor(R.color.text_secondary))
             hint = getString(R.string.session_name_hint)
             setPadding(48, 32, 48, 32)
         }
 
-        AlertDialog.Builder(this, R.style.ModernDialog)
+        AlertDialog.Builder(ctx, R.style.ModernDialog)
             .setTitle(getString(R.string.session_rename))
             .setView(input)
             .setPositiveButton(getString(R.string.save)) { _, _ ->
                 val newName = input.text.toString().trim()
                 if (newName.isNotEmpty()) {
                     repository.setSessionName(sessionStartTime, newName)
-                    Toast.makeText(this, R.string.session_renamed, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, R.string.session_renamed, Toast.LENGTH_SHORT).show()
                     loadHistory()
                 }
             }
@@ -299,14 +263,18 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun showDeletePackageDialog(packageRecords: List<PredictionRecord>) {
+        if (isAnyRecordingActive()) {
+            Toast.makeText(requireContext(), R.string.cannot_delete_while_recording, Toast.LENGTH_LONG).show()
+            return
+        }
         ModernDialogHelper.showDeleteDialog(
-            context = this,
+            context = requireContext(),
             title = getString(R.string.delete_package),
             message = getString(R.string.delete_package_confirm),
             onDelete = {
                 val sessionStartTime = packageRecords.first().sessionStartTime
                 repository.deletePackage(sessionStartTime)
-                Toast.makeText(this, R.string.package_deleted, Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.package_deleted, Toast.LENGTH_SHORT).show()
                 loadHistory()
             }
         )
@@ -329,27 +297,8 @@ class HistoryActivity : AppCompatActivity() {
         )
     }
 
-    private fun showDetailedStatistics(stats: PredictionStatistics) {
-        val message = buildString {
-            append("${getString(R.string.total)}: ${stats.totalCount} ${getString(R.string.predictions)}\n")
-            append("${getString(R.string.avg_confidence)}: ${String.format(Locale.US, "%.1f", stats.averageConfidence)}%\n")
-            append("${getString(R.string.avg_inference)}: ${String.format(Locale.US, "%.0f", stats.averageInferenceTimeMs)}ms\n\n")
-            append("${getString(R.string.distribution)}:\n")
-            stats.classDistribution.entries.sortedByDescending { it.value }
-                .forEach { append("${it.key.emoji} ${it.key.label}: ${it.value}\n") }
-        }
-
-        ModernDialogHelper.showConfirmDialog(
-            context = this,
-            title = getString(R.string.detailed_statistics),
-            message = message,
-            confirmText = getString(R.string.ok),
-            cancelText = "",
-            onConfirm = {}
-        )
-    }
-
     private fun exportPackageCsv(records: List<PredictionRecord>) {
+        val ctx = requireContext()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val csvContent = StringBuilder()
@@ -362,7 +311,7 @@ class HistoryActivity : AppCompatActivity() {
                 val startTime = timeFormat.format(Date(records.first().timestamp))
                 val endTime = timeFormat.format(Date(records.last().timestamp))
                 val fileName = "package_${startTime}_TO_${endTime}.csv"
-                val file = File(getExternalFilesDir(null), fileName)
+                val file = File(ctx.getExternalFilesDir(null), fileName)
                 file.writeText(csvContent.toString())
 
                 withContext(Dispatchers.Main) {
@@ -370,17 +319,18 @@ class HistoryActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@HistoryActivity, R.string.export_failed, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, R.string.export_failed, Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
     private fun shareCsvFile(file: File) {
+        val ctx = requireContext()
         try {
             val uri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
+                ctx,
+                "${ctx.packageName}.fileprovider",
                 file
             )
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -390,14 +340,58 @@ class HistoryActivity : AppCompatActivity() {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(Intent.createChooser(shareIntent, getString(R.string.share_csv)))
-            Toast.makeText(this, R.string.csv_exported, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, R.string.csv_exported, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.share_failed, e.message), Toast.LENGTH_LONG).show()
+            Toast.makeText(ctx, getString(R.string.share_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
     /**
-     * RecyclerView Adapter für Package Items mit Multi-Selection Support
+     * Checks if any recording is active in either User Mode or Dev Mode.
+     */
+    private fun isAnyRecordingActive(): Boolean {
+        val activity = activity ?: return false
+        val userVm = ViewModelProvider(activity)["user_mode_vm", MainViewModel::class.java]
+        val devVm = ViewModelProvider(activity)["dev_mode_vm", MainViewModel::class.java]
+        return userVm.isClassifying() || devVm.isClassifying()
+    }
+
+    /**
+     * Handle back press from activity - returns true if consumed
+     */
+    fun handleBackPress(): Boolean {
+        if (isSelectionMode) {
+            exitSelectionMode()
+            return true
+        }
+        return false
+    }
+
+    companion object {
+        fun formatDuration(durationMs: Long): String {
+            val totalSeconds = durationMs / 1000
+            if (totalSeconds < 1) return "< 1 s"
+
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds % 3600) / 60
+            val seconds = totalSeconds % 60
+
+            return buildString {
+                if (hours > 0) {
+                    append("$hours h")
+                    if (minutes > 0) append(" $minutes min")
+                } else if (minutes > 0) {
+                    append("$minutes min")
+                    if (seconds > 0) append(" $seconds s")
+                } else {
+                    append("$seconds s")
+                }
+            }
+        }
+    }
+
+    /**
+     * RecyclerView Adapter for Package Items with Multi-Selection Support
      */
     private class PackageAdapter(
         private val repository: PredictionRepository,
@@ -433,7 +427,6 @@ class HistoryActivity : AppCompatActivity() {
             } else {
                 selectedSessions.add(sessionStartTime)
             }
-            // Only update the affected item
             val position = packages.indexOfFirst { it.first().sessionStartTime == sessionStartTime }
             if (position >= 0) notifyItemChanged(position)
         }
@@ -477,12 +470,10 @@ class HistoryActivity : AppCompatActivity() {
                 val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
                 sessionNameText.text = displayName
 
-                // Dauer berechnen
                 val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
                 val durationStr = formatDuration(durationMs)
-                countAndDurationText.text = "${packageRecords.size} ${itemView.context.getString(R.string.recordings)} • $durationStr"
+                countAndDurationText.text = "${packageRecords.size} ${itemView.context.getString(R.string.recordings)} \u2022 $durationStr"
 
-                // Batterie-Verbrauch berechnen und anzeigen
                 val firstRecord = packageRecords.first()
                 val lastRecord = packageRecords.last()
                 val startBattery = firstRecord.batteryLevel
@@ -490,10 +481,9 @@ class HistoryActivity : AppCompatActivity() {
 
                 if (startBattery >= 0 && endBattery >= 0) {
                     val consumption = startBattery - endBattery
-                    batteryConsumptionText.text = "${itemView.context.getString(R.string.battery_drain)}: ${consumption}% ($startBattery% → $endBattery%)"
+                    batteryConsumptionText.text = "${itemView.context.getString(R.string.battery_drain)}: ${consumption}% ($startBattery% \u2192 $endBattery%)"
                     batteryConsumptionText.visibility = View.VISIBLE
 
-                    // Color red if consumption > 10%
                     if (consumption > 10) {
                         batteryConsumptionText.setTextColor(
                             itemView.context.getColor(android.R.color.holo_red_light)
@@ -511,7 +501,6 @@ class HistoryActivity : AppCompatActivity() {
                     )
                 }
 
-                // Selection mode UI
                 val isSelected = selectedSessions.contains(sessionStartTime)
                 selectionCheckbox.visibility = if (selectionMode) View.VISIBLE else View.GONE
                 selectionCheckbox.isChecked = isSelected
@@ -523,7 +512,6 @@ class HistoryActivity : AppCompatActivity() {
                     0
                 }
 
-                // Click handlers
                 itemView.setOnClickListener {
                     onPackageClick(packageRecords)
                 }
@@ -531,33 +519,6 @@ class HistoryActivity : AppCompatActivity() {
                 itemView.setOnLongClickListener {
                     onPackageLongClick(packageRecords)
                     true
-                }
-            }
-        }
-    }
-
-    companion object {
-        /**
-         * Formatiert eine Dauer in Millisekunden als lesbaren deutschen String.
-         * Beispiele: "12 s", "5 min 30 s", "1 h 15 min"
-         */
-        fun formatDuration(durationMs: Long): String {
-            val totalSeconds = durationMs / 1000
-            if (totalSeconds < 1) return "< 1 s"
-
-            val hours = totalSeconds / 3600
-            val minutes = (totalSeconds % 3600) / 60
-            val seconds = totalSeconds % 60
-
-            return buildString {
-                if (hours > 0) {
-                    append("$hours h")
-                    if (minutes > 0) append(" $minutes min")
-                } else if (minutes > 0) {
-                    append("$minutes min")
-                    if (seconds > 0) append(" $seconds s")
-                } else {
-                    append("$seconds s")
                 }
             }
         }
