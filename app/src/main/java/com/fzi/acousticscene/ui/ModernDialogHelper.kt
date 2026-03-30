@@ -295,7 +295,7 @@ object ModernDialogHelper {
         dialog.findViewById<TextView>(R.id.avgConfidenceText).text =
             String.format(Locale.US, "%.1f%%", stats.averageConfidence)
 
-        // Fill distribution container with progress bars
+        // Fill model distribution container with progress bars
         val distributionContainer = dialog.findViewById<LinearLayout>(R.id.distributionContainer)
         val totalCount = packageRecords.size.toFloat()
 
@@ -306,6 +306,39 @@ object ModernDialogHelper {
                 val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
                 distributionContainer.addView(itemView)
             }
+
+        // Fill user evaluation distribution
+        val userDistributionContainer = dialog.findViewById<LinearLayout>(R.id.userDistributionContainer)
+        val evaluationCountText = dialog.findViewById<TextView>(R.id.evaluationCountText)
+        val userDivider = dialog.findViewById<View>(R.id.userDistributionDivider)
+        val evaluatedRecords = packageRecords.filter { it.userSelectedClass != null }
+
+        evaluationCountText.text = String.format(
+            context.getString(R.string.n_of_m_evaluated),
+            evaluatedRecords.size, packageRecords.size
+        )
+
+        if (evaluatedRecords.isNotEmpty()) {
+            val userDistribution = evaluatedRecords.groupBy { it.userSelectedClass!! }
+                .mapValues { it.value.size }
+            val userTotal = evaluatedRecords.size.toFloat()
+
+            userDistribution.entries
+                .sortedByDescending { it.value }
+                .forEach { (scene, count) ->
+                    val percentage = (count / userTotal * 100).toInt()
+                    val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
+                    userDistributionContainer.addView(itemView)
+                }
+        } else {
+            val noDataText = TextView(context).apply {
+                text = context.getString(R.string.no_user_evaluations)
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                setPadding(0, 8, 0, 8)
+            }
+            userDistributionContainer.addView(noDataText)
+        }
 
         dialog.findViewById<MaterialButton>(R.id.btnDelete).setOnClickListener {
             dialog.dismiss()

@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.content.res.AssetManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,6 +18,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -78,6 +80,11 @@ class RecordingFragment : Fragment() {
     private var isVolumeGraphActive: Boolean = false
 
     private var isDevMode: Boolean = false
+
+    // Permission launcher for POST_NOTIFICATIONS (Android 13+)
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* result not critical - notification will silently fail if denied */ }
 
     // Scene Color Map (DCASE 2025 - 8+1 Classes)
     private val sceneColors = mapOf(
@@ -321,6 +328,13 @@ class RecordingFragment : Fragment() {
             viewModel.setRecordingMode(RecordingMode.LONG)
             updateModeButtons(RecordingMode.LONG)
             updateVolumeGraphForMode(RecordingMode.LONG)
+            // Request notification permission for evaluation notifications (Android 13+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
         }
 
         recordingProgressBar = view.findViewById(R.id.recordingProgressBar)
