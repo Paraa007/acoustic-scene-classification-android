@@ -307,37 +307,46 @@ object ModernDialogHelper {
                 distributionContainer.addView(itemView)
             }
 
-        // Fill user evaluation distribution
+        // User evaluation section - only visible for LONG mode sessions (evaluation notifications only sent there)
         val userDistributionContainer = dialog.findViewById<LinearLayout>(R.id.userDistributionContainer)
         val evaluationCountText = dialog.findViewById<TextView>(R.id.evaluationCountText)
         val userDivider = dialog.findViewById<View>(R.id.userDistributionDivider)
-        val evaluatedRecords = packageRecords.filter { it.userSelectedClass != null }
+        val isLongMode = packageRecords.firstOrNull()?.recordingMode?.hasPauseAfterRecording() == true
 
-        evaluationCountText.text = String.format(
-            context.getString(R.string.n_of_m_evaluated),
-            evaluatedRecords.size, packageRecords.size
-        )
+        if (isLongMode) {
+            val evaluatedRecords = packageRecords.filter { it.userSelectedClass != null }
 
-        if (evaluatedRecords.isNotEmpty()) {
-            val userDistribution = evaluatedRecords.groupBy { it.userSelectedClass!! }
-                .mapValues { it.value.size }
-            val userTotal = evaluatedRecords.size.toFloat()
+            evaluationCountText.text = String.format(
+                context.getString(R.string.n_of_m_evaluated),
+                evaluatedRecords.size, packageRecords.size
+            )
 
-            userDistribution.entries
-                .sortedByDescending { it.value }
-                .forEach { (scene, count) ->
-                    val percentage = (count / userTotal * 100).toInt()
-                    val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
-                    userDistributionContainer.addView(itemView)
+            if (evaluatedRecords.isNotEmpty()) {
+                val userDistribution = evaluatedRecords.groupBy { it.userSelectedClass!! }
+                    .mapValues { it.value.size }
+                val userTotal = evaluatedRecords.size.toFloat()
+
+                userDistribution.entries
+                    .sortedByDescending { it.value }
+                    .forEach { (scene, count) ->
+                        val percentage = (count / userTotal * 100).toInt()
+                        val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
+                        userDistributionContainer.addView(itemView)
+                    }
+            } else {
+                val noDataText = TextView(context).apply {
+                    text = context.getString(R.string.no_user_evaluations)
+                    textSize = 14f
+                    setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                    setPadding(0, 8, 0, 8)
                 }
-        } else {
-            val noDataText = TextView(context).apply {
-                text = context.getString(R.string.no_user_evaluations)
-                textSize = 14f
-                setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-                setPadding(0, 8, 0, 8)
+                userDistributionContainer.addView(noDataText)
             }
-            userDistributionContainer.addView(noDataText)
+        } else {
+            // Hide entire user evaluation section for non-LONG mode sessions
+            userDivider.visibility = View.GONE
+            dialog.findViewById<LinearLayout>(R.id.userEvaluationHeader).visibility = View.GONE
+            userDistributionContainer.visibility = View.GONE
         }
 
         dialog.findViewById<MaterialButton>(R.id.btnDelete).setOnClickListener {
