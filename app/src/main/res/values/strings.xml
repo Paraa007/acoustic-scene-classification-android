@@ -217,4 +217,21 @@
     <string name="model_name_saved">Model name saved</string>
     <string name="recording_active_other_mode">A recording is already active in another mode. Please stop it first.</string>
     <string name="cannot_delete_while_recording">Cannot delete sessions while a recording is active. Please stop the recording first.</string>
+
+    <!-- Evaluation Notification -->
+    <string name="evaluation_title">Umgebungsbewertung</string>
+    <string name="evaluation_channel_name">Bewertungs-Benachrichtigungen</string>
+    <string name="evaluation_channel_description">Benachrichtigungen zur Bewertung der Umgebungsklassifikation</string>
+    <string name="evaluation_question">Was ist die tatsächliche Umgebung?</string>
+    <string name="evaluation_comment_hint">Optionaler Kommentar</string>
+    <string name="evaluation_submit">Senden</string>
+    <string name="evaluation_skip">Überspringen</string>
+    <string name="evaluation_timeout">%1$d:%2$02d</string>
+    <string name="evaluation_tap_to_rate">Tippen zum Bewerten</string>
+
+    <!-- Distribution Comparison -->
+    <string name="model_predictions">Modell-Vorhersagen</string>
+    <string name="user_evaluations">Nutzer-Bewertungen</string>
+    <string name="no_user_evaluations">Keine Nutzer-Bewertungen vorhanden</string>
+    <string name="n_of_m_evaluated">%1$d/%2$d bewertet</string>
 </resources>

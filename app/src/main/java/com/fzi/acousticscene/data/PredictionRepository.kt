@@ -85,8 +85,27 @@ class PredictionRepository private constructor(private val context: Context) {
     }
     
     /**
+     * Updates an existing prediction with user evaluation data
+     */
+    @Synchronized
+    fun updatePredictionEvaluation(predictionId: Long, userSelectedClass: SceneClass?, userComment: String?) {
+        val index = predictions.indexOfFirst { it.id == predictionId }
+        if (index >= 0) {
+            predictions[index] = predictions[index].copy(
+                userSelectedClass = userSelectedClass,
+                userComment = userComment
+            )
+            saveToPrefs()
+            Log.d(TAG, "Updated prediction $predictionId with user evaluation: ${userSelectedClass?.labelShort}")
+        } else {
+            Log.w(TAG, "Prediction $predictionId not found for evaluation update")
+        }
+    }
+
+    /**
      * Fügt eine neue Vorhersage hinzu
      */
+    @Synchronized
     fun addPrediction(record: PredictionRecord) {
         // Sicherheitslimit prüfen
         if (predictions.size >= MAX_PREDICTIONS) {

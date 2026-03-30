@@ -21,7 +21,9 @@ data class PredictionRecord(
     val recordingMode: RecordingMode,
     val batteryLevel: Int = -1,  // Akkustand in % (0-100), -1 = unbekannt
     val modelName: String = "model1.pt",  // Model file name
-    val isDevMode: Boolean = false  // Whether this was recorded in Dev Mode
+    val isDevMode: Boolean = false,  // Whether this was recorded in Dev Mode
+    val userSelectedClass: SceneClass? = null,  // User evaluation: selected scene class (null = no response)
+    val userComment: String? = null  // User evaluation: optional comment
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige
@@ -71,6 +73,10 @@ data class PredictionRecord(
         // Batterie-Level (oder "N/A" wenn unbekannt)
         val batteryString = if (batteryLevel >= 0) batteryLevel.toString() else "N/A"
 
+        // User evaluation columns (empty if no response)
+        val userClassStr = userSelectedClass?.label?.let { "\"$it\"" } ?: ""
+        val userCommentStr = userComment?.let { "\"${it.replace("\"", "\"\"")}\"" } ?: ""
+
         return listOf(
             id.toString(),
             getFormattedDateTime(),
@@ -86,7 +92,9 @@ data class PredictionRecord(
             String.format(Locale.US, "%.2f", top2.second * 100),  // top2_confidence_percent
             "\"${top3_entry.first.label}\"",  // top3_display_name
             String.format(Locale.US, "%.2f", top3_entry.second * 100),  // top3_confidence_percent
-            probsString  // probabilities mit Klassennamen im Header
+            probsString,  // probabilities mit Klassennamen im Header
+            userClassStr,  // user_selected_class (empty if no evaluation)
+            userCommentStr  // user_comment (empty if no comment)
         ).joinToString(",")
     }
     
@@ -104,7 +112,8 @@ data class PredictionRecord(
                     "top1_display_name,top1_confidence_percent," +
                     "top2_display_name,top2_confidence_percent," +
                     "top3_display_name,top3_confidence_percent," +
-                    "probabilities[$probHeaders]"
+                    "probabilities[$probHeaders]," +
+                    "user_selected_class,user_comment"
         }
     }
     

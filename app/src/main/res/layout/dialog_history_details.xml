@@ -199,20 +199,63 @@
             android:background="@color/surface_variant"
             android:layout_marginBottom="16dp" />
 
-        <!-- Distribution Header -->
+        <!-- Model Predictions Distribution Header -->
         <TextView
+            android:id="@+id/modelDistributionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/distribution"
+            android:text="@string/model_predictions"
             android:textColor="@color/accent_green_light"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:layout_marginBottom="12dp" />
 
-        <!-- Distribution List Container -->
+        <!-- Model Distribution List Container -->
         <LinearLayout
             android:id="@+id/distributionContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Divider -->
+        <View
+            android:id="@+id/userDistributionDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/surface_variant"
+            android:layout_marginBottom="16dp" />
+
+        <!-- User Evaluations Header + Count -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/user_evaluations"
+                android:textColor="@color/accent_blue_light"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+            <TextView
+                android:id="@+id/evaluationCountText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- User Evaluation Distribution List Container -->
+        <LinearLayout
+            android:id="@+id/userDistributionContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"

@@ -1,10 +1,16 @@
 package com.fzi.acousticscene.ui
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.os.BatteryManager
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.AndroidViewModel
+import com.fzi.acousticscene.R
 import androidx.lifecycle.viewModelScope
 import com.fzi.acousticscene.audio.AudioRecorder
 import com.fzi.acousticscene.audio.RecordingState
@@ -48,6 +54,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "MainViewModel"
         private const val HISTORY_SIZE = 5
+        private const val EVALUATION_CHANNEL_ID = "evaluation_channel"
+        private const val EVALUATION_NOTIFICATION_ID = 2
     }
 
     private var modelInference = ModelInference(application.applicationContext)
@@ -387,6 +395,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                         // LONG-Modus: Pause nach Aufnahme (z.B. 30 Minuten warten)
                         if (currentMode.hasPauseAfterRecording() && isRecording) {
+                            // Send evaluation notification
+                            sendEvaluationNotification(record)
+
                             val pauseMs = currentMode.pauseAfterRecordingMs
                             val pauseMinutes = currentMode.getPauseMinutes()
                             Log.d(TAG, "LONG mode: Starting ${pauseMinutes} minute pause")
@@ -569,6 +580,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateStatistics()
     }
     
+    /**
+     * Sends an evaluation notification for LONG mode recordings.
+     * User has 5 minutes to respond with their own scene classification.
+     */
+    private fun sendEvaluationNotification(record: PredictionRecord) {
+        val context = getApplication<Application>()
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Create evaluation notification channel (idempotent)
+        val channel = NotificationChannel(
+            EVALUATION_CHANNEL_ID,
+            context.getString(R.string.evaluation_channel_name),
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = context.getString(R.string.evaluation_channel_description)
+        }
+        notificationManager.createNotificationChannel(channel)
+
+        // PendingIntent to open EvaluationActivity
+        val intent = Intent(context, EvaluationActivity::class.java).apply {
+            putExtra(EvaluationActivity.EXTRA_PREDICTION_ID, record.id)
+            putExtra(EvaluationActivity.EXTRA_MODEL_PREDICTED_CLASS, record.sceneClass.name)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, record.id.toInt(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, EVALUATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.evaluation_title))
+            .setContentText("${record.sceneClass.emoji} ${record.sceneClass.labelShort} — ${context.getString(R.string.evaluation_tap_to_rate)}")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setTimeoutAfter(5 * 60 * 1000L) // Auto-dismiss after 5 minutes
+            .build()
+
+        notificationManager.notify(EVALUATION_NOTIFICATION_ID, notification)
+        Log.d(TAG, "Evaluation notification sent for prediction ${record.id}")
+    }
+
     override fun onCleared() {
         super.onCleared()
         stopClassification()

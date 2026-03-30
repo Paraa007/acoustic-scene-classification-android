@@ -471,11 +471,23 @@ class HistoryActivity : AppCompatActivity() {
             private val countAndDurationText: TextView = itemView.findViewById(R.id.countAndDurationText)
             private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
             private val selectionCheckbox: CheckBox = itemView.findViewById(R.id.selectionCheckbox)
+            private val modeBadge: TextView = itemView.findViewById(R.id.modeBadge)
 
             fun bind(packageRecords: List<PredictionRecord>) {
                 val sessionStartTime = packageRecords.first().sessionStartTime
                 val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
                 sessionNameText.text = displayName
+
+                // Mode badge (Dev or User)
+                val isDevMode = packageRecords.first().isDevMode
+                if (isDevMode) {
+                    modeBadge.text = "Dev"
+                    modeBadge.setBackgroundResource(R.drawable.bg_mode_badge_dev)
+                } else {
+                    modeBadge.text = "User"
+                    modeBadge.setBackgroundResource(R.drawable.bg_mode_badge_user)
+                }
+                modeBadge.setTextColor(itemView.context.getColor(R.color.on_primary))
 
                 // Dauer berechnen
                 val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
