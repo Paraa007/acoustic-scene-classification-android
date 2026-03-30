@@ -616,7 +616,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setTimeoutAfter(5 * 60 * 1000L) // Auto-dismiss after 5 minutes
+            .setTimeoutAfter(EvaluationActivity.EVALUATION_TIMEOUT_MS) // Auto-dismiss after 5 minutes
             .build()
 
         notificationManager.notify(EVALUATION_NOTIFICATION_ID, notification)

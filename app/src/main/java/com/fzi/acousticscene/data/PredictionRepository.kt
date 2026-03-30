@@ -5,7 +5,12 @@ import android.util.Log
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.SceneClass
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
+import java.lang.reflect.Type
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -39,7 +44,15 @@ class PredictionRepository private constructor(private val context: Context) {
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val gson = Gson()
+    private val gson: Gson = GsonBuilder()
+        .registerTypeAdapter(SceneClass::class.java, JsonDeserializer<SceneClass?> { json, _, _ ->
+            try {
+                SceneClass.valueOf(json.asString)
+            } catch (_: Exception) {
+                null
+            }
+        })
+        .create()
 
     // Session-Namen Cache
     private val sessionNames = mutableMapOf<Long, String>()
@@ -120,8 +133,9 @@ class PredictionRepository private constructor(private val context: Context) {
     }
     
     /**
-     * Gibt alle Vorhersagen zurück
+     * Gibt alle Vorhersagen zurück (thread-safe snapshot)
      */
+    @Synchronized
     fun getAllPredictions(): List<PredictionRecord> = predictions.toList()
     
     /**
@@ -145,6 +159,7 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Löscht alle Vorhersagen
      */
+    @Synchronized
     fun clearAll() {
         predictions.clear()
         saveToPrefs()
@@ -156,6 +171,7 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Löscht Vorhersagen älter als X Tage
      */
+    @Synchronized
     fun clearOlderThan(days: Int) {
         val cutoff = System.currentTimeMillis() - (days * 24 * 60 * 60 * 1000L)
         val before = predictions.size
@@ -168,6 +184,7 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Löscht alle Vorhersagen mit gegebener sessionStartTime (Package löschen)
      */
+    @Synchronized
     fun deletePackage(sessionStartTime: Long) {
         val before = predictions.size
         predictions.removeAll { it.sessionStartTime == sessionStartTime }
@@ -183,6 +200,7 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Löscht mehrere Packages auf einmal (Batch-Delete)
      */
+    @Synchronized
     fun deletePackages(sessionStartTimes: Set<Long>) {
         val before = predictions.size
         predictions.removeAll { it.sessionStartTime in sessionStartTimes }
