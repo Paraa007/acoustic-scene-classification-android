@@ -22,6 +22,9 @@ class ConfidenceCircleView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    private var targetSizeDp: Int = 200
+    private var scale: Float = 1f
+
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 12f
@@ -56,6 +59,17 @@ class ConfidenceCircleView @JvmOverloads constructor(
 
     private val rect = RectF()
 
+    fun setTargetSize(sizeDp: Int) {
+        targetSizeDp = sizeDp
+        scale = sizeDp / 200f
+        backgroundPaint.strokeWidth = 12f * scale
+        progressPaint.strokeWidth = 12f * scale
+        textPaint.textSize = 48f * scale * resources.displayMetrics.scaledDensity
+        percentPaint.textSize = 24f * scale * resources.displayMetrics.scaledDensity
+        requestLayout()
+        invalidate()
+    }
+
     /**
      * Setzt die Konfidenz (0.0 - 1.0) und animiert die Änderung
      */
@@ -85,7 +99,7 @@ class ConfidenceCircleView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val size = 200.dpToPx() // 200dp
+        val size = targetSizeDp.dpToPx()
         setMeasuredDimension(size, size)
     }
 
@@ -94,7 +108,7 @@ class ConfidenceCircleView @JvmOverloads constructor(
 
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = min(width, height) / 2f - 12f // 12dp stroke width
+        val radius = min(width, height) / 2f - 12f * scale
 
         rect.set(
             centerX - radius,

@@ -219,6 +219,35 @@
             android:orientation="vertical"
             android:layout_marginBottom="16dp" />
 
+        <!-- Per-Second Clips Section (AVERAGE mode only) -->
+        <View
+            android:id="@+id/perSecondDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/surface_variant"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/perSecondHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/per_second_clips_title"
+            android:textColor="@color/accent_blue_light"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/perSecondContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
+
         <!-- Divider -->
         <View
             android:id="@+id/userDistributionDivider"

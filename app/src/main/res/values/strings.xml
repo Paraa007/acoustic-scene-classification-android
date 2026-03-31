@@ -9,6 +9,7 @@
     <string name="mode_fast">Fast (1s)</string>
     <string name="mode_medium">Medium (5s)</string>
     <string name="mode_long">Long (30min)</string>
+    <string name="mode_avg">Avg (10s) — 10×1s</string>
     <string name="recording_mode">Recording Mode</string>
     <string name="loading_model">Loading Model...</string>
     <string name="model_loaded">Model Loaded</string>
@@ -169,6 +170,10 @@
     <string name="error_init_app">Error initializing app: %1$s</string>
     <string name="export_email_body">Attached are the exported predictions.\n\nTotal: %1$d predictions</string>
 
+    <!-- Per-Second Analysis Card (AVERAGE mode) -->
+    <string name="per_second_analysis">Per-Second Analyse</string>
+    <string name="per_second_clips_title">Per-Second Clips (1s)</string>
+
     <!-- Volume Graph Card -->
     <string name="volume_analysis">Volume Analysis</string>
     <string name="show_live_data">Show Live Data</string>
@@ -207,6 +212,7 @@
     <string name="settings_app_name_label">App</string>
     <string name="settings_version_label">Version</string>
     <string name="settings_classes_label">Scene Classes</string>
+    <string name="settings_scene_legend">Scene Classes - Legende</string>
 
     <!-- Model Management -->
     <string name="settings_models">Models</string>

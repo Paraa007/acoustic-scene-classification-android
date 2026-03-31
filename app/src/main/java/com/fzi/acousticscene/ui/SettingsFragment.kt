@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
 import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.button.MaterialButton
@@ -42,6 +43,7 @@ class SettingsFragment : Fragment() {
         setupThemeToggle(view)
         setupModelList(view)
         setupVersionInfo(view)
+        setupSceneLegend(view)
     }
 
     private fun setupThemeToggle(view: View) {
@@ -285,6 +287,39 @@ class SettingsFragment : Fragment() {
             versionText.text = pInfo.versionName
         } catch (_: Exception) {
             versionText.text = "1.0"
+        }
+    }
+
+    private fun setupSceneLegend(view: View) {
+        val ctx = requireContext()
+        val container: LinearLayout = view.findViewById(R.id.sceneLegendContainer)
+
+        SceneClass.entries.forEach { scene ->
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, 8, 0, 8)
+            }
+
+            val emojiText = TextView(ctx).apply {
+                text = scene.emoji
+                textSize = 20f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginEnd = (16 * resources.displayMetrics.density).toInt() }
+            }
+
+            val labelText = TextView(ctx).apply {
+                text = scene.label
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            row.addView(emojiText)
+            row.addView(labelText)
+            container.addView(row)
         }
     }
 }
