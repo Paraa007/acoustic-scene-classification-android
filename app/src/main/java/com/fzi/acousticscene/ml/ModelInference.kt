@@ -159,7 +159,7 @@ class ModelInference(
         
         // Wähle Processor basierend auf Mode
         val processor = when (mode) {
-            RecordingMode.FAST -> fastProcessor
+            RecordingMode.FAST, RecordingMode.AVERAGE -> fastProcessor
             RecordingMode.MEDIUM -> mediumProcessor
             RecordingMode.STANDARD -> standardProcessor
             RecordingMode.LONG -> longProcessor

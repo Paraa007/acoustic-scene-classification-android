@@ -15,6 +15,7 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
+import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -306,6 +307,35 @@ object ModernDialogHelper {
                 val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
                 distributionContainer.addView(itemView)
             }
+
+        // Per-second clips section - only visible for AVERAGE mode sessions
+        val isAverageMode = packageRecords.firstOrNull()?.recordingMode == RecordingMode.AVERAGE
+        if (isAverageMode) {
+            val perSecondDivider = dialog.findViewById<View>(R.id.perSecondDivider)
+            val perSecondHeader = dialog.findViewById<TextView>(R.id.perSecondHeader)
+            val perSecondContainer = dialog.findViewById<LinearLayout>(R.id.perSecondContainer)
+
+            // Collect all per-second clips from all records in this session
+            val allClips = packageRecords.flatMap { it.perSecondClips ?: emptyList() }
+
+            if (allClips.isNotEmpty()) {
+                perSecondDivider.visibility = View.VISIBLE
+                perSecondHeader.visibility = View.VISIBLE
+                perSecondContainer.visibility = View.VISIBLE
+
+                // Distribution: how often each class appeared in 1s clips
+                val clipDistribution = allClips.groupBy { it.sceneClass }.mapValues { it.value.size }
+                val clipTotal = allClips.size.toFloat()
+
+                clipDistribution.entries
+                    .sortedByDescending { it.value }
+                    .forEach { (scene, count) ->
+                        val percentage = if (clipTotal > 0) (count / clipTotal * 100).toInt() else 0
+                        val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
+                        perSecondContainer.addView(itemView)
+                    }
+            }
+        }
 
         // User evaluation section - only visible for LONG mode sessions (evaluation notifications only sent there)
         val userDistributionContainer = dialog.findViewById<LinearLayout>(R.id.userDistributionContainer)

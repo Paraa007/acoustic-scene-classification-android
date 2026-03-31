@@ -49,6 +49,20 @@ enum class RecordingMode(
         hopLength = 500,  // Wie STANDARD
         nMels = 256,      // Wie STANDARD für volle Auflösung
         pauseAfterRecordingMs = 30 * 60 * 1000L  // 30 Minuten Pause = 1.800.000 ms
+    ),
+    /**
+     * AVERAGE-Modus (nur Dev Mode):
+     * Nimmt 10s auf, teilt in 10x 1s-Clips, führt Inferenz pro Clip aus (FAST-FFT-Parameter),
+     * und berechnet den Durchschnitt der 10 Vorhersagen als Ergebnis.
+     */
+    AVERAGE(
+        durationSeconds = 10,  // 10 Sekunden Aufnahme
+        label = "Avg (10s)",
+        nFft = 1024,      // FAST-Parameter für 1s-Clips
+        winLength = 768,
+        hopLength = 256,
+        nMels = 64,
+        pauseAfterRecordingMs = 0L
     );
 
     /**

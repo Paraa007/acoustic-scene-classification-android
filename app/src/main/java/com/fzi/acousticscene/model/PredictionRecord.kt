@@ -4,6 +4,23 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
+ * Individual 1-second clip result for AVERAGE mode
+ */
+data class PerSecondClip(
+    val clipIndex: Int,         // 0-9
+    val sceneClass: SceneClass,
+    val confidence: Float,
+    val allProbabilities: FloatArray
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is PerSecondClip) return false
+        return clipIndex == other.clipIndex
+    }
+    override fun hashCode(): Int = clipIndex
+}
+
+/**
  * Eine einzelne Vorhersage mit allen Details für CSV Export
  *
  * @param topPredictions Top 3 Predictions (Klasse, Konfidenz) für CSV Export
@@ -23,7 +40,8 @@ data class PredictionRecord(
     val modelName: String = "model1.pt",  // Model file name
     val isDevMode: Boolean = false,  // Whether this was recorded in Dev Mode
     val userSelectedClass: SceneClass? = null,  // User evaluation: selected scene class (null = no response)
-    val userComment: String? = null  // User evaluation: optional comment
+    val userComment: String? = null,  // User evaluation: optional comment
+    val perSecondClips: List<PerSecondClip>? = null  // AVERAGE mode: individual 1s clip results
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige
@@ -77,6 +95,13 @@ data class PredictionRecord(
         val userClassStr = userSelectedClass?.label?.let { "\"$it\"" } ?: ""
         val userCommentStr = userComment?.let { "\"${it.replace("\"", "\"\"")}\"" } ?: ""
 
+        // Per-second clips (AVERAGE mode only)
+        val perSecondStr = if (perSecondClips != null && perSecondClips.isNotEmpty()) {
+            perSecondClips.sortedBy { it.clipIndex }.joinToString("|") { clip ->
+                "${clip.clipIndex + 1}:${clip.sceneClass.label}:${(clip.confidence * 100).toInt()}%"
+            }
+        } else ""
+
         return listOf(
             id.toString(),
             getFormattedDateTime(),
@@ -94,7 +119,8 @@ data class PredictionRecord(
             String.format(Locale.US, "%.2f", top3_entry.second * 100),  // top3_confidence_percent
             probsString,  // probabilities mit Klassennamen im Header
             userClassStr,  // user_selected_class (empty if no evaluation)
-            userCommentStr  // user_comment (empty if no comment)
+            userCommentStr,  // user_comment (empty if no comment)
+            "\"$perSecondStr\""  // per_second_clips (AVERAGE mode)
         ).joinToString(",")
     }
     
@@ -113,7 +139,8 @@ data class PredictionRecord(
                     "top2_display_name,top2_confidence_percent," +
                     "top3_display_name,top3_confidence_percent," +
                     "probabilities[$probHeaders]," +
-                    "user_selected_class,user_comment"
+                    "user_selected_class,user_comment," +
+                    "per_second_clips"
         }
     }
     

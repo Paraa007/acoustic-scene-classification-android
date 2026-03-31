@@ -19,8 +19,10 @@ import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.ml.ModelInference
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.PerSecondClip
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
+import com.fzi.acousticscene.model.SceneClass
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -253,6 +255,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         isRecording = true
+
+        // AVERAGE mode uses a completely different flow: record 1s, infer, repeat 10x
+        if (currentMode == RecordingMode.AVERAGE) {
+            recordingJob = viewModelScope.launch {
+                startAverageClassification()
+            }
+            return
+        }
+
         recordingJob = viewModelScope.launch {
             while (isActive && isRecording) {
                 try {
@@ -359,10 +370,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     
                     // Verarbeite Audio - Processing State
                     _uiState.update { it.copy(appState = AppState.Processing, recordingProgress = 0f) }
-                    
+
                     // Führe Inferenz durch auf dediziertem ML Thread-Pool
-                    // NICHT auf Main Thread! Mit withContext wechseln wir zu mlDispatcher
-                    val result = withContext(mlDispatcher) {
+                    val result: ClassificationResult? = withContext(mlDispatcher) {
                         modelInference.infer(audioSamples!!, currentMode)
                     }
                     
@@ -455,7 +465,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         recordingJob?.cancel()
         audioRecorder.stopRecording()
         resetAnalysisViewState()
-        _uiState.update { it.copy(appState = AppState.Ready, errorMessage = null) }
+        _uiState.update { it.copy(
+            appState = AppState.Ready,
+            errorMessage = null,
+            perSecondResults = List(10) { null },
+            runningAverageResult = null
+        ) }
         Log.d(TAG, "Classification stopped")
     }
     
@@ -580,6 +595,166 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateStatistics()
     }
     
+    /**
+     * AVERAGE mode: Records 1 second at a time, infers immediately, updates UI live,
+     * repeats 10 times, then computes final averaged result.
+     * Each second is recorded and processed individually so the user sees results in real-time.
+     */
+    private suspend fun startAverageClassification() {
+        val totalClips = 10
+
+        // Loop continuously until user presses Stop
+        while (isRecording) {
+            // Clear per-second state for this round
+            _uiState.update { it.copy(
+                perSecondResults = List(totalClips) { null },
+                runningAverageResult = null
+            )}
+
+            val results = mutableListOf<ClassificationResult>()
+            val startTime = System.currentTimeMillis()
+
+            for (clipIndex in 0 until totalClips) {
+                if (!isRecording) break
+
+                // Update UI: Recording second (clipIndex+1) of 10
+                val secondsRemaining = totalClips - clipIndex
+                _uiState.update { it.copy(
+                    appState = AppState.Recording(secondsRemaining),
+                    recordingProgress = clipIndex.toFloat() / totalClips
+                )}
+
+                // Record 1 second using a fresh AudioRecorder
+                val clipRecorder = AudioRecorder(durationSeconds = 1)
+                var clipSamples: FloatArray? = null
+
+                try {
+                    clipRecorder.startRecording()
+                        .catch { e: Throwable ->
+                            if (e is CancellationException) throw e
+                            Log.e(TAG, "AVERAGE clip $clipIndex recording error", e)
+                        }
+                        .collect { state ->
+                            when (state) {
+                                is RecordingState.Completed -> {
+                                    clipSamples = state.samples
+                                }
+                                is RecordingState.Progress -> {
+                                    // Update progress within this second
+                                    val overallProgress = (clipIndex + state.progress) / totalClips
+                                    _uiState.update { it.copy(
+                                        recordingProgress = overallProgress
+                                    )}
+                                }
+                                else -> { /* Started, Error handled above */ }
+                            }
+                        }
+                } catch (e: CancellationException) {
+                    Log.d(TAG, "AVERAGE mode: Recording cancelled at clip $clipIndex")
+                    return
+                }
+
+                if (!isRecording || clipSamples == null) break
+
+                // Infer this 1-second clip immediately (stay in Recording state to avoid UI jumping)
+                val clipResult = withContext(mlDispatcher) {
+                    modelInference.infer(clipSamples!!, RecordingMode.FAST)
+                }
+
+                if (clipResult != null) {
+                    results.add(clipResult)
+
+                    // Update per-second circle and running average
+                    val runningAvg = computeRunningAverage(results, startTime)
+                    _uiState.update { current ->
+                        val updatedPerSecond = current.perSecondResults.toMutableList()
+                        updatedPerSecond[clipIndex] = clipResult
+                        current.copy(
+                            perSecondResults = updatedPerSecond,
+                            runningAverageResult = runningAvg
+                        )
+                    }
+                }
+
+                Log.d(TAG, "AVERAGE mode: Clip ${clipIndex + 1}/$totalClips done" +
+                        (clipResult?.let { " -> ${it.sceneClass.labelShort} (${(it.confidence * 100).toInt()}%)" } ?: " -> failed"))
+            }
+
+            if (!isRecording) return
+
+            // Compute final averaged result for this round
+            if (results.isNotEmpty()) {
+                val finalResult = computeRunningAverage(results, startTime)
+
+                // Build per-second clip data
+                val clips = results.mapIndexed { index, clipResult ->
+                    PerSecondClip(
+                        clipIndex = index,
+                        sceneClass = clipResult.sceneClass,
+                        confidence = clipResult.confidence,
+                        allProbabilities = clipResult.allProbabilities
+                    )
+                }
+
+                // Save to repository
+                val top3 = finalResult.getTopPredictions(3)
+                val currentBatteryLevel = getBatteryLevel()
+                val record = PredictionRecord(
+                    sceneClass = finalResult.sceneClass,
+                    confidence = finalResult.confidence,
+                    allProbabilities = finalResult.allProbabilities,
+                    topPredictions = top3,
+                    inferenceTimeMs = finalResult.inferenceTimeMs,
+                    recordingMode = currentMode,
+                    sessionStartTime = sessionStartTime,
+                    batteryLevel = currentBatteryLevel,
+                    modelName = _modelName,
+                    isDevMode = _isDevMode,
+                    perSecondClips = clips
+                )
+                predictionRepository.addPrediction(record)
+                updateStatistics()
+                updateStateWithResult(finalResult)
+
+                Log.d(TAG, "AVERAGE mode round complete: ${results.size}/$totalClips clips, best=${finalResult.sceneClass.labelShort} (${(finalResult.confidence * 100).toInt()}%)")
+            }
+
+            // Continue to next round (circles will be cleared at the top of the loop)
+        }
+    }
+
+    /**
+     * Computes an averaged ClassificationResult from a list of per-clip results.
+     */
+    private fun computeRunningAverage(
+        results: List<ClassificationResult>,
+        startTime: Long
+    ): ClassificationResult {
+        val numClasses = results.first().allProbabilities.size
+        val avgProbabilities = FloatArray(numClasses)
+        for (result in results) {
+            for (j in result.allProbabilities.indices) {
+                avgProbabilities[j] += result.allProbabilities[j]
+            }
+        }
+        for (j in avgProbabilities.indices) {
+            avgProbabilities[j] /= results.size
+        }
+
+        val bestIndex = avgProbabilities.indices.maxByOrNull { avgProbabilities[it] } ?: 0
+        val bestClass = SceneClass.fromIndex(bestIndex) ?: SceneClass.TRANSIT_VEHICLES
+        val totalInferenceTime = System.currentTimeMillis() - startTime
+
+        Log.d(TAG, "AVERAGE mode: ${results.size} clips averaged, best=${bestClass.labelShort} (${(avgProbabilities[bestIndex] * 100).toInt()}%)")
+
+        return ClassificationResult(
+            sceneClass = bestClass,
+            confidence = avgProbabilities[bestIndex],
+            allProbabilities = avgProbabilities,
+            inferenceTimeMs = totalInferenceTime
+        )
+    }
+
     /**
      * Sends an evaluation notification for LONG mode recordings.
      * User has 5 minutes to respond with their own scene classification.

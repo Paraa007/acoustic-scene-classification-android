@@ -67,5 +67,7 @@ data class UiState(
     val errorMessage: String? = null,
     val recordingMode: RecordingMode = RecordingMode.STANDARD,
     val recordingProgress: Float = 0f,
-    val currentVolume: Float = 0f
+    val currentVolume: Float = 0f,
+    val perSecondResults: List<ClassificationResult?> = List(10) { null },
+    val runningAverageResult: ClassificationResult? = null
 )

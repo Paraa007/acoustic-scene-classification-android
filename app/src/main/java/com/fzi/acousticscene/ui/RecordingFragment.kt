@@ -13,6 +13,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.view.Gravity
 import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -55,9 +56,11 @@ class RecordingFragment : Fragment() {
     private lateinit var modeFastButton: MaterialButton
     private lateinit var modeMediumButton: MaterialButton
     private lateinit var modeLongButton: MaterialButton
+    private lateinit var modeAvgButton: MaterialButton
     private lateinit var startStopButton: MaterialButton
     private lateinit var statusLabel: TextView
     private lateinit var modelStatusLabel: TextView
+    private lateinit var headerProcessingLabel: TextView
     private lateinit var recordingProgressBar: ProgressBar
     private lateinit var timerText: TextView
     private lateinit var confidenceCircleView: com.fzi.acousticscene.ui.ConfidenceCircleView
@@ -78,6 +81,16 @@ class RecordingFragment : Fragment() {
     private lateinit var volumeLineChartView: com.fzi.acousticscene.ui.VolumeLineChartView
     private var volumeGraphJob: Job? = null
     private var isVolumeGraphActive: Boolean = false
+
+    // Per-Second Circles Components (AVERAGE mode only)
+    private lateinit var perSecondCirclesCard: MaterialCardView
+    private lateinit var switchPerSecondCircles: MaterialSwitch
+    private lateinit var perSecondCirclesContainer: LinearLayout
+    private lateinit var perSecondRow1: LinearLayout
+    private lateinit var perSecondRow2: LinearLayout
+    private var perSecondCircleViews: List<ConfidenceCircleView> = emptyList()
+    private var perSecondLabelViews: List<TextView> = emptyList()
+    private var isPerSecondCirclesActive: Boolean = false
 
     private var isDevMode: Boolean = false
 
@@ -302,9 +315,11 @@ class RecordingFragment : Fragment() {
         modeFastButton = view.findViewById(R.id.modeFastButton)
         modeMediumButton = view.findViewById(R.id.modeMediumButton)
         modeLongButton = view.findViewById(R.id.modeLongButton)
+        modeAvgButton = view.findViewById(R.id.modeAvgButton)
         startStopButton = view.findViewById(R.id.startStopButton)
         statusLabel = view.findViewById(R.id.statusLabel)
         modelStatusLabel = view.findViewById(R.id.modelStatusLabel)
+        headerProcessingLabel = view.findViewById(R.id.headerProcessingLabel)
 
         modeStandardButton.setOnClickListener {
             viewModel.setRecordingMode(RecordingMode.STANDARD)
@@ -337,6 +352,17 @@ class RecordingFragment : Fragment() {
             }
         }
 
+        modeAvgButton.setOnClickListener {
+            viewModel.setRecordingMode(RecordingMode.AVERAGE)
+            updateModeButtons(RecordingMode.AVERAGE)
+            updateVolumeGraphForMode(RecordingMode.AVERAGE)
+        }
+
+        // Show Avg button only in Dev Mode
+        if (isDevMode) {
+            modeAvgButton.visibility = View.VISIBLE
+        }
+
         recordingProgressBar = view.findViewById(R.id.recordingProgressBar)
         timerText = view.findViewById(R.id.timerText)
         confidenceCircleView = view.findViewById(R.id.confidenceCircleView)
@@ -358,6 +384,63 @@ class RecordingFragment : Fragment() {
 
         // Initialize volume graph with current recording mode duration
         volumeLineChartView.setMaxDuration(viewModel.getRecordingMode().durationSeconds.toFloat())
+
+        // Per-Second Circles Components
+        perSecondCirclesCard = view.findViewById(R.id.perSecondCirclesCard)
+        switchPerSecondCircles = view.findViewById(R.id.switchPerSecondCircles)
+        perSecondCirclesContainer = view.findViewById(R.id.perSecondCirclesContainer)
+        perSecondRow1 = view.findViewById(R.id.perSecondRow1)
+        perSecondRow2 = view.findViewById(R.id.perSecondRow2)
+
+        // Create 10 small circle items programmatically
+        val circles = mutableListOf<ConfidenceCircleView>()
+        val labels = mutableListOf<TextView>()
+        val ctx = requireContext()
+        for (i in 0 until 10) {
+            val itemLayout = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = 2.dpToPx()
+                    marginEnd = 2.dpToPx()
+                }
+            }
+            val circle = ConfidenceCircleView(ctx).apply {
+                setTargetSize(52)
+            }
+            val label = TextView(ctx).apply {
+                text = "${i + 1}"
+                textSize = 10f
+                gravity = Gravity.CENTER
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            }
+            itemLayout.addView(circle)
+            itemLayout.addView(label)
+
+            if (i < 5) perSecondRow1.addView(itemLayout)
+            else perSecondRow2.addView(itemLayout)
+
+            circles.add(circle)
+            labels.add(label)
+        }
+        perSecondCircleViews = circles
+        perSecondLabelViews = labels
+
+        // Show per-second card only in Dev Mode when AVERAGE is selected
+        if (isDevMode && viewModel.getRecordingMode() == RecordingMode.AVERAGE) {
+            perSecondCirclesCard.visibility = View.VISIBLE
+        }
+
+        // Per-second circles toggle listener
+        switchPerSecondCircles.setOnCheckedChangeListener { _, isChecked ->
+            isPerSecondCirclesActive = isChecked
+            perSecondCirclesContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
+            if (!isChecked) {
+                // Reset all circles
+                perSecondCircleViews.forEach { it.setConfidence(0f, animate = false) }
+                perSecondLabelViews.forEachIndexed { idx, tv -> tv.text = "${idx + 1}" }
+            }
+        }
 
         // Switch listener for volume graph
         switchVolumeGraph.setOnCheckedChangeListener { buttonView, isChecked ->
@@ -402,6 +485,7 @@ class RecordingFragment : Fragment() {
                 (activity as? MainActivity)?.stopClassificationService()
                 stopVolumeGraphCollection()
                 volumeLineChartView.clearData()
+                resetPerSecondCircles()
             } else {
                 // Block if the other mode already has an active recording
                 if (isOtherModeRecording()) {
@@ -442,12 +526,25 @@ class RecordingFragment : Fragment() {
     private fun updateUI(state: UiState) {
         updateAppState(state.appState)
         updateModelStatus(state.isModelLoaded)
-        updateCurrentResult(state.currentResult)
-        updatePredictions(state.currentResult)
+
+        // In AVERAGE mode during processing, show running average in the big circle
+        if (state.recordingMode == RecordingMode.AVERAGE
+            && state.appState is AppState.Processing
+            && state.runningAverageResult != null
+        ) {
+            updateCurrentResult(state.runningAverageResult)
+            updatePredictions(state.runningAverageResult)
+        } else {
+            updateCurrentResult(state.currentResult)
+            updatePredictions(state.currentResult)
+        }
+
         updateStatistics(state.totalClassifications, state.averageInferenceTime)
         updateRecentPredictions(state.history)
         updateModeButtons(state.recordingMode)
         updateVolumeDisplay(state.currentVolume, state.appState)
+        updatePerSecondCircles(state.perSecondResults)
+        updatePerSecondCardVisibility(state.recordingMode)
 
         if (state.errorMessage != null) {
             // Error shown in status label
@@ -484,6 +581,8 @@ class RecordingFragment : Fragment() {
         modeMediumButton.setTextColor(inactiveTextColor)
         modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
         modeLongButton.setTextColor(inactiveTextColor)
+        modeAvgButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
+        modeAvgButton.setTextColor(inactiveTextColor)
 
         when (mode) {
             RecordingMode.STANDARD -> {
@@ -502,11 +601,19 @@ class RecordingFragment : Fragment() {
                 modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
                 modeLongButton.setTextColor(activeTextColor)
             }
+            RecordingMode.AVERAGE -> {
+                modeAvgButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
+                modeAvgButton.setTextColor(activeTextColor)
+            }
         }
     }
 
     private fun updateAppState(appState: AppState) {
         val ctx = context ?: return
+
+        // Show processing indicator in header instead of status card
+        headerProcessingLabel.visibility = if (appState is AppState.Processing) View.VISIBLE else View.GONE
+
         when (appState) {
             is AppState.Idle -> {
                 statusLabel.text = getString(R.string.status_idle)
@@ -546,8 +653,7 @@ class RecordingFragment : Fragment() {
                 recordingProgressBar.visibility = View.VISIBLE
             }
             is AppState.Processing -> {
-                statusLabel.text = getString(R.string.status_processing)
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_processing))
+                // Status text stays as previous state (no change to statusLabel)
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
                 recordingProgressBar.visibility = View.GONE
@@ -766,6 +872,39 @@ class RecordingFragment : Fragment() {
     private fun updateVolumeGraphForMode(mode: RecordingMode) {
         volumeLineChartView.setMaxDuration(mode.durationSeconds.toFloat())
         volumeLineChartView.clearData()
+    }
+
+    private fun updatePerSecondCircles(perSecondResults: List<ClassificationResult?>) {
+        if (!isPerSecondCirclesActive) return
+
+        perSecondResults.forEachIndexed { index, result ->
+            if (index < perSecondCircleViews.size) {
+                if (result != null) {
+                    perSecondCircleViews[index].setConfidence(result.confidence, animate = true)
+                    perSecondLabelViews[index].text = "${result.sceneClass.emoji}\n${(result.confidence * 100).toInt()}%"
+                } else {
+                    perSecondCircleViews[index].setConfidence(0f, animate = false)
+                    perSecondLabelViews[index].text = "${index + 1}"
+                }
+            }
+        }
+    }
+
+    private fun resetPerSecondCircles() {
+        perSecondCircleViews.forEach { it.setConfidence(0f, animate = false) }
+        perSecondLabelViews.forEachIndexed { idx, tv -> tv.text = "${idx + 1}" }
+    }
+
+    private fun updatePerSecondCardVisibility(mode: RecordingMode) {
+        if (!::perSecondCirclesCard.isInitialized) return
+        if (isDevMode && mode == RecordingMode.AVERAGE) {
+            perSecondCirclesCard.visibility = View.VISIBLE
+        } else {
+            perSecondCirclesCard.visibility = View.GONE
+            if (::switchPerSecondCircles.isInitialized) {
+                switchPerSecondCircles.isChecked = false
+            }
+        }
     }
 
     private fun hasAudioPermission(): Boolean {
