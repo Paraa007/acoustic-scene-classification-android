@@ -87,6 +87,13 @@ Die FFT-Parameter (nFft, winLength, hopLength, nMels, fMin, fMax) sind für alle
 
 ## Changelog
 
+**2026-04-14 — Two-step mode picker + timeline schema**
+- Mode picker restructured into two steps: first category **"Continuous"** (FAST, STANDARD, AVERAGE) vs. **"Interval"** (LONG), then the specific mode. Sub-buttons are generated dynamically in Kotlin.
+- New `RecordingCategory` enum and `category` / `devOnly` properties on `RecordingMode`; helper `forCategory(cat, isDevMode)`.
+- New `ModeTimelineView` (Canvas-based) under the picker: static schema per mode — filled blocks for recording, gaps for pauses, labels like "10s" / "30 min pause". AVERAGE additionally draws a bracket under all 10 × 1 s blocks with the label "10 × 1s → 1 averaged result" to make the aggregation explicit. One-line description below (`mode_desc_*` strings).
+- Last selected mode is persisted in `SharedPreferences` ("mode_prefs") with separate keys for User Mode and Dev Mode.
+- All newly added UI copy is in English (app-wide convention).
+
 **2026-04-14 — MEDIUM-Modus entfernt**
 - Der ungenutzte `MEDIUM (5s)`-Aufnahmemodus wurde komplett aus App entfernt: Enum-Eintrag, Button im Recording-Screen, String-Ressource und alle Referenzen in `RecordingFragment`. Damit bleiben 4 Modi: FAST, STANDARD, LONG, AVERAGE (Dev-only).
 

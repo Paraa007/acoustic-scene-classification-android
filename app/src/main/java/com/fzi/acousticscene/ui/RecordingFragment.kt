@@ -3,8 +3,10 @@ package com.fzi.acousticscene.ui
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.app.Dialog
+import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.AssetManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -27,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
@@ -52,10 +55,13 @@ class RecordingFragment : Fragment() {
     private lateinit var viewModel: MainViewModel
 
     // UI Components
-    private lateinit var modeStandardButton: MaterialButton
-    private lateinit var modeFastButton: MaterialButton
-    private lateinit var modeLongButton: MaterialButton
-    private lateinit var modeAvgButton: MaterialButton
+    private lateinit var categoryContinuousButton: MaterialButton
+    private lateinit var categoryIntervalButton: MaterialButton
+    private lateinit var subModeButtonRow: LinearLayout
+    private lateinit var modeTimeline: ModeTimelineView
+    private lateinit var modeDescription: TextView
+    private val subModeButtons: MutableMap<RecordingMode, MaterialButton> = mutableMapOf()
+    private var currentCategory: RecordingCategory = RecordingCategory.CONTINUOUS
     private lateinit var startStopButton: MaterialButton
     private lateinit var statusLabel: TextView
     private lateinit var modelStatusLabel: TextView
@@ -310,50 +316,18 @@ class RecordingFragment : Fragment() {
     }
 
     private fun initializeViews(view: View) {
-        modeStandardButton = view.findViewById(R.id.modeStandardButton)
-        modeFastButton = view.findViewById(R.id.modeFastButton)
-        modeLongButton = view.findViewById(R.id.modeLongButton)
-        modeAvgButton = view.findViewById(R.id.modeAvgButton)
+        categoryContinuousButton = view.findViewById(R.id.categoryContinuousButton)
+        categoryIntervalButton = view.findViewById(R.id.categoryIntervalButton)
+        subModeButtonRow = view.findViewById(R.id.subModeButtonRow)
+        modeTimeline = view.findViewById(R.id.modeTimeline)
+        modeDescription = view.findViewById(R.id.modeDescription)
         startStopButton = view.findViewById(R.id.startStopButton)
         statusLabel = view.findViewById(R.id.statusLabel)
         modelStatusLabel = view.findViewById(R.id.modelStatusLabel)
         headerProcessingLabel = view.findViewById(R.id.headerProcessingLabel)
 
-        modeStandardButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.STANDARD)
-            updateModeButtons(RecordingMode.STANDARD)
-            updateVolumeGraphForMode(RecordingMode.STANDARD)
-        }
-
-        modeFastButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.FAST)
-            updateModeButtons(RecordingMode.FAST)
-            updateVolumeGraphForMode(RecordingMode.FAST)
-        }
-
-        modeLongButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.LONG)
-            updateModeButtons(RecordingMode.LONG)
-            updateVolumeGraphForMode(RecordingMode.LONG)
-            // Request notification permission for evaluation notifications (Android 13+)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            }
-        }
-
-        modeAvgButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.AVERAGE)
-            updateModeButtons(RecordingMode.AVERAGE)
-            updateVolumeGraphForMode(RecordingMode.AVERAGE)
-        }
-
-        // Show Avg button only in Dev Mode
-        if (isDevMode) {
-            modeAvgButton.visibility = View.VISIBLE
-        }
+        categoryContinuousButton.setOnClickListener { selectCategory(RecordingCategory.CONTINUOUS, persist = true) }
+        categoryIntervalButton.setOnClickListener { selectCategory(RecordingCategory.INTERVAL, persist = true) }
 
         recordingProgressBar = view.findViewById(R.id.recordingProgressBar)
         timerText = view.findViewById(R.id.timerText)
@@ -505,7 +479,130 @@ class RecordingFragment : Fragment() {
         } else {
             getString(R.string.app_name_full)
         }
+
+        // Restore last mode selection (category + mode) from prefs
+        val lastMode = loadPersistedMode()
+        selectCategory(lastMode.category, persist = false)
+        selectMode(lastMode, persist = false)
     }
+
+    private fun prefsKey(): String = if (isDevMode) "last_mode_dev" else "last_mode_user"
+
+    private fun loadPersistedMode(): RecordingMode {
+        val prefs = requireContext().getSharedPreferences("mode_prefs", Context.MODE_PRIVATE)
+        val name = prefs.getString(prefsKey(), null) ?: return RecordingMode.DEFAULT
+        return try {
+            val m = RecordingMode.valueOf(name)
+            if (!isDevMode && m.devOnly) RecordingMode.DEFAULT else m
+        } catch (e: Exception) {
+            RecordingMode.DEFAULT
+        }
+    }
+
+    private fun persistMode(mode: RecordingMode) {
+        requireContext().getSharedPreferences("mode_prefs", Context.MODE_PRIVATE)
+            .edit().putString(prefsKey(), mode.name).apply()
+    }
+
+    private fun selectCategory(cat: RecordingCategory, persist: Boolean) {
+        currentCategory = cat
+        val ctx = context ?: return
+        val activeColor = ContextCompat.getColor(ctx, R.color.accent_green)
+        val inactiveColor = ContextCompat.getColor(ctx, R.color.surface_variant)
+        val activeTextColor = ContextCompat.getColor(ctx, R.color.on_primary)
+        val inactiveTextColor = ContextCompat.getColor(ctx, R.color.text_secondary)
+
+        val (sel, other) = if (cat == RecordingCategory.CONTINUOUS)
+            categoryContinuousButton to categoryIntervalButton
+        else
+            categoryIntervalButton to categoryContinuousButton
+        sel.backgroundTintList = ColorStateList.valueOf(activeColor)
+        sel.setTextColor(activeTextColor)
+        other.backgroundTintList = ColorStateList.valueOf(inactiveColor)
+        other.setTextColor(inactiveTextColor)
+
+        rebuildSubModeButtons()
+
+        val current = viewModel.getRecordingMode()
+        if (current.category != cat) {
+            val first = RecordingMode.forCategory(cat, isDevMode).firstOrNull() ?: return
+            selectMode(first, persist = persist)
+        } else {
+            highlightSubMode(current)
+            modeTimeline.setMode(current)
+            modeDescription.text = descriptionFor(current)
+        }
+    }
+
+    private fun rebuildSubModeButtons() {
+        subModeButtonRow.removeAllViews()
+        subModeButtons.clear()
+        val ctx = context ?: return
+        val modes = RecordingMode.forCategory(currentCategory, isDevMode)
+        val inactiveColor = ContextCompat.getColor(ctx, R.color.surface_variant)
+        val inactiveTextColor = ContextCompat.getColor(ctx, R.color.text_secondary)
+        modes.forEachIndexed { idx, mode ->
+            val btn = MaterialButton(ctx).apply {
+                text = mode.label
+                textSize = 11f
+                cornerRadius = 12.dpToPx()
+                backgroundTintList = ColorStateList.valueOf(inactiveColor)
+                setTextColor(inactiveTextColor)
+                isAllCaps = false
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = if (idx == 0) 0 else 3.dpToPx()
+                    marginEnd = if (idx == modes.size - 1) 0 else 3.dpToPx()
+                }
+                setOnClickListener { selectMode(mode, persist = true) }
+            }
+            subModeButtonRow.addView(btn)
+            subModeButtons[mode] = btn
+        }
+    }
+
+    private fun highlightSubMode(mode: RecordingMode) {
+        val ctx = context ?: return
+        val activeColor = ContextCompat.getColor(ctx, R.color.accent_green)
+        val inactiveColor = ContextCompat.getColor(ctx, R.color.surface_variant)
+        val activeTextColor = ContextCompat.getColor(ctx, R.color.on_primary)
+        val inactiveTextColor = ContextCompat.getColor(ctx, R.color.text_secondary)
+        subModeButtons.forEach { (m, btn) ->
+            if (m == mode) {
+                btn.backgroundTintList = ColorStateList.valueOf(activeColor)
+                btn.setTextColor(activeTextColor)
+            } else {
+                btn.backgroundTintList = ColorStateList.valueOf(inactiveColor)
+                btn.setTextColor(inactiveTextColor)
+            }
+        }
+    }
+
+    private fun selectMode(mode: RecordingMode, persist: Boolean) {
+        viewModel.setRecordingMode(mode)
+        highlightSubMode(mode)
+        modeTimeline.setMode(mode)
+        modeDescription.text = descriptionFor(mode)
+        updateVolumeGraphForMode(mode)
+        if (persist && mode == RecordingMode.LONG
+            && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        ) {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        if (persist) persistMode(mode)
+    }
+
+    private fun descriptionFor(mode: RecordingMode): String = getString(
+        when (mode) {
+            RecordingMode.FAST -> R.string.mode_desc_fast
+            RecordingMode.STANDARD -> R.string.mode_desc_standard
+            RecordingMode.LONG -> R.string.mode_desc_long
+            RecordingMode.AVERAGE -> R.string.mode_desc_avg
+        }
+    )
 
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -533,7 +630,7 @@ class RecordingFragment : Fragment() {
 
         updateStatistics(state.totalClassifications, state.averageInferenceTime)
         updateRecentPredictions(state.history)
-        updateModeButtons(state.recordingMode)
+        syncModeSelection(state.recordingMode)
         updateVolumeDisplay(state.currentVolume, state.appState)
         updatePerSecondCircles(state.perSecondResults)
         updatePerSecondCardVisibility(state.recordingMode)
@@ -558,40 +655,14 @@ class RecordingFragment : Fragment() {
         }
     }
 
-    private fun updateModeButtons(mode: RecordingMode) {
-        val ctx = context ?: return
-        val activeColor = ContextCompat.getColor(ctx, R.color.accent_green)
-        val inactiveColor = ContextCompat.getColor(ctx, R.color.surface_variant)
-        val activeTextColor = ContextCompat.getColor(ctx, R.color.on_primary)
-        val inactiveTextColor = ContextCompat.getColor(ctx, R.color.text_secondary)
-
-        modeStandardButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeStandardButton.setTextColor(inactiveTextColor)
-        modeFastButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeFastButton.setTextColor(inactiveTextColor)
-        modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeLongButton.setTextColor(inactiveTextColor)
-        modeAvgButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeAvgButton.setTextColor(inactiveTextColor)
-
-        when (mode) {
-            RecordingMode.STANDARD -> {
-                modeStandardButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeStandardButton.setTextColor(activeTextColor)
-            }
-            RecordingMode.FAST -> {
-                modeFastButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeFastButton.setTextColor(activeTextColor)
-            }
-            RecordingMode.LONG -> {
-                modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeLongButton.setTextColor(activeTextColor)
-            }
-            RecordingMode.AVERAGE -> {
-                modeAvgButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeAvgButton.setTextColor(activeTextColor)
-            }
+    private fun syncModeSelection(mode: RecordingMode) {
+        if (!::modeTimeline.isInitialized) return
+        if (mode.category != currentCategory) {
+            selectCategory(mode.category, persist = false)
         }
+        highlightSubMode(mode)
+        modeTimeline.setMode(mode)
+        modeDescription.text = descriptionFor(mode)
     }
 
     private fun updateAppState(appState: AppState) {

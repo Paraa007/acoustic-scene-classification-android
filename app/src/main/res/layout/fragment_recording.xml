@@ -305,66 +305,64 @@
                     android:textColor="@color/text_primary"
                     android:layout_marginBottom="12dp" />
 
+                <!-- Step 1: Category switch (Continuous / Interval) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center"
-                    android:layout_marginTop="8dp">
+                    android:layout_marginTop="4dp">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/modeFastButton"
+                        android:id="@+id/categoryContinuousButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp"
-                        android:text="@string/mode_fast"
-                        android:textSize="11sp"
-                        android:padding="10dp"
+                        android:text="@string/category_continuous"
+                        android:textSize="12sp"
+                        android:padding="12dp"
                         app:cornerRadius="12dp"
                         app:backgroundTint="@color/surface_variant"
                         android:textColor="@color/text_secondary" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/modeStandardButton"
+                        android:id="@+id/categoryIntervalButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="3dp"
-                        android:layout_marginEnd="3dp"
-                        android:text="@string/mode_standard"
-                        android:textSize="11sp"
-                        android:padding="10dp"
+                        android:text="@string/category_interval"
+                        android:textSize="12sp"
+                        android:padding="12dp"
                         app:cornerRadius="12dp"
                         app:backgroundTint="@color/surface_variant"
                         android:textColor="@color/text_secondary" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/modeLongButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="3dp"
-                        android:text="@string/mode_long"
-                        android:textSize="11sp"
-                        android:padding="10dp"
-                        app:cornerRadius="12dp"
-                        app:backgroundTint="@color/accent_green"
-                        android:textColor="@color/on_primary" />
                 </LinearLayout>
 
-                <!-- Avg mode button - only visible in Dev Mode -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/modeAvgButton"
+                <!-- Step 2: Sub-mode buttons, populated dynamically -->
+                <LinearLayout
+                    android:id="@+id/subModeButtonRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/mode_avg"
-                    android:textSize="11sp"
-                    android:padding="10dp"
-                    android:visibility="gone"
-                    app:cornerRadius="12dp"
-                    app:backgroundTint="@color/surface_variant"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="10dp" />
+
+                <!-- Timeline schema -->
+                <com.fzi.acousticscene.ui.ModeTimelineView
+                    android:id="@+id/modeTimeline"
+                    android:layout_width="match_parent"
+                    android:layout_height="100dp"
+                    android:layout_marginTop="12dp" />
+
+                <!-- One-line description -->
+                <TextView
+                    android:id="@+id/modeDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textSize="12sp"
                     android:textColor="@color/text_secondary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

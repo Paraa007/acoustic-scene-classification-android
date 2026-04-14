@@ -9,6 +9,13 @@
     <string name="mode_fast">Fast (1s)</string>
     <string name="mode_long">Long (30min)</string>
     <string name="mode_avg">Avg (10s) — 10×1s</string>
+    <string name="category_continuous">Continuous</string>
+    <string name="category_interval">Interval</string>
+    <string name="mode_desc_fast">Records every second and classifies immediately, no pauses in between.</string>
+    <string name="mode_desc_standard">Records 10 s at a time, classifies, then starts the next 10 s recording right away.</string>
+    <string name="mode_desc_long">Records 10 s, pauses 30 min, repeats. For long-term monitoring.</string>
+    <string name="mode_desc_avg">Records 10 × 1 s, classifies each clip separately, averages the probabilities.</string>
+    <string name="timeline_pause_30min">30 min pause</string>
     <string name="recording_mode">Recording Mode</string>
     <string name="loading_model">Loading Model...</string>
     <string name="model_loaded">Model Loaded</string>
