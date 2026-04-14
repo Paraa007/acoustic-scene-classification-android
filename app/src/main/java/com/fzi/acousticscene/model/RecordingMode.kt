@@ -10,23 +10,33 @@ package com.fzi.acousticscene.model
  *
  * LONG-Modus: Macht 10s Aufnahme, dann 30 Minuten Pause (für Langzeit-Monitoring)
  */
+enum class RecordingCategory(val label: String) {
+    CONTINUOUS("Durchgehend"),
+    INTERVAL("Intervall")
+}
+
 enum class RecordingMode(
     val durationSeconds: Int,
     val label: String,
-    val pauseAfterRecordingMs: Long = 0L  // Pause nach Aufnahme in Millisekunden
+    val category: RecordingCategory,
+    val pauseAfterRecordingMs: Long = 0L,
+    val devOnly: Boolean = false
 ) {
     STANDARD(
         durationSeconds = 10,
-        label = "Standard (10s)"
+        label = "Standard (10s)",
+        category = RecordingCategory.CONTINUOUS
     ),
     FAST(
         durationSeconds = 1,
-        label = "Fast (1s)"
+        label = "Fast (1s)",
+        category = RecordingCategory.CONTINUOUS
     ),
     LONG(
         durationSeconds = 10,
         label = "Long (30min)",
-        pauseAfterRecordingMs = 30 * 60 * 1000L  // 30 Minuten Pause = 1.800.000 ms
+        category = RecordingCategory.INTERVAL,
+        pauseAfterRecordingMs = 30 * 60 * 1000L
     ),
     /**
      * AVERAGE-Modus (nur Dev Mode):
@@ -35,23 +45,19 @@ enum class RecordingMode(
      */
     AVERAGE(
         durationSeconds = 10,
-        label = "Avg (10s)"
+        label = "Avg (10s)",
+        category = RecordingCategory.CONTINUOUS,
+        devOnly = true
     );
 
-    /**
-     * Prüft, ob dieser Modus eine Pause nach der Aufnahme hat
-     */
     fun hasPauseAfterRecording(): Boolean = pauseAfterRecordingMs > 0
 
-    /**
-     * Gibt die Pause in Minuten zurück (für UI-Anzeige)
-     */
     fun getPauseMinutes(): Int = (pauseAfterRecordingMs / 60000L).toInt()
 
     companion object {
-        /**
-         * Gibt die Standard-Aufnahme-Dauer zurück
-         */
         val DEFAULT = STANDARD
+
+        fun forCategory(category: RecordingCategory, isDevMode: Boolean): List<RecordingMode> =
+            values().filter { it.category == category && (isDevMode || !it.devOnly) }
     }
 }
