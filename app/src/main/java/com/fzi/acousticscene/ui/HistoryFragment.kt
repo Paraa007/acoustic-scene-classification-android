@@ -17,7 +17,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.lifecycle.ViewModelProvider
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.PredictionRepository
+import androidx.lifecycle.lifecycleScope
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.PredictionRecord
 import com.google.android.material.button.MaterialButton
@@ -97,6 +99,13 @@ class HistoryFragment : Fragment() {
         recyclerView.adapter = adapter
 
         loadHistory()
+
+        // Observe active sessions so the badge updates live when recordings start/stop
+        viewLifecycleOwner.lifecycleScope.launch {
+            ActiveSessionRegistry.active.collect {
+                adapter.setActiveSessionStartTimes(ActiveSessionRegistry.activeSessionStartTimes())
+            }
+        }
     }
 
     override fun onResume() {
@@ -403,6 +412,13 @@ class HistoryFragment : Fragment() {
         private var allSessionStartTimes: List<Long> = emptyList()
         private val selectedSessions = mutableSetOf<Long>()
         private var selectionMode = false
+        private var activeSessionStartTimes: Set<Long> = emptySet()
+
+        fun setActiveSessionStartTimes(active: Set<Long>) {
+            if (activeSessionStartTimes == active) return
+            activeSessionStartTimes = active
+            notifyDataSetChanged()
+        }
 
         fun submitList(newList: List<List<PredictionRecord>>, sessionStartTimes: List<Long>) {
             packages = newList
@@ -465,11 +481,14 @@ class HistoryFragment : Fragment() {
             private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
             private val selectionCheckbox: CheckBox = itemView.findViewById(R.id.selectionCheckbox)
             private val modeBadge: TextView = itemView.findViewById(R.id.modeBadge)
+            private val activeBadge: TextView = itemView.findViewById(R.id.activeBadge)
 
             fun bind(packageRecords: List<PredictionRecord>) {
                 val sessionStartTime = packageRecords.first().sessionStartTime
                 val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
                 sessionNameText.text = displayName
+
+                activeBadge.visibility = if (sessionStartTime in activeSessionStartTimes) View.VISIBLE else View.GONE
 
                 // Mode badge (Dev or User)
                 val isDevMode = packageRecords.first().isDevMode

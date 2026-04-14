@@ -7,7 +7,7 @@
     <string name="stop_recording">Stop Recording</string>
     <string name="mode_standard">Standard (10s)</string>
     <string name="mode_fast">Fast (1s)</string>
-    <string name="mode_long">Long (30min)</string>
+    <string name="mode_long">every 30min</string>
     <string name="mode_avg">Avg (10s) — 10×1s</string>
     <string name="category_continuous">Continuous</string>
     <string name="category_interval">Interval</string>
@@ -247,4 +247,13 @@
     <string name="user_evaluations">Nutzer-Bewertungen</string>
     <string name="no_user_evaluations">Keine Nutzer-Bewertungen vorhanden</string>
     <string name="n_of_m_evaluated">%1$d/%2$d bewertet</string>
+
+    <!-- Pause/Resume + Active session -->
+    <string name="pause_recording">Pause</string>
+    <string name="resume_recording">Resume</string>
+    <string name="user_paused">Paused</string>
+    <string name="user_paused_with_minutes">Paused · %1$d min remaining</string>
+    <string name="user_paused_with_mmss">Paused · %1$s remaining</string>
+    <string name="pause_mmss">Pause: %1$s until next recording</string>
+    <string name="active_session_badge">● ACTIVE</string>
 </resources>

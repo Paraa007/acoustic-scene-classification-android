@@ -372,7 +372,7 @@
             android:id="@+id/startStopButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:text="@string/start_recording"
             android:textSize="18sp"
             android:padding="24dp"
@@ -382,6 +382,20 @@
             app:cornerRadius="16dp"
             app:backgroundTint="@color/accent_green"
             android:textColor="@color/on_primary" />
+
+        <!-- Pause/Resume button (LONG mode only, visible while session active) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/pauseResumeButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            android:text="@string/pause_recording"
+            android:textSize="16sp"
+            app:cornerRadius="16dp"
+            app:strokeColor="@color/accent_green"
+            android:textColor="@color/accent_green" />
 
         <!-- Pending evaluation card (shown for 5 min after a LONG recording while app is foreground) -->
         <com.google.android.material.card.MaterialCardView
