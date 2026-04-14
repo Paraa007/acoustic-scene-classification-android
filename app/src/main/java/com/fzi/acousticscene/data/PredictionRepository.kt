@@ -101,12 +101,11 @@ class PredictionRepository private constructor(private val context: Context) {
      * Updates an existing prediction with user evaluation data
      */
     @Synchronized
-    fun updatePredictionEvaluation(predictionId: Long, userSelectedClass: SceneClass?, userComment: String?) {
+    fun updatePredictionEvaluation(predictionId: Long, userSelectedClass: SceneClass?) {
         val index = predictions.indexOfFirst { it.id == predictionId }
         if (index >= 0) {
             predictions[index] = predictions[index].copy(
-                userSelectedClass = userSelectedClass,
-                userComment = userComment
+                userSelectedClass = userSelectedClass
             )
             saveToPrefs()
             Log.d(TAG, "Updated prediction $predictionId with user evaluation: ${userSelectedClass?.labelShort}")

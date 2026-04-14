@@ -12,7 +12,6 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.model.SceneClass
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
 
 /**
  * Activity for user evaluation of acoustic scene classification predictions.
@@ -29,7 +28,6 @@ class EvaluationActivity : AppCompatActivity() {
         private const val STATE_PREDICTION_ID = "state_prediction_id"
         private const val STATE_DEADLINE = "state_deadline"
         private const val STATE_SELECTED_INDEX = "state_selected_index"
-        private const val STATE_COMMENT = "state_comment"
     }
 
     private var predictionId: Long = -1
@@ -82,12 +80,6 @@ class EvaluationActivity : AppCompatActivity() {
 
         // Submit button
         val btnSubmit = findViewById<MaterialButton>(R.id.btnSubmit)
-        val commentEditText = findViewById<TextInputEditText>(R.id.commentEditText)
-
-        // Restore comment
-        savedInstanceState?.getString(STATE_COMMENT)?.let {
-            commentEditText.setText(it)
-        }
 
         btnSubmit.setOnClickListener {
             val selectedId = radioGroup.checkedRadioButtonId
@@ -95,11 +87,9 @@ class EvaluationActivity : AppCompatActivity() {
                 radioGroup.findViewById<RadioButton>(selectedId)?.tag as? SceneClass
             } else null
 
-            val comment = commentEditText.text?.toString()?.trim()?.ifEmpty { null }
-
-            if (selectedClass != null || comment != null) {
+            if (selectedClass != null) {
                 PredictionRepository.getInstance(this)
-                    .updatePredictionEvaluation(predictionId, selectedClass, comment)
+                    .updatePredictionEvaluation(predictionId, selectedClass)
             }
             finish()
         }
@@ -145,15 +135,13 @@ class EvaluationActivity : AppCompatActivity() {
         if (selectedId != -1) {
             outState.putInt(STATE_SELECTED_INDEX, selectedId - 1000)
         }
-
-        val comment = findViewById<TextInputEditText>(R.id.commentEditText).text?.toString()
-        if (!comment.isNullOrEmpty()) {
-            outState.putString(STATE_COMMENT, comment)
-        }
     }
 
     override fun onDestroy() {
         countDownTimer?.cancel()
+        if (predictionId != -1L) {
+            EvaluationPromptBus.dismiss(predictionId)
+        }
         super.onDestroy()
     }
 }

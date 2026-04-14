@@ -40,7 +40,6 @@ data class PredictionRecord(
     val modelName: String = "model1.pt",  // Model file name
     val isDevMode: Boolean = false,  // Whether this was recorded in Dev Mode
     val userSelectedClass: SceneClass? = null,  // User evaluation: selected scene class (null = no response)
-    val userComment: String? = null,  // User evaluation: optional comment
     val perSecondClips: List<PerSecondClip>? = null  // AVERAGE mode: individual 1s clip results
 ) {
     /**
@@ -91,9 +90,8 @@ data class PredictionRecord(
         // Batterie-Level (oder "N/A" wenn unbekannt)
         val batteryString = if (batteryLevel >= 0) batteryLevel.toString() else "N/A"
 
-        // User evaluation columns (empty if no response)
+        // User evaluation column (empty if no response)
         val userClassStr = userSelectedClass?.label?.let { "\"$it\"" } ?: ""
-        val userCommentStr = userComment?.let { "\"${it.replace("\"", "\"\"")}\"" } ?: ""
 
         // Per-second clips (AVERAGE mode only)
         val perSecondStr = if (perSecondClips != null && perSecondClips.isNotEmpty()) {
@@ -119,7 +117,6 @@ data class PredictionRecord(
             String.format(Locale.US, "%.2f", top3_entry.second * 100),  // top3_confidence_percent
             probsString,  // probabilities mit Klassennamen im Header
             userClassStr,  // user_selected_class (empty if no evaluation)
-            userCommentStr,  // user_comment (empty if no comment)
             "\"$perSecondStr\""  // per_second_clips (AVERAGE mode)
         ).joinToString(",")
     }
@@ -139,7 +136,7 @@ data class PredictionRecord(
                     "top2_display_name,top2_confidence_percent," +
                     "top3_display_name,top3_confidence_percent," +
                     "probabilities[$probHeaders]," +
-                    "user_selected_class,user_comment," +
+                    "user_selected_class," +
                     "per_second_clips"
         }
     }

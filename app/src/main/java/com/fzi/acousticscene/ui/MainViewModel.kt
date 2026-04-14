@@ -10,6 +10,8 @@ import android.os.BatteryManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.fzi.acousticscene.R
 import androidx.lifecycle.viewModelScope
 import com.fzi.acousticscene.audio.AudioRecorder
@@ -169,6 +171,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateStatistics()
         // Starte Volume-Beobachtung
         startVolumeObservation()
+        // Observe dismissals of the in-app evaluation prompt (from EvaluationActivity)
+        viewModelScope.launch {
+            EvaluationPromptBus.dismissals.collect { dismissedId ->
+                _uiState.update { state ->
+                    if (state.pendingEvaluation?.predictionId == dismissedId) {
+                        state.copy(pendingEvaluation = null)
+                    } else state
+                }
+            }
+        }
         // Note: loadModel() is called from setModelConfig() when fragments configure the model
     }
 
@@ -761,6 +773,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun sendEvaluationNotification(record: PredictionRecord) {
         val context = getApplication<Application>()
+
+        // If the app is in the foreground, surface a persistent in-app prompt
+        // (card in RecordingFragment with a 5-minute countdown) instead of a system notification.
+        val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        if (isForeground) {
+            val deadline = android.os.SystemClock.elapsedRealtime() + EvaluationActivity.EVALUATION_TIMEOUT_MS
+            _uiState.update {
+                it.copy(
+                    pendingEvaluation = PendingEvaluation(
+                        predictionId = record.id,
+                        modelClass = record.sceneClass,
+                        deadlineElapsedMs = deadline
+                    )
+                )
+            }
+            // Auto-clear when deadline passes (only if still the same pending entry)
+            viewModelScope.launch {
+                delay(EvaluationActivity.EVALUATION_TIMEOUT_MS)
+                _uiState.update { state ->
+                    if (state.pendingEvaluation?.predictionId == record.id) {
+                        state.copy(pendingEvaluation = null)
+                    } else state
+                }
+            }
+            Log.d(TAG, "In-app evaluation prompt set for prediction ${record.id}")
+            return
+        }
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create evaluation notification channel (idempotent)

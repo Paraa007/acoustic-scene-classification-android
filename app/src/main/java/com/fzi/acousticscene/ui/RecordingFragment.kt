@@ -38,6 +38,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.materialswitch.MaterialSwitch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -86,6 +87,13 @@ class RecordingFragment : Fragment() {
     private lateinit var volumeLineChartView: com.fzi.acousticscene.ui.VolumeLineChartView
     private var volumeGraphJob: Job? = null
     private var isVolumeGraphActive: Boolean = false
+
+    // Pending evaluation card (foreground LONG-mode prompt, 5-min countdown)
+    private lateinit var pendingEvaluationCard: MaterialCardView
+    private lateinit var pendingEvaluationTitle: TextView
+    private lateinit var pendingEvaluationSubtitle: TextView
+    private lateinit var pendingEvaluationButton: MaterialButton
+    private var pendingEvaluationTickerJob: Job? = null
 
     // Per-Second Circles Components (AVERAGE mode only)
     private lateinit var perSecondCirclesCard: MaterialCardView
@@ -328,6 +336,11 @@ class RecordingFragment : Fragment() {
 
         categoryContinuousButton.setOnClickListener { selectCategory(RecordingCategory.CONTINUOUS, persist = true) }
         categoryIntervalButton.setOnClickListener { selectCategory(RecordingCategory.INTERVAL, persist = true) }
+
+        pendingEvaluationCard = view.findViewById(R.id.pendingEvaluationCard)
+        pendingEvaluationTitle = view.findViewById(R.id.pendingEvaluationTitle)
+        pendingEvaluationSubtitle = view.findViewById(R.id.pendingEvaluationSubtitle)
+        pendingEvaluationButton = view.findViewById(R.id.pendingEvaluationButton)
 
         recordingProgressBar = view.findViewById(R.id.recordingProgressBar)
         timerText = view.findViewById(R.id.timerText)
@@ -604,6 +617,43 @@ class RecordingFragment : Fragment() {
         }
     )
 
+    private fun updatePendingEvaluation(pending: PendingEvaluation?) {
+        if (pending == null) {
+            pendingEvaluationTickerJob?.cancel()
+            pendingEvaluationTickerJob = null
+            if (::pendingEvaluationCard.isInitialized) {
+                pendingEvaluationCard.visibility = View.GONE
+            }
+            return
+        }
+
+        pendingEvaluationCard.visibility = View.VISIBLE
+        pendingEvaluationTitle.text = getString(R.string.evaluation_inapp_message)
+        val launchAction = View.OnClickListener {
+            val intent = android.content.Intent(requireContext(), EvaluationActivity::class.java).apply {
+                putExtra(EvaluationActivity.EXTRA_PREDICTION_ID, pending.predictionId)
+                putExtra(EvaluationActivity.EXTRA_MODEL_PREDICTED_CLASS, pending.modelClass.name)
+            }
+            startActivity(intent)
+        }
+        pendingEvaluationButton.setOnClickListener(launchAction)
+        pendingEvaluationCard.setOnClickListener(launchAction)
+
+        // Start a per-second ticker for the countdown if not already running for this prediction
+        pendingEvaluationTickerJob?.cancel()
+        pendingEvaluationTickerJob = viewLifecycleOwner.lifecycleScope.launch {
+            while (isActive) {
+                val remainingMs = (pending.deadlineElapsedMs - android.os.SystemClock.elapsedRealtime())
+                    .coerceAtLeast(0L)
+                val minutes = (remainingMs / 1000) / 60
+                val seconds = (remainingMs / 1000) % 60
+                pendingEvaluationSubtitle.text = "${pending.modelClass.emoji} ${pending.modelClass.labelShort} · %d:%02d".format(minutes, seconds)
+                if (remainingMs == 0L) break
+                delay(1000L)
+            }
+        }
+    }
+
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiState.collect { state ->
@@ -634,6 +684,7 @@ class RecordingFragment : Fragment() {
         updateVolumeDisplay(state.currentVolume, state.appState)
         updatePerSecondCircles(state.perSecondResults)
         updatePerSecondCardVisibility(state.recordingMode)
+        updatePendingEvaluation(state.pendingEvaluation)
 
         if (state.errorMessage != null) {
             // Error shown in status label
