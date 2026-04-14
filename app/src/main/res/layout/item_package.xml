@@ -44,6 +44,21 @@
                     android:textColor="@color/text_primary" />
 
                 <TextView
+                    android:id="@+id/activeBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="true"
+                    android:text="@string/active_session_badge"
+                    android:textColor="@color/on_primary"
+                    android:background="@color/status_recording"
+                    android:visibility="gone" />
+
+                <TextView
                     android:id="@+id/modeBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

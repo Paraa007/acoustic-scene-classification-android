@@ -16,6 +16,7 @@ import com.fzi.acousticscene.R
 import androidx.lifecycle.viewModelScope
 import com.fzi.acousticscene.audio.AudioRecorder
 import com.fzi.acousticscene.audio.RecordingState
+import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.ml.ComputationDispatcher
@@ -142,7 +143,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     private var recordingJob: Job? = null
     private var volumeJob: Job? = null
-    private var isRecording = false
+    @Volatile private var isRecording = false
+    @Volatile private var isPaused = false
     private var currentMode: RecordingMode = RecordingMode.STANDARD
     private var audioRecorder: AudioRecorder = AudioRecorder(durationSeconds = currentMode.durationSeconds)
 
@@ -267,6 +269,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         isRecording = true
+        isPaused = false
+        _uiState.update { it.copy(isPaused = false) }
+
+        // Track active session globally so other screens (Welcome, History) can detect it
+        ActiveSessionRegistry.register(
+            ActiveSessionRegistry.Entry(
+                isDevMode = _isDevMode,
+                modelPath = _modelPath,
+                modelName = _modelName,
+                numClasses = _numClasses,
+                sessionStartTime = sessionStartTime
+            )
+        )
 
         // AVERAGE mode uses a completely different flow: record 1s, infer, repeat 10x
         if (currentMode == RecordingMode.AVERAGE) {
@@ -279,8 +294,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         recordingJob = viewModelScope.launch {
             while (isActive && isRecording) {
                 try {
+                    // Block here if user paused — holds before starting the next recording
+                    while (isPaused && isRecording && isActive) {
+                        _uiState.update { it.copy(appState = AppState.UserPaused(0)) }
+                        delay(500)
+                    }
+                    if (!isRecording) break
+
                     val durationSeconds = currentMode.durationSeconds
-                    
+
                     // Starte Aufnahme
                     _uiState.update { 
                         it.copy(
@@ -424,15 +446,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val pauseMinutes = currentMode.getPauseMinutes()
                             Log.d(TAG, "LONG mode: Starting ${pauseMinutes} minute pause")
 
-                            // Zeige Pause-Status in der UI
-                            var remainingMinutes = pauseMinutes
-                            while (remainingMinutes > 0 && isActive && isRecording) {
-                                _uiState.update {
-                                    it.copy(appState = AppState.Paused(remainingMinutes))
+                            // Zeige Pause-Status in der UI (Sekundengenau)
+                            var remainingSeconds = (pauseMs / 1000L).toInt()
+                            while (remainingSeconds > 0 && isActive && isRecording) {
+                                if (isPaused) {
+                                    _uiState.update {
+                                        it.copy(appState = AppState.UserPaused(remainingSeconds))
+                                    }
+                                    delay(500)
+                                    continue
                                 }
-                                // Warte 1 Minute
-                                delay(60 * 1000L)
-                                remainingMinutes--
+                                _uiState.update {
+                                    it.copy(appState = AppState.Paused(remainingSeconds))
+                                }
+                                delay(1000L)
+                                if (!isPaused) remainingSeconds--
                             }
 
                             if (isRecording) {
@@ -474,17 +502,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun stopClassification() {
         isRecording = false
+        isPaused = false
         recordingJob?.cancel()
         audioRecorder.stopRecording()
         resetAnalysisViewState()
+        ActiveSessionRegistry.unregister(_isDevMode)
         _uiState.update { it.copy(
             appState = AppState.Ready,
             errorMessage = null,
             perSecondResults = List(10) { null },
-            runningAverageResult = null
+            runningAverageResult = null,
+            isPaused = false
         ) }
         Log.d(TAG, "Classification stopped")
     }
+
+    /**
+     * User presses Pause in LONG mode: halts both the active recording loop
+     * (at the next iteration boundary) and the 30-min countdown. The session
+     * stays alive; Resume continues from where Pause was hit.
+     */
+    fun pauseClassification() {
+        if (!isRecording || isPaused) return
+        isPaused = true
+        _uiState.update { it.copy(isPaused = true) }
+        Log.d(TAG, "Classification paused by user")
+    }
+
+    fun resumeClassification() {
+        if (!isRecording || !isPaused) return
+        isPaused = false
+        _uiState.update { it.copy(isPaused = false) }
+        Log.d(TAG, "Classification resumed by user")
+    }
+
+    fun isUserPaused(): Boolean = isPaused
     
     /**
      * Aktualisiert den UI State mit einem neuen Klassifikations-Ergebnis

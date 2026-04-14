@@ -64,6 +64,7 @@ class RecordingFragment : Fragment() {
     private val subModeButtons: MutableMap<RecordingMode, MaterialButton> = mutableMapOf()
     private var currentCategory: RecordingCategory = RecordingCategory.CONTINUOUS
     private lateinit var startStopButton: MaterialButton
+    private lateinit var pauseResumeButton: MaterialButton
     private lateinit var statusLabel: TextView
     private lateinit var modelStatusLabel: TextView
     private lateinit var headerProcessingLabel: TextView
@@ -179,6 +180,13 @@ class RecordingFragment : Fragment() {
         if (isDevMode) {
             // If already recording in dev mode, just resume showing the session (no dialog)
             if (viewModel.isClassifying()) {
+                return
+            }
+            // Registry fallback: process survived but ViewModel was cleared — restore config
+            // from the active-session registry and skip the picker.
+            val activeDev = com.fzi.acousticscene.data.ActiveSessionRegistry.get(isDevMode = true)
+            if (activeDev != null) {
+                viewModel.setModelConfig(activeDev.modelPath, activeDev.modelName, activeDev.numClasses, true)
                 return
             }
             // Must select a model before using Dev Mode
@@ -330,6 +338,11 @@ class RecordingFragment : Fragment() {
         modeTimeline = view.findViewById(R.id.modeTimeline)
         modeDescription = view.findViewById(R.id.modeDescription)
         startStopButton = view.findViewById(R.id.startStopButton)
+        pauseResumeButton = view.findViewById(R.id.pauseResumeButton)
+        pauseResumeButton.setOnClickListener {
+            if (viewModel.isUserPaused()) viewModel.resumeClassification()
+            else viewModel.pauseClassification()
+        }
         statusLabel = view.findViewById(R.id.statusLabel)
         modelStatusLabel = view.findViewById(R.id.modelStatusLabel)
         headerProcessingLabel = view.findViewById(R.id.headerProcessingLabel)
@@ -617,6 +630,15 @@ class RecordingFragment : Fragment() {
         }
     )
 
+    private fun updatePauseButton(state: UiState) {
+        if (!::pauseResumeButton.isInitialized) return
+        val show = state.recordingMode == RecordingMode.LONG && viewModel.isClassifying()
+        pauseResumeButton.visibility = if (show) View.VISIBLE else View.GONE
+        pauseResumeButton.text = getString(
+            if (state.isPaused) R.string.resume_recording else R.string.pause_recording
+        )
+    }
+
     private fun updatePendingEvaluation(pending: PendingEvaluation?) {
         if (pending == null) {
             pendingEvaluationTickerJob?.cancel()
@@ -685,6 +707,7 @@ class RecordingFragment : Fragment() {
         updatePerSecondCircles(state.perSecondResults)
         updatePerSecondCardVisibility(state.recordingMode)
         updatePendingEvaluation(state.pendingEvaluation)
+        updatePauseButton(state)
 
         if (state.errorMessage != null) {
             // Error shown in status label
@@ -768,14 +791,35 @@ class RecordingFragment : Fragment() {
                 timerText.visibility = View.GONE
             }
             is AppState.Paused -> {
-                val minutes = appState.minutesRemaining
-                statusLabel.text = getString(R.string.pause_minutes, minutes)
+                val total = appState.secondsRemaining
+                val minutes = total / 60
+                val seconds = total % 60
+                val mmss = "%d:%02d".format(minutes, seconds)
+                statusLabel.text = getString(R.string.pause_mmss, mmss)
                 statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
                 recordingProgressBar.visibility = View.GONE
-                timerText.text = "$minutes ${getString(R.string.min)}"
+                timerText.text = mmss
                 timerText.visibility = View.VISIBLE
+            }
+            is AppState.UserPaused -> {
+                val total = appState.secondsRemaining
+                if (total > 0) {
+                    val minutes = total / 60
+                    val seconds = total % 60
+                    val mmss = "%d:%02d".format(minutes, seconds)
+                    statusLabel.text = getString(R.string.user_paused_with_mmss, mmss)
+                    timerText.text = mmss
+                    timerText.visibility = View.VISIBLE
+                } else {
+                    statusLabel.text = getString(R.string.user_paused)
+                    timerText.visibility = View.GONE
+                }
+                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
+                startStopButton.isEnabled = true
+                startStopButton.text = getString(R.string.stop_recording)
+                recordingProgressBar.visibility = View.GONE
             }
             is AppState.Error -> {
                 statusLabel.text = appState.message

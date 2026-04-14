@@ -34,7 +34,7 @@ enum class RecordingMode(
     ),
     LONG(
         durationSeconds = 10,
-        label = "Long (30min)",
+        label = "every 30min",
         category = RecordingCategory.INTERVAL,
         pauseAfterRecordingMs = 30 * 60 * 1000L
     ),

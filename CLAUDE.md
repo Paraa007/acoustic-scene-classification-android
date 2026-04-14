@@ -19,7 +19,7 @@ Android-App (Kotlin) für **Acoustic Scene Classification** in Echtzeit. Die App
 **Aufnahme-Modi** (auswählbar auf dem Recording-Screen):
 - **Fast (1s)** — kurze Aufnahme, schnelles Feedback.
 - **Standard (10s)** — Normalfall, gute Balance.
-- **Long (30min)** — nimmt 10s auf, pausiert dann 30min, wiederholt. Für Langzeit-Monitoring. Nach jeder Aufnahme bekommt der Nutzer eine Push-Notification und kann die tatsächliche Szene + Kommentar angeben (Evaluation-Feature).
+- **every 30min** — nimmt 10s auf, pausiert dann 30min, wiederholt. Für Langzeit-Monitoring. Nach jeder Aufnahme bekommt der Nutzer eine Push-Notification und kann die tatsächliche Szene + Kommentar angeben (Evaluation-Feature).
 - **Avg (10s, nur Dev Mode)** — nimmt 10 × 1s nacheinander auf, inferiert jeden Clip einzeln, und mittelt die 10 Wahrscheinlichkeitsverteilungen. Alle Einzelergebnisse sind live im UI sichtbar (10 kleine Kreise + großer Kreis mit laufendem Durchschnitt).
 
 **History / Auswertung:**
@@ -86,6 +86,16 @@ Die FFT-Parameter (nFft, winLength, hopLength, nMels, fMin, fMax) sind für alle
 - `scripts/` — Python-Utilities (Modell-Export, Tests) und Shell-Helper
 
 ## Changelog
+
+**2026-04-15 — LONG-mode label + second-accurate countdown**
+- Renamed the LONG mode label from "Long (30min)" to "every 30min" (both `RecordingMode.LONG.label` and string `mode_long`).
+- The 30-min pause countdown now ticks every second instead of every minute. `AppState.Paused` / `UserPaused` now carry `secondsRemaining: Int` (was `minutesRemaining`). UI shows `mm:ss` (e.g. `29:47`) in both the status label and the timer. New strings: `pause_mmss`, `user_paused_with_mmss`.
+
+**2026-04-15 — LONG-mode Pause/Resume + persistent active session + History "active" badge**
+- LONG mode now has a Pause/Resume button under Start/Stop, visible only while a LONG session is active. It halts both the recording loop (at the next iteration boundary) and the 30-min countdown; Resume continues from where Pause was hit. Stop still ends the session entirely. New `AppState.UserPaused(minutesRemaining)` and `UiState.isPaused` drive the UI.
+- New `ActiveSessionRegistry` (`data/`) tracks which modes (User/Dev) have a live session, process-wide. `MainViewModel.startClassification()` registers, `stopClassification()` unregisters. Survives activity/fragment destruction as long as the foreground service keeps the process alive.
+- `RecordingFragment.configureModel()` checks the registry: if a Dev-mode session is active but the ViewModel is empty (process revival edge case), it restores the model config from the registry entry and skips the picker. The normal in-process case (ViewModel alive) continues to use `isClassifying()`.
+- `HistoryFragment` observes `ActiveSessionRegistry.active` and pushes the set of active `sessionStartTime`s into `PackageAdapter`. Matching rows show a red "● ACTIVE" badge next to the Dev/User mode badge; it appears/disappears live as recordings start and stop.
 
 **2026-04-14 — Removed optional comment from evaluation**
 - `EvaluationActivity` no longer has a comment `EditText`. Users now pick one of the 9 classes and tap Send — no more text input, no keyboard issues.

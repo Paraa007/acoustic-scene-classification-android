@@ -43,7 +43,13 @@ sealed class AppState {
      * Paused: Pause zwischen Aufnahmen (nur bei LONG-Modus)
      * @param minutesRemaining Verbleibende Minuten bis zur nächsten Aufnahme
      */
-    data class Paused(val minutesRemaining: Int) : AppState()
+    data class Paused(val secondsRemaining: Int) : AppState()
+
+    /**
+     * UserPaused: User explicitly paused the LONG-mode loop. Mirrors `Paused`
+     * (kept separate so UI can show a different label).
+     */
+    data class UserPaused(val secondsRemaining: Int) : AppState()
 
     /**
      * Processing: Inferenz läuft
@@ -81,5 +87,6 @@ data class UiState(
     val currentVolume: Float = 0f,
     val perSecondResults: List<ClassificationResult?> = List(10) { null },
     val runningAverageResult: ClassificationResult? = null,
-    val pendingEvaluation: PendingEvaluation? = null
+    val pendingEvaluation: PendingEvaluation? = null,
+    val isPaused: Boolean = false
 )
