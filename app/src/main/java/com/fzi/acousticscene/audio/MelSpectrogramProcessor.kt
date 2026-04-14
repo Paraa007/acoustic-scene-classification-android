@@ -31,7 +31,7 @@ data class SparseMelFilter(
  * Kompatibel mit dem PyTorch-Modell (DCASE 2025).
  * 
  * Input: FloatArray mit 320000 Samples (10 Sekunden @ 32kHz)
- * Output: Array<FloatArray> mit Shape [256, 641] (nMels x nFrames)
+ * Output: Array<FloatArray> mit Shape [nMels, nFrames] (z.B. [256, 641] bei 10s @ 32kHz mit center=True)
  */
 class MelSpectrogramProcessor(
     private val sampleRate: Int = 32000,
@@ -125,20 +125,36 @@ class MelSpectrogramProcessor(
 
     /**
      * Berechnet STFT und gibt Power Spectrum zurück
-     * 
+     *
      * OPTIMIERT: Verwendet Pre-allocated Buffers um GC-Druck zu reduzieren
+     * Center-Padding: Signal wird mit winLength/2 reflect-gepaddet (wie torch.stft center=True, pad_mode='reflect')
      */
     private fun computeSTFT(audioSamples: FloatArray): Array<FloatArray> {
+        // Center-Padding: reflect (wie torch.stft mit center=True, pad_mode='reflect')
+        val pad = winLength / 2
+        val paddedSamples = FloatArray(audioSamples.size + 2 * pad)
+        // Originalsignal in die Mitte kopieren
+        audioSamples.copyInto(paddedSamples, destinationOffset = pad)
+        // Reflect-Padding links: signal[pad-1], signal[pad-2], ..., signal[0]
+        for (i in 0 until pad) {
+            paddedSamples[pad - 1 - i] = audioSamples[minOf(i + 1, audioSamples.size - 1)]
+        }
+        // Reflect-Padding rechts: signal[n-2], signal[n-3], ...
+        val n = audioSamples.size
+        for (i in 0 until pad) {
+            paddedSamples[pad + n + i] = audioSamples[maxOf(n - 2 - i, 0)]
+        }
+
         // Berechne Anzahl der Frames
-        val nSamples = audioSamples.size
+        val nSamples = paddedSamples.size
         val nFrames = 1 + (nSamples - winLength) / hopLength
-        
+
         // Anzahl der Frequenz-Bins (nur positive Frequenzen + DC + Nyquist)
         val nFreqBins = nFft / 2 + 1
-        
+
         // Power Spectrum Array (muss neu erstellt werden, da Größe variabel)
         val powerSpectrum = Array(nFrames) { FloatArray(nFreqBins) }
-        
+
         // Für jeden Frame - WICHTIG: Buffers wiederverwenden!
         for (frameIdx in 0 until nFrames) {
             val startSample = frameIdx * hopLength
@@ -151,7 +167,7 @@ class MelSpectrogramProcessor(
             for (i in 0 until winLength) {
                 val sampleIdx = startSample + i
                 if (sampleIdx < nSamples) {
-                    windowedFrame[i] = audioSamples[sampleIdx] * hannWindow[i]
+                    windowedFrame[i] = paddedSamples[sampleIdx] * hannWindow[i]
                 }
             }
             // Rest bleibt 0 (Zero-Padding bereits durch fill(0f))
@@ -291,117 +307,109 @@ class MelSpectrogramProcessor(
     }
 
     /**
-     * Erstellt Hann Window
+     * Erstellt periodisches Hann Window (wie torch.hann_window(periodic=True))
+     * Periodic: teilt durch N (nicht N-1 wie symmetric)
      */
     private fun createHannWindow(size: Int): FloatArray {
         return FloatArray(size) { i ->
-            (0.5f * (1 - cos(2.0 * PI * i / (size - 1)))).toFloat()
+            (0.5f * (1 - cos(2.0 * PI * i / size))).toFloat()
         }
     }
 
     /**
-     * Erstellt SPARSE Mel-Filterbank
-     * 
-     * OPTIMIERUNG: Statt voller Matrix (nMels × 2049 Bins, 90% sind 0),
-     * speichern wir nur die aktiven Bereiche [startBin, endBin] mit Gewichten.
-     * 
-     * Memory: Vorher ~2MB (256 × 2049 × 4 Bytes), Jetzt ~50KB (256 × ~50 × 4 Bytes)
-     * Speed: Vorher 524,544 Ops/Frame, Jetzt ~12,800 Ops/Frame (20-40x schneller!)
+     * Erstellt SPARSE Mel-Filterbank — kompatibel mit torchaudio.functional.create_fb_matrix
+     *
+     * WICHTIG: torchaudio berechnet Filter im KONTINUIERLICHEN Frequenzraum,
+     * nicht mit diskreten Bin-Indizes (wie librosa). Algorithmus:
+     * 1. all_freqs = linspace(0, sr/2, n_fft/2+1) — exakte Frequenz pro Bin
+     * 2. Mel-Punkte gleichmäßig in Mel-Skala verteilt
+     * 3. Dreieck-Filter: up_slope und down_slope basierend auf Frequenz-Differenzen
+     * 4. filter[mel][bin] = max(0, min(down_slope, up_slope))
      */
     private fun createSparseFilterbank(): Array<SparseMelFilter> {
         val t0 = System.currentTimeMillis()
-        Log.d(TAG, "PERF: Creating SPARSE Mel filterbank: $nMels mels, fMin=$fMin, fMax=$fMax")
-        
+        Log.d(TAG, "PERF: Creating SPARSE Mel filterbank (torchaudio-compatible): $nMels mels, fMin=$fMin, fMax=$fMax")
+
         val nFreqBins = nFft / 2 + 1
-        
-        // Mel-Skala Grenzen
+
+        // 1. Frequenz-Vektor: exakte Frequenz für jeden FFT-Bin (wie torchaudio)
+        val allFreqs = FloatArray(nFreqBins) { i ->
+            i.toFloat() * sampleRate / nFft
+        }
+
+        // 2. Mel-Punkte gleichmäßig verteilt (nMels + 2 Punkte für Start/Ende)
         val melMin = hzToMel(fMin)
         val melMax = hzToMel(fMax)
-        
-        // Mel-Punkte gleichmäßig verteilt
         val melPoints = FloatArray(nMels + 2) { i ->
             melMin + i * (melMax - melMin) / (nMels + 1)
         }
-        
-        // Zurück zu Hz
-        val hzPoints = melPoints.map { melToHz(it) }
-        
-        // Zu FFT-Bin-Indizes
-        val binPoints = hzPoints.map { hz ->
-            floor((nFft + 1) * hz / sampleRate).toInt()
-        }
-        
-        // SPARSE Filterbank erstellen - nur Nicht-Null-Bereiche!
+
+        // 3. Mel-Punkte zurück zu Hz
+        val fPts = FloatArray(nMels + 2) { i -> melToHz(melPoints[i]) }
+
+        // 4. Frequenz-Differenzen zwischen aufeinanderfolgenden Mel-Punkten
+        val fDiff = FloatArray(nMels + 1) { i -> fPts[i + 1] - fPts[i] }
+
+        // 5. SPARSE Filterbank erstellen
         val filters = mutableListOf<SparseMelFilter>()
         var totalNonZeroBins = 0
-        
+
         for (mel in 0 until nMels) {
-            val startBin = binPoints[mel]
-            val centerBin = binPoints[mel + 1]
-            val endBin = binPoints[mel + 2]
-            
-            // Bestimme aktiven Bereich (clamp auf gültige Werte)
-            // Der aktive Bereich ist [startBin, endBin], aber clamped auf [0, nFreqBins-1]
-            val actualStartBin = maxOf(0, minOf(startBin, nFreqBins - 1))
-            val actualEndBin = minOf(endBin, nFreqBins - 1)
-            
-            // Berechne Filterbreite (inklusive beider Enden)
-            val filterWidth = actualEndBin - actualStartBin + 1
-            val weights = FloatArray(filterWidth) { 0f }
-            
-            // Aufsteigende Flanke (von startBin bis centerBin)
-            if (centerBin > startBin) {
-                val rangeStart = maxOf(actualStartBin, startBin)
-                val rangeEnd = minOf(centerBin, actualEndBin + 1)
-                
-                for (bin in rangeStart until rangeEnd) {
-                    if (bin >= actualStartBin && bin <= actualEndBin) {
-                        val weightIndex = bin - actualStartBin
-                        // Gewicht: linear von 0 (startBin) zu 1 (centerBin)
-                        weights[weightIndex] = (bin - startBin).toFloat() / (centerBin - startBin)
-                    }
+            // torchaudio Algorithmus:
+            // down_slopes = (f_pts[mel+2] - all_freqs) / f_diff[mel+1]   (absteigende Flanke)
+            // up_slopes   = (all_freqs - f_pts[mel])   / f_diff[mel]     (aufsteigende Flanke)
+            // filter = max(0, min(down_slope, up_slope))
+
+            val fLow = fPts[mel]
+            val fCenter = fPts[mel + 1]
+            val fHigh = fPts[mel + 2]
+            val dLow = fDiff[mel]    // fCenter - fLow
+            val dHigh = fDiff[mel + 1] // fHigh - fCenter
+
+            // Finde aktiven Bereich (wo Filter > 0)
+            var startBin = nFreqBins
+            var endBin = 0
+
+            for (bin in 0 until nFreqBins) {
+                val freq = allFreqs[bin]
+                val upSlope = if (dLow > 0f) (freq - fLow) / dLow else 0f
+                val downSlope = if (dHigh > 0f) (fHigh - freq) / dHigh else 0f
+                val weight = maxOf(0f, minOf(downSlope, upSlope))
+                if (weight > 0f) {
+                    if (bin < startBin) startBin = bin
+                    endBin = bin
                 }
             }
-            
-            // Absteigende Flanke (von centerBin bis endBin)
-            if (endBin > centerBin) {
-                val rangeStart = maxOf(actualStartBin, centerBin + 1) // +1 weil centerBin bereits bei 1.0 ist
-                val rangeEnd = minOf(endBin + 1, actualEndBin + 1)
-                
-                for (bin in rangeStart until rangeEnd) {
-                    if (bin >= actualStartBin && bin <= actualEndBin) {
-                        val weightIndex = bin - actualStartBin
-                        // Gewicht: linear von 1 (centerBin) zu 0 (endBin)
-                        weights[weightIndex] = (endBin - bin).toFloat() / (endBin - centerBin)
-                    }
+
+            // Erstelle Sparse-Filter
+            if (startBin <= endBin) {
+                val filterWidth = endBin - startBin + 1
+                val weights = FloatArray(filterWidth)
+
+                for (i in 0 until filterWidth) {
+                    val bin = startBin + i
+                    val freq = allFreqs[bin]
+                    val upSlope = if (dLow > 0f) (freq - fLow) / dLow else 0f
+                    val downSlope = if (dHigh > 0f) (fHigh - freq) / dHigh else 0f
+                    weights[i] = maxOf(0f, minOf(downSlope, upSlope))
                 }
+
+                totalNonZeroBins += weights.count { it > 1e-10f }
+                filters.add(SparseMelFilter(startBin = startBin, endBin = endBin, weights = weights))
+            } else {
+                // Leerer Filter (sollte nicht vorkommen)
+                filters.add(SparseMelFilter(startBin = 0, endBin = 0, weights = floatArrayOf(0f)))
             }
-            
-            // Center-Bin: Gewicht = 1.0 (wenn innerhalb des aktiven Bereichs)
-            if (centerBin >= actualStartBin && centerBin <= actualEndBin) {
-                val weightIndex = centerBin - actualStartBin
-                weights[weightIndex] = 1.0f
-            }
-            
-            // Zähle Nicht-Null Gewichte
-            val nonZeroCount = weights.count { it > 1e-10f }
-            totalNonZeroBins += nonZeroCount
-            
-            filters.add(SparseMelFilter(
-                startBin = actualStartBin,
-                endBin = actualEndBin,
-                weights = weights
-            ))
         }
-        
+
         val t1 = System.currentTimeMillis()
         val avgNonZeroBins = totalNonZeroBins.toFloat() / nMels
-        
+
         Log.d(TAG, "PERF: SPARSE Mel filterbank created in ${t1 - t0}ms")
         Log.d(TAG, "PERF: Memory savings: ${nMels * nFreqBins * 4 / 1024}KB → ${totalNonZeroBins * 4 / 1024}KB")
         Log.d(TAG, "PERF: Avg non-zero bins per filter: ${String.format("%.1f", avgNonZeroBins)} (instead of $nFreqBins)")
         Log.d(TAG, "PERF: Expected speedup: ${String.format("%.1f", nFreqBins / avgNonZeroBins)}x")
-        
+
         return filters.toTypedArray()
     }
 
