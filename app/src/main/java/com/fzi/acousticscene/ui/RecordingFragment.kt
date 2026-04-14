@@ -54,7 +54,6 @@ class RecordingFragment : Fragment() {
     // UI Components
     private lateinit var modeStandardButton: MaterialButton
     private lateinit var modeFastButton: MaterialButton
-    private lateinit var modeMediumButton: MaterialButton
     private lateinit var modeLongButton: MaterialButton
     private lateinit var modeAvgButton: MaterialButton
     private lateinit var startStopButton: MaterialButton
@@ -313,7 +312,6 @@ class RecordingFragment : Fragment() {
     private fun initializeViews(view: View) {
         modeStandardButton = view.findViewById(R.id.modeStandardButton)
         modeFastButton = view.findViewById(R.id.modeFastButton)
-        modeMediumButton = view.findViewById(R.id.modeMediumButton)
         modeLongButton = view.findViewById(R.id.modeLongButton)
         modeAvgButton = view.findViewById(R.id.modeAvgButton)
         startStopButton = view.findViewById(R.id.startStopButton)
@@ -331,12 +329,6 @@ class RecordingFragment : Fragment() {
             viewModel.setRecordingMode(RecordingMode.FAST)
             updateModeButtons(RecordingMode.FAST)
             updateVolumeGraphForMode(RecordingMode.FAST)
-        }
-
-        modeMediumButton.setOnClickListener {
-            viewModel.setRecordingMode(RecordingMode.MEDIUM)
-            updateModeButtons(RecordingMode.MEDIUM)
-            updateVolumeGraphForMode(RecordingMode.MEDIUM)
         }
 
         modeLongButton.setOnClickListener {
@@ -577,8 +569,6 @@ class RecordingFragment : Fragment() {
         modeStandardButton.setTextColor(inactiveTextColor)
         modeFastButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
         modeFastButton.setTextColor(inactiveTextColor)
-        modeMediumButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
-        modeMediumButton.setTextColor(inactiveTextColor)
         modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
         modeLongButton.setTextColor(inactiveTextColor)
         modeAvgButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(inactiveColor))
@@ -592,10 +582,6 @@ class RecordingFragment : Fragment() {
             RecordingMode.FAST -> {
                 modeFastButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
                 modeFastButton.setTextColor(activeTextColor)
-            }
-            RecordingMode.MEDIUM -> {
-                modeMediumButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))
-                modeMediumButton.setTextColor(activeTextColor)
             }
             RecordingMode.LONG -> {
                 modeLongButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activeColor))

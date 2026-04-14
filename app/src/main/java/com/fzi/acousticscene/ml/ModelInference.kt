@@ -44,31 +44,9 @@ class ModelInference(
     private var module: Module? = null
     private var isLoaded = false
     private var currentModelPath: String? = null
-    // Separate Processor pro Mode für optimale Performance
-    private val standardProcessor = MelSpectrogramProcessor(
-        nFft = RecordingMode.STANDARD.nFft,
-        winLength = RecordingMode.STANDARD.winLength,
-        hopLength = RecordingMode.STANDARD.hopLength,
-        nMels = RecordingMode.STANDARD.nMels
-    )
-    private val fastProcessor = MelSpectrogramProcessor(
-        nFft = RecordingMode.FAST.nFft,
-        winLength = RecordingMode.FAST.winLength,
-        hopLength = RecordingMode.FAST.hopLength,
-        nMels = RecordingMode.FAST.nMels
-    )
-    private val mediumProcessor = MelSpectrogramProcessor(
-        nFft = RecordingMode.MEDIUM.nFft,
-        winLength = RecordingMode.MEDIUM.winLength,
-        hopLength = RecordingMode.MEDIUM.hopLength,
-        nMels = RecordingMode.MEDIUM.nMels
-    )
-    private val longProcessor = MelSpectrogramProcessor(
-        nFft = RecordingMode.LONG.nFft,
-        winLength = RecordingMode.LONG.winLength,
-        hopLength = RecordingMode.LONG.hopLength,
-        nMels = RecordingMode.LONG.nMels
-    )
+    // Ein Processor für alle Modi — FFT-Parameter sind immer gleich,
+    // nur die Audio-Länge (und damit die Spektrogramm-Breite) ändert sich
+    private val melProcessor = MelSpectrogramProcessor()
     
     /**
      * Sets a new model path and reloads the model
@@ -157,13 +135,7 @@ class ModelInference(
             return null
         }
         
-        // Wähle Processor basierend auf Mode
-        val processor = when (mode) {
-            RecordingMode.FAST, RecordingMode.AVERAGE -> fastProcessor
-            RecordingMode.MEDIUM -> mediumProcessor
-            RecordingMode.STANDARD -> standardProcessor
-            RecordingMode.LONG -> longProcessor
-        }
+        val processor = melProcessor
         val expectedSize = mode.durationSeconds * 32000 // 32kHz sample rate
         
         // Normalisiere Audio-Länge
@@ -226,14 +198,14 @@ class ModelInference(
                 val outputData = outputTensor.dataAsFloatArray
                 
                 Log.d(TAG, "Output tensor shape: ${outputTensor.shape().contentToString()}, size: ${outputData.size}")
-                
+
                 // 6. Wende Softmax an (Output sind Logits)
                 val t8 = System.currentTimeMillis()
                 val probabilities = softmax(outputData)
                 val t9 = System.currentTimeMillis()
                 val softmaxTime = t9 - t8
                 Log.d(TAG, "PERF: Softmax: ${softmaxTime}ms")
-                
+
                 // 7. Finde argmax
                 val maxIndex = probabilities.indices.maxByOrNull { probabilities[it] } ?: 0
                 val maxProbability = probabilities[maxIndex]

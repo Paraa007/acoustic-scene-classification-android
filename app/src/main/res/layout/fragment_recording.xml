@@ -326,20 +326,6 @@
                         android:textColor="@color/text_secondary" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/modeMediumButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="3dp"
-                        android:layout_marginEnd="3dp"
-                        android:text="@string/mode_medium"
-                        android:textSize="11sp"
-                        android:padding="10dp"
-                        app:cornerRadius="12dp"
-                        app:backgroundTint="@color/surface_variant"
-                        android:textColor="@color/text_secondary" />
-
-                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/modeStandardButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"

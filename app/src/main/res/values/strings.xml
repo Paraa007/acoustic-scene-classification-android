@@ -7,7 +7,6 @@
     <string name="stop_recording">Stop Recording</string>
     <string name="mode_standard">Standard (10s)</string>
     <string name="mode_fast">Fast (1s)</string>
-    <string name="mode_medium">Medium (5s)</string>
     <string name="mode_long">Long (30min)</string>
     <string name="mode_avg">Avg (10s) — 10×1s</string>
     <string name="recording_mode">Recording Mode</string>

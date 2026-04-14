@@ -96,6 +96,7 @@ class MainActivity : AppCompatActivity() {
 
         // Check battery optimization
         checkBatteryOptimization()
+
     }
 
     override fun onDestroy() {
