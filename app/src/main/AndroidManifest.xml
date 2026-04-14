@@ -55,6 +55,7 @@
             android:exported="false"
             android:launchMode="singleTop"
             android:excludeFromRecents="true"
+            android:windowSoftInputMode="adjustResize|stateHidden"
             android:theme="@style/Theme.AcousticSceneClassifier" />
 
         <!-- Classification Service für Hintergrund-Betrieb -->

@@ -87,6 +87,22 @@ Die FFT-Parameter (nFft, winLength, hopLength, nMels, fMin, fMax) sind für alle
 
 ## Changelog
 
+**2026-04-14 — Removed optional comment from evaluation**
+- `EvaluationActivity` no longer has a comment `EditText`. Users now pick one of the 9 classes and tap Send — no more text input, no keyboard issues.
+- `PredictionRecord.userComment` field removed. `PredictionRepository.updatePredictionEvaluation(id, userSelectedClass)` now takes a single parameter.
+- CSV export: `user_comment` column removed from both the header and each row.
+- Layout cleanup in `activity_evaluation.xml` (removed `TextInputLayout` + divider); string `evaluation_comment_hint` deleted.
+
+**2026-04-14 — Persistent in-app evaluation card + sticky Send/Skip**
+- `activity_evaluation.xml` restructured: the Send/Skip button row now sits **outside** the `ScrollView` as a sticky bottom bar inside the card, so it's always reachable when the soft keyboard opens. Comment `EditText` also gets `imeOptions="actionDone"`.
+- In-app evaluation prompt is now a **persistent card** below the Start/Stop button in `RecordingFragment` with a live 5-min countdown (previously a short-lived Snackbar). `UiState.pendingEvaluation: PendingEvaluation?` drives visibility; `MainViewModel` sets it for 5 min when a LONG recording finishes with the app in foreground and auto-clears it on expiry.
+- `EvaluationPromptBus` simplified to a dismissal-only bus: `EvaluationActivity.onDestroy()` posts the prediction id and the ViewModel clears matching `pendingEvaluation`. The previous Snackbar in `MainActivity` was removed.
+
+**2026-04-14 — Foreground evaluation routing + keyboard manifest fix**
+- `EvaluationActivity` sets `windowSoftInputMode="adjustResize|stateHidden"` in the manifest.
+- LONG-mode evaluation no longer posts a system notification when the app is in the foreground. `MainViewModel.sendEvaluationNotification` checks `ProcessLifecycleOwner` state: backgrounded → system notification as before; foregrounded → in-app card (see entry above).
+- New dependency: `androidx.lifecycle:lifecycle-process:2.7.0`.
+
 **2026-04-14 — Two-step mode picker + timeline schema**
 - Mode picker restructured into two steps: first category **"Continuous"** (FAST, STANDARD, AVERAGE) vs. **"Interval"** (LONG), then the specific mode. Sub-buttons are generated dynamically in Kotlin.
 - New `RecordingCategory` enum and `category` / `devOnly` properties on `RecordingMode`; helper `forCategory(cat, isDevMode)`.

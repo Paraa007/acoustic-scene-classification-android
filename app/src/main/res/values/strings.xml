@@ -235,9 +235,10 @@
     <string name="evaluation_channel_name">Bewertungs-Benachrichtigungen</string>
     <string name="evaluation_channel_description">Benachrichtigungen zur Bewertung der Umgebungsklassifikation</string>
     <string name="evaluation_question">Was ist die tatsächliche Umgebung?</string>
-    <string name="evaluation_comment_hint">Optionaler Kommentar</string>
     <string name="evaluation_submit">Senden</string>
     <string name="evaluation_skip">Überspringen</string>
+    <string name="evaluation_inapp_action">Rate now</string>
+    <string name="evaluation_inapp_message">New recording ready to rate</string>
     <string name="evaluation_timeout">%1$d:%2$02d</string>
     <string name="evaluation_tap_to_rate">Tippen zum Bewerten</string>
 

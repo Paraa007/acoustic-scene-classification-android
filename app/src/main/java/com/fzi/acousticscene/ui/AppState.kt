@@ -2,6 +2,17 @@ package com.fzi.acousticscene.ui
 
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.RecordingMode
+import com.fzi.acousticscene.model.SceneClass
+
+/**
+ * Pending evaluation that sits in the UI as a persistent "Rate" card/button
+ * while the user is inside the app. Expires after 5 min (see deadlineElapsed).
+ */
+data class PendingEvaluation(
+    val predictionId: Long,
+    val modelClass: SceneClass,
+    val deadlineElapsedMs: Long // SystemClock.elapsedRealtime()-based
+)
 
 /**
  * Sealed Class für App-Zustände
@@ -69,5 +80,6 @@ data class UiState(
     val recordingProgress: Float = 0f,
     val currentVolume: Float = 0f,
     val perSecondResults: List<ClassificationResult?> = List(10) { null },
-    val runningAverageResult: ClassificationResult? = null
+    val runningAverageResult: ClassificationResult? = null,
+    val pendingEvaluation: PendingEvaluation? = null
 )
