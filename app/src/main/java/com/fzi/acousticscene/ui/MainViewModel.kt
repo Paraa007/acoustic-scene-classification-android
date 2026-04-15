@@ -22,6 +22,8 @@ import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.ml.ModelInference
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LongSubMode
+import com.fzi.acousticscene.model.LongSubResult
 import com.fzi.acousticscene.model.PerSecondClip
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
@@ -270,7 +272,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         
         isRecording = true
         isPaused = false
+        // Every Start begins a fresh History session
+        sessionStartTime = System.currentTimeMillis()
         _uiState.update { it.copy(isPaused = false) }
+        Log.d(TAG, "New session started: $sessionStartTime")
 
         // Track active session globally so other screens (Welcome, History) can detect it
         ActiveSessionRegistry.register(
@@ -405,11 +410,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     // Verarbeite Audio - Processing State
                     _uiState.update { it.copy(appState = AppState.Processing, recordingProgress = 0f) }
 
-                    // Führe Inferenz durch auf dediziertem ML Thread-Pool
-                    val result: ClassificationResult? = withContext(mlDispatcher) {
-                        modelInference.infer(audioSamples!!, currentMode)
+                    // Für LONG: mehrere Sub-Modi auf dasselbe 10s-Sample anwenden.
+                    // Für STANDARD/FAST: single inference (bisheriges Verhalten).
+                    val subResults: List<LongSubResult>
+                    val result: ClassificationResult?
+                    if (currentMode == RecordingMode.LONG) {
+                        val (pri, subs) = runLongSubModes(audioSamples!!, _uiState.value.selectedLongSubs)
+                        result = pri
+                        subResults = subs
+                    } else {
+                        subResults = emptyList()
+                        result = withContext(mlDispatcher) {
+                            modelInference.infer(audioSamples!!, currentMode)
+                        }
                     }
-                    
+
                     // Prüfe, ob Recording noch aktiv ist (falls Benutzer gestoppt hat)
                     if (result != null) {
                         // Speichere in Repository (ALLE Vorhersagen)
@@ -418,6 +433,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                         // Akkustand zum Zeitpunkt der Vorhersage erfassen
                         val currentBatteryLevel = getBatteryLevel()
+
+                        // Falls AVERAGE-Sub aktiv war, dessen PerSecondClips mit aufnehmen
+                        val perSecondFromAvg = subResults
+                            .firstOrNull { it.subMode == LongSubMode.AVERAGE }
+                            ?.perSecondClips
 
                         val record = PredictionRecord(
                             sceneClass = result.sceneClass,
@@ -429,7 +449,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             sessionStartTime = sessionStartTime,  // Session start time
                             batteryLevel = currentBatteryLevel,  // Battery level
                             modelName = _modelName,  // Model file name
-                            isDevMode = _isDevMode  // Whether Dev Mode is active
+                            isDevMode = _isDevMode,  // Whether Dev Mode is active
+                            perSecondClips = perSecondFromAvg,
+                            longSubResults = subResults.takeIf { it.isNotEmpty() }
                         )
                         predictionRepository.addPrediction(record)
                         updateStatistics()
@@ -510,9 +532,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(
             appState = AppState.Ready,
             errorMessage = null,
+            currentResult = null,
+            history = emptyList(),
+            totalClassifications = 0,
+            averageInferenceTime = 0L,
+            recordingProgress = 0f,
+            currentVolume = 0f,
             perSecondResults = List(10) { null },
             runningAverageResult = null,
-            isPaused = false
+            isPaused = false,
+            longSubResults = emptyMap(),
+            pendingEvaluation = null
         ) }
         Log.d(TAG, "Classification stopped")
     }
@@ -537,6 +567,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun isUserPaused(): Boolean = isPaused
+
+    /**
+     * LONG sub-mode selection. STANDARD is always included (default, cannot be removed).
+     */
+    fun setLongSubs(subs: Set<LongSubMode>) {
+        val normalized = (subs + LongSubMode.STANDARD).toSet()
+        if (_uiState.value.selectedLongSubs != normalized) {
+            _uiState.update { it.copy(selectedLongSubs = normalized) }
+        }
+    }
+
+    fun toggleLongSub(sub: LongSubMode) {
+        if (sub == LongSubMode.STANDARD) return  // locked on
+        val current = _uiState.value.selectedLongSubs
+        val next = if (sub in current) current - sub else current + sub
+        setLongSubs(next)
+    }
     
     /**
      * Aktualisiert den UI State mit einem neuen Klassifikations-Ergebnis
@@ -784,6 +831,124 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Continue to next round (circles will be cleared at the top of the loop)
+        }
+    }
+
+    /**
+     * LONG-mode fan-out: apply each selected sub-mode to the same 10 s buffer.
+     * Returns (primaryResult, subResults). primaryResult mirrors the Standard sub-mode
+     * (fallback: first ran sub-mode) so the existing record / UI pipeline stays untouched
+     * at the top level. UI's longSubResults map is updated live per sub-mode.
+     */
+    private suspend fun runLongSubModes(
+        audioSamples: FloatArray,
+        subs: Set<LongSubMode>
+    ): Pair<ClassificationResult?, List<LongSubResult>> {
+        val sampleRate = 32000
+        val out = mutableListOf<LongSubResult>()
+        var standardResult: ClassificationResult? = null
+        var anyResult: ClassificationResult? = null
+
+        // Reset live state for this iteration
+        _uiState.update { it.copy(
+            longSubResults = emptyMap(),
+            perSecondResults = List(10) { null },
+            runningAverageResult = null
+        )}
+
+        // Standard — full 10s
+        if (LongSubMode.STANDARD in subs) {
+            val r = withContext(mlDispatcher) {
+                modelInference.infer(audioSamples, RecordingMode.STANDARD)
+            }
+            if (r != null) {
+                standardResult = r
+                anyResult = anyResult ?: r
+                pushLongSubUi(LongSubMode.STANDARD, r)
+                out += LongSubResult(
+                    subMode = LongSubMode.STANDARD,
+                    sceneClass = r.sceneClass,
+                    confidence = r.confidence,
+                    allProbabilities = r.allProbabilities,
+                    inferenceTimeMs = r.inferenceTimeMs
+                )
+            }
+        }
+
+        // Fast — middle 1s
+        if (LongSubMode.FAST in subs && audioSamples.size >= sampleRate * 10) {
+            val from = (sampleRate * 4.5f).toInt()
+            val to = (sampleRate * 5.5f).toInt()
+            val slice = audioSamples.copyOfRange(from, to)
+            val r = withContext(mlDispatcher) {
+                modelInference.infer(slice, RecordingMode.FAST)
+            }
+            if (r != null) {
+                anyResult = anyResult ?: r
+                pushLongSubUi(LongSubMode.FAST, r)
+                out += LongSubResult(
+                    subMode = LongSubMode.FAST,
+                    sceneClass = r.sceneClass,
+                    confidence = r.confidence,
+                    allProbabilities = r.allProbabilities,
+                    inferenceTimeMs = r.inferenceTimeMs
+                )
+            }
+        }
+
+        // Average — 10 × 1s slices, averaged, streamed live
+        if (LongSubMode.AVERAGE in subs && audioSamples.size >= sampleRate * 10) {
+            val startTime = System.currentTimeMillis()
+            val clipResults = mutableListOf<ClassificationResult>()
+            for (i in 0 until 10) {
+                if (!isRecording) break
+                val slice = audioSamples.copyOfRange(i * sampleRate, (i + 1) * sampleRate)
+                val clipResult = withContext(mlDispatcher) {
+                    modelInference.infer(slice, RecordingMode.FAST)
+                } ?: continue
+                clipResults += clipResult
+                val runningAvg = computeRunningAverage(clipResults, startTime)
+                _uiState.update { current ->
+                    val per = current.perSecondResults.toMutableList()
+                    if (i < per.size) per[i] = clipResult
+                    current.copy(
+                        perSecondResults = per,
+                        runningAverageResult = runningAvg
+                    )
+                }
+                // Brief pacing so the live per-second circles animate visibly
+                delay(350L)
+            }
+            if (clipResults.isNotEmpty()) {
+                val avg = computeRunningAverage(clipResults, startTime)
+                anyResult = anyResult ?: avg
+                pushLongSubUi(LongSubMode.AVERAGE, avg)
+                val clips = clipResults.mapIndexed { idx, cr ->
+                    PerSecondClip(
+                        clipIndex = idx,
+                        sceneClass = cr.sceneClass,
+                        confidence = cr.confidence,
+                        allProbabilities = cr.allProbabilities
+                    )
+                }
+                out += LongSubResult(
+                    subMode = LongSubMode.AVERAGE,
+                    sceneClass = avg.sceneClass,
+                    confidence = avg.confidence,
+                    allProbabilities = avg.allProbabilities,
+                    inferenceTimeMs = avg.inferenceTimeMs,
+                    perSecondClips = clips
+                )
+            }
+        }
+
+        val primary = standardResult ?: anyResult
+        return primary to out
+    }
+
+    private fun pushLongSubUi(sub: LongSubMode, result: ClassificationResult) {
+        _uiState.update { state ->
+            state.copy(longSubResults = state.longSubResults + (sub to result))
         }
     }
 

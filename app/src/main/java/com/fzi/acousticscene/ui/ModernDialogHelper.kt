@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionStatistics
+import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
@@ -307,6 +308,45 @@ object ModernDialogHelper {
                 val itemView = createDistributionItemWithProgress(context, scene, count, percentage)
                 distributionContainer.addView(itemView)
             }
+
+        // Method Comparison section - visible when any LONG record carries sub-mode results.
+        // When present, it replaces the generic "Model predictions" distribution above —
+        // the per-sub-mode stacks already cover the same information.
+        val recordsWithSubs = packageRecords.filter { !it.longSubResults.isNullOrEmpty() }
+        if (recordsWithSubs.isNotEmpty()) {
+            dialog.findViewById<TextView>(R.id.modelDistributionHeader).visibility = View.GONE
+            distributionContainer.visibility = View.GONE
+            val mcDivider = dialog.findViewById<View>(R.id.methodComparisonDivider)
+            val mcHeader = dialog.findViewById<TextView>(R.id.methodComparisonHeader)
+            val mcContainer = dialog.findViewById<LinearLayout>(R.id.methodComparisonContainer)
+            mcDivider.visibility = View.VISIBLE
+            mcHeader.visibility = View.VISIBLE
+            mcContainer.visibility = View.VISIBLE
+
+            LongSubMode.entries.forEach { sub ->
+                val subRecords = recordsWithSubs.mapNotNull { rec ->
+                    rec.longSubResults?.firstOrNull { it.subMode == sub }
+                }
+                if (subRecords.isEmpty()) return@forEach
+
+                val sectionLabel = TextView(context).apply {
+                    text = "${sub.label} (${sub.hint})"
+                    textSize = 14f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    setPadding(0, 12, 0, 6)
+                }
+                mcContainer.addView(sectionLabel)
+
+                val dist = subRecords.groupBy { it.sceneClass }.mapValues { it.value.size }
+                val total = subRecords.size.toFloat()
+                dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
+                    val percentage = if (total > 0) (count / total * 100).toInt() else 0
+                    val row = createDistributionItemWithProgress(context, scene, count, percentage)
+                    mcContainer.addView(row)
+                }
+            }
+        }
 
         // Per-second clips section - only visible for AVERAGE mode sessions
         val isAverageMode = packageRecords.firstOrNull()?.recordingMode == RecordingMode.AVERAGE

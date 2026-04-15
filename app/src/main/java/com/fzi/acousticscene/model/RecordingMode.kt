@@ -15,6 +15,16 @@ enum class RecordingCategory(val label: String) {
     INTERVAL("Intervall")
 }
 
+/**
+ * LONG-mode evaluation sub-modes: applied to the same 10 s recording.
+ * STANDARD is always selected (default, cannot be unchecked).
+ */
+enum class LongSubMode(val label: String, val hint: String) {
+    STANDARD("Standard", "full 10 s"),
+    FAST("Fast", "middle 1 s"),
+    AVERAGE("Avg", "10 × 1 s → Ø")
+}
+
 enum class RecordingMode(
     val durationSeconds: Int,
     val label: String,
