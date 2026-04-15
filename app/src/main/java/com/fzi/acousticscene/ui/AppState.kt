@@ -1,6 +1,7 @@
 package com.fzi.acousticscene.ui
 
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 
@@ -88,5 +89,7 @@ data class UiState(
     val perSecondResults: List<ClassificationResult?> = List(10) { null },
     val runningAverageResult: ClassificationResult? = null,
     val pendingEvaluation: PendingEvaluation? = null,
-    val isPaused: Boolean = false
+    val isPaused: Boolean = false,
+    val selectedLongSubs: Set<LongSubMode> = setOf(LongSubMode.STANDARD),
+    val longSubResults: Map<LongSubMode, ClassificationResult?> = emptyMap()
 )

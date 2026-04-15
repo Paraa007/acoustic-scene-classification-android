@@ -69,10 +69,11 @@
 
                 <!-- FrameLayout for Ripple effect behind Confidence Circle -->
                 <FrameLayout
+                    android:id="@+id/mainCircleFrame"
                     android:layout_width="240dp"
                     android:layout_height="240dp"
                     android:layout_gravity="center"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="4dp">
 
                     <!-- Ripple/Sonar Animation (behind the circle) -->
                     <com.fzi.acousticscene.ui.RipplePulseView
@@ -89,6 +90,17 @@
                         android:layout_gravity="center" />
                 </FrameLayout>
 
+                <!-- Label directly below the main confidence circle (only in LONG triangle mode) -->
+                <TextView
+                    android:id="@+id/mainCircleSubLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/long_sub_label_standard"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_secondary"
+                    android:gravity="center"
+                    android:visibility="gone" />
+
                 <!-- Detected class with Emoji -->
                 <TextView
                     android:id="@+id/currentSceneLabel"
@@ -100,6 +112,67 @@
                     android:gravity="center"
                     android:maxLines="2"
                     android:visibility="gone" />
+
+                <!-- Triangle bottom row: Fast + Avg small circles (LONG mode only) -->
+                <LinearLayout
+                    android:id="@+id/longTriangleRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/longFastCircleWrap"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:visibility="gone">
+
+                        <com.fzi.acousticscene.ui.ConfidenceCircleView
+                            android:id="@+id/longFastCircle"
+                            android:layout_width="70dp"
+                            android:layout_height="70dp" />
+
+                        <TextView
+                            android:id="@+id/longFastLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/long_sub_label_fast"
+                            android:textSize="10sp"
+                            android:gravity="center"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/longAvgCircleWrap"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:visibility="gone">
+
+                        <com.fzi.acousticscene.ui.ConfidenceCircleView
+                            android:id="@+id/longAvgCircle"
+                            android:layout_width="70dp"
+                            android:layout_height="70dp" />
+
+                        <TextView
+                            android:id="@+id/longAvgLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/long_sub_label_average"
+                            android:textSize="10sp"
+                            android:gravity="center"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <!-- Volume level (0-100) -->
                 <TextView
@@ -348,6 +421,69 @@
                     android:orientation="horizontal"
                     android:gravity="center"
                     android:layout_marginTop="10dp" />
+
+                <!-- Step 2b: LONG sub-mode chooser (Standard locked + Fast + Avg checkboxes) -->
+                <LinearLayout
+                    android:id="@+id/longSubModeChooser"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/long_submodes_title"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginBottom="6dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <com.google.android.material.checkbox.MaterialCheckBox
+                            android:id="@+id/cbLongStandard"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:checked="true"
+                            android:enabled="false"
+                            android:text="@string/long_sub_standard"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_primary" />
+
+                        <com.google.android.material.checkbox.MaterialCheckBox
+                            android:id="@+id/cbLongFast"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/long_sub_fast"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_primary" />
+
+                        <com.google.android.material.checkbox.MaterialCheckBox
+                            android:id="@+id/cbLongAverage"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/long_sub_average"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_primary" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/longSubModeHint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/long_sub_hint_combined"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
 
                 <!-- Timeline schema -->
                 <com.fzi.acousticscene.ui.ModeTimelineView

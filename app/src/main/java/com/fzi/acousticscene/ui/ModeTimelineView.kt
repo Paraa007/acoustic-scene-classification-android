@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingMode
 
 /**
@@ -22,6 +23,7 @@ class ModeTimelineView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var mode: RecordingMode = RecordingMode.STANDARD
+    private var longSubs: Set<LongSubMode> = setOf(LongSubMode.STANDARD)
 
     private val blockPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.accent_green)
@@ -61,6 +63,13 @@ class ModeTimelineView @JvmOverloads constructor(
     fun setMode(mode: RecordingMode) {
         if (this.mode != mode) {
             this.mode = mode
+            invalidate()
+        }
+    }
+
+    fun setLongSubs(subs: Set<LongSubMode>) {
+        if (this.longSubs != subs) {
+            this.longSubs = subs
             invalidate()
         }
     }
@@ -153,7 +162,12 @@ class ModeTimelineView @JvmOverloads constructor(
             RecordingMode.FAST -> "continuous, 1 s per recording"
             RecordingMode.STANDARD -> "continuous, 10 s per recording"
             RecordingMode.AVERAGE -> "continuous, 10 × 1 s averaged into one result"
-            RecordingMode.LONG -> "10 s record · 30 min pause · repeat"
+            RecordingMode.LONG -> {
+                val selected = LongSubMode.entries
+                    .filter { it in longSubs }
+                    .joinToString(" + ") { it.label }
+                "10 s record · 30 min pause · evaluated as: $selected"
+            }
         }
         canvas.drawText(summary, w / 2f, h - dp(6f), labelPaint)
     }

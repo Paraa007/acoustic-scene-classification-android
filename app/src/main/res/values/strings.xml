@@ -256,4 +256,15 @@
     <string name="user_paused_with_mmss">Paused · %1$s remaining</string>
     <string name="pause_mmss">Pause: %1$s until next recording</string>
     <string name="active_session_badge">● ACTIVE</string>
+
+    <!-- LONG Sub-Mode Chooser (Dev Mode: evaluate a 10s recording with multiple methods) -->
+    <string name="long_submodes_title">Evaluation methods</string>
+    <string name="long_sub_standard">Standard</string>
+    <string name="long_sub_fast">Fast</string>
+    <string name="long_sub_average">Avg</string>
+    <string name="long_sub_hint_combined">Standard = full 10 s · Fast = middle 1 s · Avg = 10 × 1 s → Ø</string>
+    <string name="long_sub_label_standard">Standard (10 s)</string>
+    <string name="long_sub_label_fast">Fast (middle 1 s)</string>
+    <string name="long_sub_label_average">Avg (10 × 1 s)</string>
+    <string name="history_method_comparison">Method comparison</string>
 </resources>

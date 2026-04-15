@@ -28,10 +28,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -105,6 +107,21 @@ class RecordingFragment : Fragment() {
     private var perSecondCircleViews: List<ConfidenceCircleView> = emptyList()
     private var perSecondLabelViews: List<TextView> = emptyList()
     private var isPerSecondCirclesActive: Boolean = false
+
+    // LONG sub-mode chooser + triangle circles
+    private lateinit var longSubModeChooser: LinearLayout
+    private lateinit var cbLongStandard: MaterialCheckBox
+    private lateinit var cbLongFast: MaterialCheckBox
+    private lateinit var cbLongAverage: MaterialCheckBox
+    private lateinit var mainCircleSubLabel: TextView
+    private lateinit var mainCircleFrame: android.widget.FrameLayout
+    private lateinit var longTriangleRow: LinearLayout
+    private lateinit var longFastCircleWrap: LinearLayout
+    private lateinit var longAvgCircleWrap: LinearLayout
+    private lateinit var longFastCircle: ConfidenceCircleView
+    private lateinit var longAvgCircle: ConfidenceCircleView
+    private lateinit var longFastLabel: TextView
+    private lateinit var longAvgLabel: TextView
 
     private var isDevMode: Boolean = false
 
@@ -350,6 +367,41 @@ class RecordingFragment : Fragment() {
         categoryContinuousButton.setOnClickListener { selectCategory(RecordingCategory.CONTINUOUS, persist = true) }
         categoryIntervalButton.setOnClickListener { selectCategory(RecordingCategory.INTERVAL, persist = true) }
 
+        // LONG sub-mode chooser + triangle circles
+        longSubModeChooser = view.findViewById(R.id.longSubModeChooser)
+        cbLongStandard = view.findViewById(R.id.cbLongStandard)
+        cbLongFast = view.findViewById(R.id.cbLongFast)
+        cbLongAverage = view.findViewById(R.id.cbLongAverage)
+        mainCircleSubLabel = view.findViewById(R.id.mainCircleSubLabel)
+        mainCircleFrame = view.findViewById(R.id.mainCircleFrame)
+        longTriangleRow = view.findViewById(R.id.longTriangleRow)
+        longFastCircleWrap = view.findViewById(R.id.longFastCircleWrap)
+        longAvgCircleWrap = view.findViewById(R.id.longAvgCircleWrap)
+        longFastCircle = view.findViewById(R.id.longFastCircle)
+        longAvgCircle = view.findViewById(R.id.longAvgCircle)
+        longFastCircle.setTargetSize(60)
+        longAvgCircle.setTargetSize(60)
+        longFastLabel = view.findViewById(R.id.longFastLabel)
+        longAvgLabel = view.findViewById(R.id.longAvgLabel)
+
+        // Restore persisted LONG sub-mode selection (Dev Mode only feature for now)
+        if (isDevMode) {
+            val persisted = loadPersistedLongSubs()
+            viewModel.setLongSubs(persisted)
+            cbLongFast.isChecked = LongSubMode.FAST in persisted
+            cbLongAverage.isChecked = LongSubMode.AVERAGE in persisted
+        }
+        cbLongFast.setOnCheckedChangeListener { _, _ ->
+            if (suppressSubModeListener) return@setOnCheckedChangeListener
+            viewModel.toggleLongSub(LongSubMode.FAST)
+            persistLongSubs(viewModel.uiState.value.selectedLongSubs)
+        }
+        cbLongAverage.setOnCheckedChangeListener { _, _ ->
+            if (suppressSubModeListener) return@setOnCheckedChangeListener
+            viewModel.toggleLongSub(LongSubMode.AVERAGE)
+            persistLongSubs(viewModel.uiState.value.selectedLongSubs)
+        }
+
         pendingEvaluationCard = view.findViewById(R.id.pendingEvaluationCard)
         pendingEvaluationTitle = view.findViewById(R.id.pendingEvaluationTitle)
         pendingEvaluationSubtitle = view.findViewById(R.id.pendingEvaluationSubtitle)
@@ -530,6 +582,23 @@ class RecordingFragment : Fragment() {
             .edit().putString(prefsKey(), mode.name).apply()
     }
 
+    private fun longSubsPrefsKey(): String =
+        if (isDevMode) "long_sub_modes_dev" else "long_sub_modes_user"
+
+    private fun loadPersistedLongSubs(): Set<LongSubMode> {
+        val prefs = requireContext().getSharedPreferences("mode_prefs", Context.MODE_PRIVATE)
+        val stored = prefs.getStringSet(longSubsPrefsKey(), null) ?: return setOf(LongSubMode.STANDARD)
+        val parsed = stored.mapNotNull {
+            runCatching { LongSubMode.valueOf(it) }.getOrNull()
+        }.toSet()
+        return parsed + LongSubMode.STANDARD
+    }
+
+    private fun persistLongSubs(subs: Set<LongSubMode>) {
+        requireContext().getSharedPreferences("mode_prefs", Context.MODE_PRIVATE)
+            .edit().putStringSet(longSubsPrefsKey(), subs.map { it.name }.toSet()).apply()
+    }
+
     private fun selectCategory(cat: RecordingCategory, persist: Boolean) {
         currentCategory = cat
         val ctx = context ?: return
@@ -630,6 +699,103 @@ class RecordingFragment : Fragment() {
         }
     )
 
+    private fun updateLongSubModeUi(state: UiState) {
+        if (!::longSubModeChooser.isInitialized) return
+        val isLong = state.recordingMode == RecordingMode.LONG
+        // Chooser only for Dev Mode + LONG
+        longSubModeChooser.visibility = if (isDevMode && isLong) View.VISIBLE else View.GONE
+
+        // Reflect selection into checkboxes (don't trigger listener recursion)
+        val subs = state.selectedLongSubs
+        syncCheckbox(cbLongFast, LongSubMode.FAST in subs)
+        syncCheckbox(cbLongAverage, LongSubMode.AVERAGE in subs)
+
+        // Lock sub-mode selection while a session is active
+        val locked = viewModel.isClassifying()
+        cbLongFast.isEnabled = !locked
+        cbLongAverage.isEnabled = !locked
+
+        // Triangle circles: only when LONG is active and at least one extra sub-mode selected
+        val hasExtras = isLong && (LongSubMode.FAST in subs || LongSubMode.AVERAGE in subs)
+        longTriangleRow.visibility = if (hasExtras) View.VISIBLE else View.GONE
+        longFastCircleWrap.visibility = if (isLong && LongSubMode.FAST in subs) View.VISIBLE else View.GONE
+        longAvgCircleWrap.visibility = if (isLong && LongSubMode.AVERAGE in subs) View.VISIBLE else View.GONE
+
+        // Shrink main circle when triangle is on
+        val targetMain = if (hasExtras) 150 else 200
+        confidenceCircleView.setTargetSize(targetMain)
+
+        // Shrink frame so the Standard sub-label sits close under the circle
+        val frameDp = if (hasExtras) 170 else 240
+        val density = resources.displayMetrics.density
+        val framePx = (frameDp * density).toInt()
+        if (mainCircleFrame.layoutParams.height != framePx) {
+            mainCircleFrame.layoutParams = mainCircleFrame.layoutParams.apply {
+                width = framePx
+                height = framePx
+            }
+        }
+
+        // Hide Top Predictions card in triangle mode — it's ambiguous which circle it belongs to
+        if (hasExtras) predictionsCard.visibility = View.GONE
+
+        // Reflect selected subs in the timeline summary
+        if (::modeTimeline.isInitialized) modeTimeline.setLongSubs(subs)
+
+        // Main circle sub-label: only in triangle mode (compact colored label like the side circles).
+        // When Standard is alone, hide this compact label — the existing big `currentSceneLabel`
+        // keeps showing the full "Emoji Class" style.
+        mainCircleSubLabel.visibility = if (hasExtras) View.VISIBLE else View.GONE
+        val ctx = context
+        if (hasExtras && ctx != null) {
+            val stdResult = state.longSubResults[LongSubMode.STANDARD] ?: state.currentResult
+            if (stdResult != null) {
+                mainCircleSubLabel.text =
+                    "${getString(R.string.long_sub_label_standard)}\n${stdResult.sceneClass.emoji} ${stdResult.sceneClass.labelShort} ${(stdResult.confidence * 100).toInt()}%"
+                val colorRes = sceneColors[stdResult.sceneClass] ?: R.color.accent_green
+                mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, colorRes))
+            } else {
+                mainCircleSubLabel.text = getString(R.string.long_sub_label_standard)
+                mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            }
+            // Hide the big full-class label when triangle is active (compact label takes over)
+            currentSceneLabel.visibility = View.GONE
+        }
+
+        // Bind per-sub results
+        bindSubCircle(longFastCircle, longFastLabel, state.longSubResults[LongSubMode.FAST], R.string.long_sub_label_fast)
+        bindSubCircle(longAvgCircle, longAvgLabel, state.longSubResults[LongSubMode.AVERAGE], R.string.long_sub_label_average)
+    }
+
+    private var suppressSubModeListener = false
+
+    private fun syncCheckbox(cb: MaterialCheckBox, checked: Boolean) {
+        if (cb.isChecked != checked) {
+            suppressSubModeListener = true
+            cb.isChecked = checked
+            suppressSubModeListener = false
+        }
+    }
+
+    private fun bindSubCircle(
+        circle: ConfidenceCircleView,
+        label: TextView,
+        result: ClassificationResult?,
+        baseLabelRes: Int
+    ) {
+        val ctx = context ?: return
+        if (result != null) {
+            circle.setConfidence(result.confidence, animate = true)
+            label.text = "${getString(baseLabelRes)}\n${result.sceneClass.emoji} ${result.sceneClass.labelShort} ${(result.confidence * 100).toInt()}%"
+            val colorRes = sceneColors[result.sceneClass] ?: R.color.accent_green
+            label.setTextColor(ContextCompat.getColor(ctx, colorRes))
+        } else {
+            circle.setConfidence(0f, animate = false)
+            label.text = getString(baseLabelRes)
+            label.setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+        }
+    }
+
     private fun updatePauseButton(state: UiState) {
         if (!::pauseResumeButton.isInitialized) return
         val show = state.recordingMode == RecordingMode.LONG && viewModel.isClassifying()
@@ -708,6 +874,7 @@ class RecordingFragment : Fragment() {
         updatePerSecondCardVisibility(state.recordingMode)
         updatePendingEvaluation(state.pendingEvaluation)
         updatePauseButton(state)
+        updateLongSubModeUi(state)
 
         if (state.errorMessage != null) {
             // Error shown in status label
@@ -1049,7 +1216,9 @@ class RecordingFragment : Fragment() {
 
     private fun updatePerSecondCardVisibility(mode: RecordingMode) {
         if (!::perSecondCirclesCard.isInitialized) return
-        if (isDevMode && mode == RecordingMode.AVERAGE) {
+        val longWithAvg = mode == RecordingMode.LONG &&
+            LongSubMode.AVERAGE in viewModel.uiState.value.selectedLongSubs
+        if (isDevMode && (mode == RecordingMode.AVERAGE || longWithAvg)) {
             perSecondCirclesCard.visibility = View.VISIBLE
         } else {
             perSecondCirclesCard.visibility = View.GONE

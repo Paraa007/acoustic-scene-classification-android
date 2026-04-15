@@ -21,6 +21,25 @@ data class PerSecondClip(
 }
 
 /**
+ * LONG-mode sub-mode result (Standard / Fast / Avg applied to the same 10 s recording).
+ */
+data class LongSubResult(
+    val subMode: LongSubMode,
+    val sceneClass: SceneClass,
+    val confidence: Float,
+    val allProbabilities: FloatArray,
+    val inferenceTimeMs: Long,
+    val perSecondClips: List<PerSecondClip>? = null  // Only for AVERAGE sub-mode
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is LongSubResult) return false
+        return subMode == other.subMode
+    }
+    override fun hashCode(): Int = subMode.hashCode()
+}
+
+/**
  * Eine einzelne Vorhersage mit allen Details für CSV Export
  *
  * @param topPredictions Top 3 Predictions (Klasse, Konfidenz) für CSV Export
@@ -40,7 +59,8 @@ data class PredictionRecord(
     val modelName: String = "model1.pt",  // Model file name
     val isDevMode: Boolean = false,  // Whether this was recorded in Dev Mode
     val userSelectedClass: SceneClass? = null,  // User evaluation: selected scene class (null = no response)
-    val perSecondClips: List<PerSecondClip>? = null  // AVERAGE mode: individual 1s clip results
+    val perSecondClips: List<PerSecondClip>? = null,  // AVERAGE mode: individual 1s clip results
+    val longSubResults: List<LongSubResult>? = null  // LONG mode: per sub-mode evaluation of the same 10s buffer
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige
@@ -93,12 +113,21 @@ data class PredictionRecord(
         // User evaluation column (empty if no response)
         val userClassStr = userSelectedClass?.label?.let { "\"$it\"" } ?: ""
 
-        // Per-second clips (AVERAGE mode only)
+        // Per-second clips (AVERAGE mode + LONG-with-Avg sub-mode)
         val perSecondStr = if (perSecondClips != null && perSecondClips.isNotEmpty()) {
             perSecondClips.sortedBy { it.clipIndex }.joinToString("|") { clip ->
                 "${clip.clipIndex + 1}:${clip.sceneClass.label}:${(clip.confidence * 100).toInt()}%"
             }
         } else ""
+
+        // LONG sub-mode results
+        fun subCell(sub: LongSubMode): String {
+            val r = longSubResults?.firstOrNull { it.subMode == sub } ?: return ""
+            return "${r.sceneClass.label}:${(r.confidence * 100).toInt()}%"
+        }
+        val longStdStr = subCell(LongSubMode.STANDARD)
+        val longFastStr = subCell(LongSubMode.FAST)
+        val longAvgStr = subCell(LongSubMode.AVERAGE)
 
         return listOf(
             id.toString(),
@@ -117,7 +146,10 @@ data class PredictionRecord(
             String.format(Locale.US, "%.2f", top3_entry.second * 100),  // top3_confidence_percent
             probsString,  // probabilities mit Klassennamen im Header
             userClassStr,  // user_selected_class (empty if no evaluation)
-            "\"$perSecondStr\""  // per_second_clips (AVERAGE mode)
+            "\"$perSecondStr\"",  // per_second_clips (AVERAGE mode)
+            "\"$longStdStr\"",   // long_standard (LONG sub-mode)
+            "\"$longFastStr\"",  // long_fast (LONG sub-mode)
+            "\"$longAvgStr\""    // long_average (LONG sub-mode)
         ).joinToString(",")
     }
     
@@ -137,7 +169,8 @@ data class PredictionRecord(
                     "top3_display_name,top3_confidence_percent," +
                     "probabilities[$probHeaders]," +
                     "user_selected_class," +
-                    "per_second_clips"
+                    "per_second_clips," +
+                    "long_standard,long_fast,long_average"
         }
     }
     

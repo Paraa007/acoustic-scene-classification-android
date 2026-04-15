@@ -87,6 +87,27 @@ Die FFT-Parameter (nFft, winLength, hopLength, nMels, fMin, fMax) sind für alle
 
 ## Changelog
 
+**2026-04-15 — LONG sub-mode polish: triangle layout, per-second pacing, session lifecycle**
+- Triangle circles reworked: main Standard circle 150 dp (inside a 170 dp frame when triangle is active, 240 dp otherwise) with the Standard sub-label sitting right under the %; Fast + Avg circles 70 dp each (internal `setTargetSize(60)`), both wraps `layout_weight=1` so they're geometrically symmetric. Small circles now show `<Label>\n<Emoji> <ClassShort> <%>` colored by class — same compact style across all three sub-modes.
+- When ≥ 2 sub-modes are selected, the big `currentSceneLabel` (the large "Emoji Class") is hidden — its role is taken over by the compact colored label under the main circle, so all three circles are labeled consistently. With only Standard selected, the original big label behavior is preserved.
+- Top Predictions card is hidden in triangle mode — it was ambiguous which circle its Top 3 belonged to.
+- LONG + Avg sub-mode: 350 ms pacing between the 10 per-second inferences on the in-memory 10 s buffer, so the "Show Live Data" circles visibly fill one by one instead of flashing through in < 1 s.
+- `stopClassification()` now also clears `pendingEvaluation`, `currentResult`, `history`, `totalClassifications`, `averageInferenceTime`, `recordingProgress`, `currentVolume` — pressing Stop wipes every transient session view (big circle, Top Predictions, Last Predictions, Session Statistics, pending Rate card) back to the Ready state, as if the app had just launched. The persistent History-tab repository is untouched.
+- `startClassification()` bumps `sessionStartTime = now` on every press, so every Start = a fresh History session and every Stop ends it. Re-pressing Start never re-opens the previous session — it opens a new one. `ActiveSessionRegistry` picks this up automatically.
+- Evaluation-methods checkboxes (Fast / Avg) are disabled while a session is running; selection is locked until Stop. Standard stays locked-on as before.
+- History session-detail dialog wrapped in a `NestedScrollView` (`maxHeight=600dp`) so long method-comparison + user-evaluation sections scroll instead of overlapping. When `longSubResults` exists on any record, the redundant top-level "Modell-Vorhersagen" distribution is hidden — the per-sub-mode "Method comparison" stacks already convey the same info.
+
+**2026-04-15 — LONG sub-mode evaluation (Dev Mode): Standard / Fast / Avg on the same 10 s sample**
+- LONG mode now acts as a comparison harness. In Dev Mode, below the Interval / LONG button row there's an "Evaluation methods" chooser with three checkboxes: Standard (locked on, default), Fast (middle 1 s), Avg (10 × 1 s averaged). User can pick 1, 2, or all 3.
+- On every 30-min tick a single 10 s recording is made, then inference runs once per selected sub-mode on the same buffer: Standard → full 10 s; Fast → `samples[4.5s..5.5s]`; Avg → 10 × 1 s slices fed back through the existing AVERAGE live pipeline (`perSecondResults` + `runningAverageResult`).
+- UI: when ≥ 2 sub-modes are selected, the big confidence circle shrinks to 180 dp (Standard) and two smaller 90 dp circles appear underneath in a triangle layout — bottom-left = Fast, bottom-right = Avg, each with a per-sub label. With only Standard selected, UI is unchanged.
+- `ModeTimelineView` for LONG appends `evaluated as: Standard + Fast + Avg` (reflecting the current selection) to the bottom summary.
+- Per-Second card is also shown when LONG + Avg sub-mode is active, so the "Show Live Data" switch still gates the 1 s circles.
+- Data model: new `LongSubMode` enum and `LongSubResult` (`model/PredictionRecord.kt`). `PredictionRecord` gains `longSubResults: List<LongSubResult>?`. When Avg ran, its 10 × 1 s clips populate the existing `perSecondClips` field.
+- CSV: 3 new columns `long_standard`, `long_fast`, `long_average` (one row per recording), each `"<Class>:<xx>%"` or empty.
+- History session-detail dialog gains a "Method comparison" section rendering a distribution stack per sub-mode so you can compare evaluation strategies on identical audio.
+- Sub-mode selection persisted in `mode_prefs` under new keys `long_sub_modes_dev` / `long_sub_modes_user` (latter reserved for a future User-Mode port). Dev-Mode only today.
+
 **2026-04-15 — LONG-mode label + second-accurate countdown**
 - Renamed the LONG mode label from "Long (30min)" to "every 30min" (both `RecordingMode.LONG.label` and string `mode_long`).
 - The 30-min pause countdown now ticks every second instead of every minute. `AppState.Paused` / `UserPaused` now carry `secondsRemaining: Int` (was `minutesRemaining`). UI shows `mm:ss` (e.g. `29:47`) in both the status label and the timer. New strings: `pause_mmss`, `user_paused_with_mmss`.
