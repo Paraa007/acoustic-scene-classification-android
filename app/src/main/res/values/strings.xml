@@ -177,7 +177,7 @@
     <string name="export_email_body">Attached are the exported predictions.\n\nTotal: %1$d predictions</string>
 
     <!-- Per-Second Analysis Card (AVERAGE mode) -->
-    <string name="per_second_analysis">Per-Second Analyse</string>
+    <string name="per_second_analysis">Per-Second Analysis</string>
     <string name="per_second_clips_title">Per-Second Clips (1s)</string>
 
     <!-- Volume Graph Card -->
@@ -216,9 +216,8 @@
     <string name="settings_theme_description">Switch between light and dark theme</string>
     <string name="settings_about">About</string>
     <string name="settings_app_name_label">App</string>
-    <string name="settings_version_label">Version</string>
     <string name="settings_classes_label">Scene Classes</string>
-    <string name="settings_scene_legend">Scene Classes - Legende</string>
+    <string name="settings_scene_legend">Scene Classes - Legend</string>
 
     <!-- Model Management -->
     <string name="settings_models">Models</string>
@@ -231,22 +230,22 @@
     <string name="cannot_delete_while_recording">Cannot delete sessions while a recording is active. Please stop the recording first.</string>
 
     <!-- Evaluation Notification -->
-    <string name="evaluation_title">Umgebungsbewertung</string>
-    <string name="evaluation_channel_name">Bewertungs-Benachrichtigungen</string>
-    <string name="evaluation_channel_description">Benachrichtigungen zur Bewertung der Umgebungsklassifikation</string>
-    <string name="evaluation_question">Was ist die tatsächliche Umgebung?</string>
-    <string name="evaluation_submit">Senden</string>
-    <string name="evaluation_skip">Überspringen</string>
+    <string name="evaluation_title">Environment Rating</string>
+    <string name="evaluation_channel_name">Rating Notifications</string>
+    <string name="evaluation_channel_description">Notifications for rating environment classifications</string>
+    <string name="evaluation_question">What is the actual environment?</string>
+    <string name="evaluation_submit">Send</string>
+    <string name="evaluation_skip">Skip</string>
     <string name="evaluation_inapp_action">Rate now</string>
     <string name="evaluation_inapp_message">New recording ready to rate</string>
     <string name="evaluation_timeout">%1$d:%2$02d</string>
-    <string name="evaluation_tap_to_rate">Tippen zum Bewerten</string>
+    <string name="evaluation_tap_to_rate">Tap to rate</string>
 
     <!-- Distribution Comparison -->
-    <string name="model_predictions">Modell-Vorhersagen</string>
-    <string name="user_evaluations">Nutzer-Bewertungen</string>
-    <string name="no_user_evaluations">Keine Nutzer-Bewertungen vorhanden</string>
-    <string name="n_of_m_evaluated">%1$d/%2$d bewertet</string>
+    <string name="model_predictions">Model Predictions</string>
+    <string name="user_evaluations">User Ratings</string>
+    <string name="no_user_evaluations">No user ratings available</string>
+    <string name="n_of_m_evaluated">%1$d/%2$d rated</string>
 
     <!-- Pause/Resume + Active session -->
     <string name="pause_recording">Pause</string>
@@ -254,8 +253,21 @@
     <string name="user_paused">Paused</string>
     <string name="user_paused_with_minutes">Paused · %1$d min remaining</string>
     <string name="user_paused_with_mmss">Paused · %1$s remaining</string>
+    <string name="user_paused_auto_resume">Paused · auto-resume in %1$s</string>
     <string name="pause_mmss">Pause: %1$s until next recording</string>
     <string name="active_session_badge">● ACTIVE</string>
+
+    <!-- Pause duration picker (opens when the user hits Pause in LONG mode) -->
+    <string name="pause_duration_title">Pause duration</string>
+    <string name="pause_duration_subtitle">Choose how long to pause. With a timer the session resumes automatically.</string>
+    <string name="pause_duration_no_timer">No timer (pause until Resume)</string>
+    <string name="pause_duration_15_min">15 minutes</string>
+    <string name="pause_duration_30_min">30 minutes</string>
+    <string name="pause_duration_1_hour">1 hour</string>
+    <string name="pause_duration_2_hours">2 hours</string>
+    <string name="pause_duration_4_hours">4 hours</string>
+    <string name="pause_duration_8_hours">8 hours</string>
+    <string name="pause_duration_16_hours">16 hours</string>
 
     <!-- LONG Sub-Mode Chooser (Dev Mode: evaluate a 10s recording with multiple methods) -->
     <string name="long_submodes_title">Evaluation methods</string>

@@ -180,7 +180,7 @@ class ClassificationService : Service() {
         startKeepAliveAlarm()
 
         // Starte Foreground Service mit Notification (HIGH Priority!)
-        startForeground(NOTIFICATION_ID, createNotification("Klassifikation läuft..."))
+        startForeground(NOTIFICATION_ID, createNotification("Classification running..."))
 
         // Benachrichtige Listener
         serviceListener?.onClassificationStarted()
@@ -361,10 +361,10 @@ class ClassificationService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Klassifikation",
+                "Classification",
                 NotificationManager.IMPORTANCE_DEFAULT  // Erhöht von LOW auf DEFAULT
             ).apply {
-                description = "Zeigt an, dass die Audio-Klassifikation im Hintergrund läuft"
+                description = "Indicates that audio classification is running in the background"
                 setShowBadge(false)
                 // Deaktiviere Sound und Vibration (wir wollen nur höhere Priorität)
                 setSound(null, null)

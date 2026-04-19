@@ -438,6 +438,69 @@ object ModernDialogHelper {
     }
 
     /**
+     * Option for the pause-duration picker dialog. `durationMs = null` means
+     * "no timer" (pause stays active until the user presses Resume).
+     */
+    data class PauseDurationOption(
+        val label: String,
+        val durationMs: Long?
+    )
+
+    /**
+     * Shows a picker so the user can choose how long the LONG-mode pause should
+     * last. The first option is typically "No timer" (indefinite pause); the
+     * rest are preset durations. Exactly one option is always selected on tap.
+     */
+    fun showPauseDurationDialog(
+        context: Context,
+        title: String,
+        subtitle: String,
+        options: List<PauseDurationOption>,
+        onSelected: (PauseDurationOption) -> Unit
+    ): Dialog {
+        val dialog = Dialog(context, R.style.ModernDialog)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_pause_duration)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        dialog.findViewById<TextView>(R.id.dialogTitle).text = title
+        dialog.findViewById<TextView>(R.id.dialogSubtitle).text = subtitle
+
+        val container = dialog.findViewById<LinearLayout>(R.id.optionsContainer)
+        val density = context.resources.displayMetrics.density
+        options.forEach { option ->
+            val btn = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = option.label
+                textSize = 15f
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                strokeColor = ContextCompat.getColorStateList(context, R.color.accent_green)
+                cornerRadius = (12 * density).toInt()
+                gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (8 * density).toInt() }
+                setOnClickListener {
+                    onSelected(option)
+                    dialog.dismiss()
+                }
+            }
+            container.addView(btn)
+        }
+
+        dialog.findViewById<MaterialButton>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+        return dialog
+    }
+
+    /**
      * Creates a distribution item with emoji, name, count, and progress bar
      */
     private fun createDistributionItemWithProgress(

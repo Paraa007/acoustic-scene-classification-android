@@ -90,6 +90,9 @@ data class UiState(
     val runningAverageResult: ClassificationResult? = null,
     val pendingEvaluation: PendingEvaluation? = null,
     val isPaused: Boolean = false,
+    // When the user pauses with a timer, this holds the SystemClock.elapsedRealtime()
+    // deadline at which the session should auto-resume. null = indefinite pause.
+    val userPauseDeadlineElapsedMs: Long? = null,
     val selectedLongSubs: Set<LongSubMode> = setOf(LongSubMode.STANDARD),
     val longSubResults: Map<LongSubMode, ClassificationResult?> = emptyMap()
 )
