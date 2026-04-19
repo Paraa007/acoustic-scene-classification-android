@@ -36,6 +36,9 @@ class WelcomeActivity : AppCompatActivity() {
         const val EXTRA_MODEL_NAME = "model_name"
         const val EXTRA_NUM_CLASSES = "num_classes"
         const val EXTRA_IS_DEV_MODE = "is_dev_mode"
+        // ALL IN ONE (Dev only): ArrayList<String> of `.pt` filenames selected for
+        // simultaneous inference. null / missing = regular single-model session.
+        const val EXTRA_ALL_IN_ONE_MODELS = "all_in_one_models"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -138,6 +141,14 @@ class WelcomeActivity : AppCompatActivity() {
             emptyStateText.visibility = View.GONE
             modelListContainer.visibility = View.VISIBLE
 
+            // ALL IN ONE card first — lets the user compare several models on the same audio
+            if (models.size >= 2) {
+                modelListContainer.addView(createAllInOneItemView {
+                    dialog.dismiss()
+                    showAllInOneSelectionDialog(models)
+                })
+            }
+
             // Add model items
             models.forEach { modelFileName ->
                 val modelItem = createModelItemView(modelFileName) {
@@ -233,6 +244,137 @@ class WelcomeActivity : AppCompatActivity() {
     }
 
     /**
+     * Card inside the Select Model dialog that opens the ALL IN ONE multi-select picker.
+     * Styled distinctly (accent stroke, dual-brain icon) so it stands out from the
+     * individual model rows below it.
+     */
+    private fun createAllInOneItemView(onClick: () -> Unit): View {
+        val card = MaterialCardView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 12 }
+            setCardBackgroundColor(ContextCompat.getColor(context, R.color.dialog_surface_light))
+            radius = 16f * resources.displayMetrics.density
+            cardElevation = 0f
+            strokeWidth = 2
+            strokeColor = ContextCompat.getColor(context, R.color.accent_green)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+        }
+
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(48, 40, 48, 40)
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+
+        val iconText = TextView(this).apply {
+            text = "🧠🧠"
+            textSize = 22f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = 32 }
+        }
+
+        val textContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val nameText = TextView(this).apply {
+            text = getString(R.string.all_in_one)
+            textSize = 16f
+            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+
+        val subText = TextView(this).apply {
+            text = getString(R.string.all_in_one_subtitle_short)
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(context, R.color.accent_green))
+        }
+
+        textContainer.addView(nameText)
+        textContainer.addView(subText)
+        content.addView(iconText)
+        content.addView(textContainer)
+        card.addView(content)
+        return card
+    }
+
+    /**
+     * Multi-select dialog: user picks ≥ 2 models that should run in parallel on the
+     * same audio for each recording. Start button is disabled until ≥ 2 are ticked.
+     */
+    private fun showAllInOneSelectionDialog(models: List<String>) {
+        val dialog = Dialog(this, R.style.ModernDialog)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_all_in_one_selection)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        val container = dialog.findViewById<LinearLayout>(R.id.allInOneListContainer)
+        val btnBack = dialog.findViewById<MaterialButton>(R.id.btnAllInOneBack)
+        val btnStart = dialog.findViewById<MaterialButton>(R.id.btnAllInOneStart)
+
+        val selected = linkedSetOf<String>()
+        btnStart.isEnabled = false
+
+        models.forEach { modelFileName ->
+            val row = createAllInOneCheckboxRow(modelFileName) { isChecked ->
+                if (isChecked) selected.add(modelFileName) else selected.remove(modelFileName)
+                btnStart.isEnabled = selected.size >= 2
+            }
+            container.addView(row)
+        }
+
+        btnBack.setOnClickListener {
+            dialog.dismiss()
+            showModelSelectionDialog()
+        }
+
+        btnStart.setOnClickListener {
+            if (selected.size < 2) return@setOnClickListener
+            val config = ModelConfig.createAllInOne(selected.toList())
+            Toast.makeText(
+                this,
+                getString(R.string.all_in_one_started, selected.size),
+                Toast.LENGTH_SHORT
+            ).show()
+            dialog.dismiss()
+            startMainActivity(config)
+        }
+
+        dialog.show()
+    }
+
+    private fun createAllInOneCheckboxRow(
+        modelFileName: String,
+        onChecked: (Boolean) -> Unit
+    ): View {
+        val numClasses = ModelConfig.getClassCountForModel(modelFileName)
+        val row = com.google.android.material.checkbox.MaterialCheckBox(this).apply {
+            text = "$modelFileName · $numClasses Classes"
+            textSize = 14f
+            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.bottomMargin = 4
+            layoutParams = lp
+            setOnCheckedChangeListener { _, checked -> onChecked(checked) }
+        }
+        return row
+    }
+
+    /**
      * Lists all .pt model files in dev_models/ directory
      */
     private fun listDevModels(): List<String> {
@@ -255,6 +397,9 @@ class WelcomeActivity : AppCompatActivity() {
             putExtra(EXTRA_MODEL_NAME, config.modelName)
             putExtra(EXTRA_NUM_CLASSES, config.numClasses)
             putExtra(EXTRA_IS_DEV_MODE, config.isDevMode)
+            config.allInOneModels?.let {
+                putStringArrayListExtra(EXTRA_ALL_IN_ONE_MODELS, ArrayList(it))
+            }
         }
         startActivity(intent)
         finish()

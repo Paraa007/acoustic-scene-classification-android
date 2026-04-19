@@ -94,5 +94,10 @@ data class UiState(
     // deadline at which the session should auto-resume. null = indefinite pause.
     val userPauseDeadlineElapsedMs: Long? = null,
     val selectedLongSubs: Set<LongSubMode> = setOf(LongSubMode.STANDARD),
-    val longSubResults: Map<LongSubMode, ClassificationResult?> = emptyMap()
+    val longSubResults: Map<LongSubMode, ClassificationResult?> = emptyMap(),
+    // ALL IN ONE: model-name-keyed live result, filled as each model finishes inferring.
+    // Empty map = single-model session (regular dev / user mode).
+    val allInOneResults: Map<String, ClassificationResult> = emptyMap(),
+    // Fixed list of model filenames currently selected in ALL IN ONE mode (drives UI order).
+    val allInOneModelNames: List<String> = emptyList()
 )

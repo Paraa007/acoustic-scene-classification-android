@@ -216,13 +216,24 @@ class PredictionRepository private constructor(private val context: Context) {
     }
 
     /**
-     * Exportiert alle Vorhersagen als CSV-String
+     * Exportiert alle Vorhersagen als CSV-String.
+     *
+     * Scannt zuerst alle Records nach eindeutigen ALL-IN-ONE-Modellnamen und
+     * baut daraus dynamische Spalten `allinone_<model>` am Ende der Zeile.
+     * Records ohne ALL-IN-ONE-Daten bekommen leere Zellen in diesen Spalten.
      */
-    fun exportToCsvString(): String {
+    fun exportToCsvString(records: List<PredictionRecord> = predictions): String {
+        val allInOneModelNames: List<String> = records
+            .mapNotNull { it.allInOneResults }
+            .flatten()
+            .map { it.modelName }
+            .distinct()
+            .sorted()
+
         val sb = StringBuilder()
-        sb.appendLine(PredictionRecord.getCsvHeader())
-        predictions.forEach { record ->
-            sb.appendLine(record.toCsvRow())
+        sb.appendLine(PredictionRecord.getCsvHeader(allInOneModelNames.takeIf { it.isNotEmpty() }))
+        records.forEach { record ->
+            sb.appendLine(record.toCsvRow(allInOneModelNames.takeIf { it.isNotEmpty() }))
         }
         return sb.toString()
     }
@@ -262,19 +273,19 @@ class PredictionRepository private constructor(private val context: Context) {
         val startTime = records.firstOrNull()?.timestamp ?: System.currentTimeMillis()
         val timestamp = dateFormat.format(Date(startTime))
 
-        // Get model name from first prediction
-        val model = records.firstOrNull()?.modelName?.replace(".pt", "") ?: "model1"
+        // Get model name from first prediction. ALL-IN-ONE sessions use a compact marker.
+        val first = records.firstOrNull()
+        val model = if (first?.allInOneResults != null && first.allInOneResults.isNotEmpty()) {
+            "allinone_${first.allInOneResults.size}models"
+        } else {
+            first?.modelName?.replace(".pt", "") ?: "model1"
+        }
 
         // Format: recording_[MODEL_NAME]_[TIMESTAMP].csv
         val fileName = "recording_${model}_${timestamp}.csv"
         val file = File(context.getExternalFilesDir(null), fileName)
 
-        val sb = StringBuilder()
-        sb.appendLine(PredictionRecord.getCsvHeader())
-        records.forEach { record ->
-            sb.appendLine(record.toCsvRow())
-        }
-        file.writeText(sb.toString())
+        file.writeText(exportToCsvString(records))
 
         Log.d(TAG, "Exported ${records.size} predictions to ${file.absolutePath}")
         file

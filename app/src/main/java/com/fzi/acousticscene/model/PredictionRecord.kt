@@ -21,6 +21,24 @@ data class PerSecondClip(
 }
 
 /**
+ * ALL-IN-ONE mode result: one entry per model that was run on the same recording buffer.
+ */
+data class AllInOneResult(
+    val modelName: String,
+    val sceneClass: SceneClass,
+    val confidence: Float,
+    val allProbabilities: FloatArray,
+    val inferenceTimeMs: Long
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AllInOneResult) return false
+        return modelName == other.modelName
+    }
+    override fun hashCode(): Int = modelName.hashCode()
+}
+
+/**
  * LONG-mode sub-mode result (Standard / Fast / Avg applied to the same 10 s recording).
  */
 data class LongSubResult(
@@ -60,7 +78,8 @@ data class PredictionRecord(
     val isDevMode: Boolean = false,  // Whether this was recorded in Dev Mode
     val userSelectedClass: SceneClass? = null,  // User evaluation: selected scene class (null = no response)
     val perSecondClips: List<PerSecondClip>? = null,  // AVERAGE mode: individual 1s clip results
-    val longSubResults: List<LongSubResult>? = null  // LONG mode: per sub-mode evaluation of the same 10s buffer
+    val longSubResults: List<LongSubResult>? = null,  // LONG mode: per sub-mode evaluation of the same 10s buffer
+    val allInOneResults: List<AllInOneResult>? = null  // ALL-IN-ONE mode: one entry per selected model
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige
@@ -88,9 +107,14 @@ data class PredictionRecord(
     
     /**
      * Konvertiert zu CSV-Zeile
-     * Enthält jetzt auch Top 3 Predictions und Batterie-Level
+     * Enthält jetzt auch Top 3 Predictions und Batterie-Level.
+     *
+     * @param allInOneModelNames Wenn nicht-null, wird am Ende für jedes Modell in dieser
+     *   Liste eine Zelle `"Class:XX%"` aus [allInOneResults] angehängt (leer falls dieses
+     *   Record keinen Eintrag für das Modell hat). So bekommt der CSV-Export dynamische
+     *   Spalten pro Modell, ohne dass Records ohne ALL-IN-ONE-Daten einen Defekt erzeugen.
      */
-    fun toCsvRow(): String {
+    fun toCsvRow(allInOneModelNames: List<String>? = null): String {
         // Probabilities mit Klassennamen (statt Indizes)
         val probHeaders = SceneClass.entries.sortedBy { it.index }.map { it.name }
         val probsString = allProbabilities.joinToString(";") {
@@ -129,7 +153,7 @@ data class PredictionRecord(
         val longFastStr = subCell(LongSubMode.FAST)
         val longAvgStr = subCell(LongSubMode.AVERAGE)
 
-        return listOf(
+        val baseCells = listOf(
             id.toString(),
             getFormattedDateTime(),
             batteryString,  // NEU: battery_percent nach timestamp
@@ -150,7 +174,19 @@ data class PredictionRecord(
             "\"$longStdStr\"",   // long_standard (LONG sub-mode)
             "\"$longFastStr\"",  // long_fast (LONG sub-mode)
             "\"$longAvgStr\""    // long_average (LONG sub-mode)
-        ).joinToString(",")
+        )
+
+        // ALL-IN-ONE dynamische Spalten: eine Zelle pro bekanntem Modellnamen
+        val allInOneCells: List<String> = if (allInOneModelNames != null && allInOneModelNames.isNotEmpty()) {
+            allInOneModelNames.map { name ->
+                val r = allInOneResults?.firstOrNull { it.modelName == name }
+                if (r != null) {
+                    "\"${r.sceneClass.label}:${(r.confidence * 100).toInt()}%\""
+                } else ""
+            }
+        } else emptyList()
+
+        return (baseCells + allInOneCells).joinToString(",")
     }
     
     companion object {
@@ -160,10 +196,10 @@ data class PredictionRecord(
          * Geändert: recording_mode enthält jetzt Zeit (z.B. "STANDARD (10s)"), probabilities enthält Klassennamen
          * NEU: battery_percent nach timestamp
          */
-        fun getCsvHeader(): String {
+        fun getCsvHeader(allInOneModelNames: List<String>? = null): String {
             // Probabilities mit Display-Namen (wie top3_display_name) - mit Anführungszeichen
             val probHeaders = SceneClass.entries.sortedBy { it.index }.joinToString(";") { "\"${it.label}\"" }
-            return "id,timestamp,battery_percent,class_display_name,confidence_percent,inference_time_sec,recording_mode," +
+            val base = "id,timestamp,battery_percent,class_display_name,confidence_percent,inference_time_sec,recording_mode," +
                     "top1_display_name,top1_confidence_percent," +
                     "top2_display_name,top2_confidence_percent," +
                     "top3_display_name,top3_confidence_percent," +
@@ -171,6 +207,10 @@ data class PredictionRecord(
                     "user_selected_class," +
                     "per_second_clips," +
                     "long_standard,long_fast,long_average"
+            val allInOneCols = if (!allInOneModelNames.isNullOrEmpty()) {
+                "," + allInOneModelNames.joinToString(",") { "allinone_${it.removeSuffix(".pt")}" }
+            } else ""
+            return base + allInOneCols
         }
     }
     

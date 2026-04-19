@@ -67,6 +67,21 @@
                 android:padding="32dp"
                 android:gravity="center">
 
+                <!-- Primary-model title: shown only in ALL IN ONE mode so the user
+                     knows which model drives the big circle / triangle sub-mode circles. -->
+                <TextView
+                    android:id="@+id/mainCircleModelTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent_green"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:ellipsize="middle"
+                    android:visibility="gone" />
+
                 <!-- FrameLayout for Ripple effect behind Confidence Circle -->
                 <FrameLayout
                     android:id="@+id/mainCircleFrame"
@@ -184,6 +199,41 @@
                     android:textSize="14sp"
                     android:textColor="@color/text_secondary"
                     android:visibility="gone" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ALL IN ONE: per-model live predictions card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/allInOneCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="@color/surface_dark"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/all_in_one_card_title"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:id="@+id/allInOneContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

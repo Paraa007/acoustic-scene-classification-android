@@ -22,9 +22,11 @@ import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.ml.ModelInference
+import com.fzi.acousticscene.model.AllInOneResult
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.LongSubResult
+import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PerSecondClip
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
@@ -74,9 +76,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var _numClasses: Int = 8
     private var _isDevMode: Boolean = false
 
+    // ALL-IN-ONE: additional ModelInference instances, one per selected dev model.
+    // The first entry mirrors `modelInference` (primary). When this list has ≥ 2
+    // entries, ALL-IN-ONE mode is active and every inference loops over all of them.
+    private var _allInOneModelNames: List<String> = emptyList()
+    private var allInOneInferences: List<ModelInference> = emptyList()
+
     val modelName: String get() = _modelName
     val numClasses: Int get() = _numClasses
     val isDevMode: Boolean get() = _isDevMode
+    val isAllInOne: Boolean get() = _allInOneModelNames.size >= 2
+    val allInOneModelNames: List<String> get() = _allInOneModelNames
 
     // Repository for all predictions (singleton - shared with HistoryFragment)
     private val predictionRepository = PredictionRepository.getInstance(application)
@@ -85,22 +95,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var sessionStartTime: Long = System.currentTimeMillis()
 
     /**
-     * Sets the model configuration from Intent extras
+     * Sets the model configuration from Intent extras.
+     *
+     * For single-model sessions [allInOneModels] is null/empty. For ALL-IN-ONE
+     * sessions it carries every selected `.pt` filename (primary first); each
+     * model gets its own cached [ModelInference] instance for parallel inference.
      */
-    fun setModelConfig(modelPath: String, modelName: String, numClasses: Int, isDevMode: Boolean) {
+    fun setModelConfig(
+        modelPath: String,
+        modelName: String,
+        numClasses: Int,
+        isDevMode: Boolean,
+        allInOneModels: List<String>? = null
+    ) {
         val pathChanged = _modelPath != modelPath
+        val allInOneChanged = _allInOneModelNames != (allInOneModels ?: emptyList<String>())
         _modelPath = modelPath
         _modelName = modelName
         _numClasses = numClasses
         _isDevMode = isDevMode
 
-        // Update the ModelInference with the new path
+        // Update the primary ModelInference with the new path
         modelInference.setModelPath(modelPath)
 
-        Log.d(TAG, "Model config set: $modelName ($numClasses classes, devMode=$isDevMode)")
+        // Rebuild all-in-one inference pool when the selection changes
+        if (allInOneChanged) {
+            _allInOneModelNames = allInOneModels?.toList() ?: emptyList()
+            allInOneInferences = if (_allInOneModelNames.size >= 2) {
+                _allInOneModelNames.map { name ->
+                    val fullPath = "${ModelConfig.DEV_MODELS_DIR}/$name"
+                    // The primary model shares its instance with `modelInference`
+                    // to avoid loading the same model twice. Others get fresh inferences.
+                    if (fullPath == modelPath) {
+                        modelInference
+                    } else {
+                        ModelInference(getApplication<Application>().applicationContext, fullPath)
+                    }
+                }
+            } else emptyList()
+            _uiState.update {
+                it.copy(
+                    allInOneModelNames = _allInOneModelNames,
+                    allInOneResults = emptyMap()
+                )
+            }
+        }
+
+        Log.d(TAG, "Model config set: $modelName ($numClasses classes, devMode=$isDevMode, allInOne=${_allInOneModelNames.size})")
 
         // (Re)load model if path changed or model not yet loaded
-        if (pathChanged || !_uiState.value.isModelLoaded) {
+        if (pathChanged || allInOneChanged || !_uiState.value.isModelLoaded) {
             loadModel()
         }
     }
@@ -219,9 +263,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 // Model Loading kann blockierend sein, daher auf IO Dispatcher
                 val success = withContext(Dispatchers.IO) {
-                    modelInference.loadModel()
+                    val primaryLoaded = modelInference.loadModel()
+                    // ALL-IN-ONE: also load every extra inference (primary is the same instance
+                    // as modelInference when paths match, so loadModel() is idempotent there).
+                    val extrasLoaded = allInOneInferences.all { it.loadModel() }
+                    primaryLoaded && extrasLoaded
                 }
-                
+
                 if (success) {
                     _uiState.update {
                         it.copy(
@@ -288,7 +336,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 modelPath = _modelPath,
                 modelName = _modelName,
                 numClasses = _numClasses,
-                sessionStartTime = sessionStartTime
+                sessionStartTime = sessionStartTime,
+                allInOneModels = _allInOneModelNames.takeIf { it.size >= 2 }
             )
         )
 
@@ -418,14 +467,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     // Für STANDARD/FAST: single inference (bisheriges Verhalten).
                     val subResults: List<LongSubResult>
                     val result: ClassificationResult?
+                    val allInOneForRecord: List<AllInOneResult>
                     if (currentMode == RecordingMode.LONG) {
                         val (pri, subs) = runLongSubModes(audioSamples!!, _uiState.value.selectedLongSubs)
                         result = pri
                         subResults = subs
+                        // LONG + ALL-IN-ONE: run every selected model on the full 10s buffer.
+                        // The LONG sub-modes (Standard/Fast/Avg) continue to use the primary
+                        // model only to keep the comparison matrix tractable.
+                        allInOneForRecord = if (isAllInOne) runAllInOne(audioSamples!!, currentMode) else emptyList()
                     } else {
                         subResults = emptyList()
-                        result = withContext(mlDispatcher) {
-                            modelInference.infer(audioSamples!!, currentMode)
+                        if (isAllInOne) {
+                            val allResults = runAllInOne(audioSamples!!, currentMode)
+                            allInOneForRecord = allResults
+                            // Primary display follows the first model in the selection
+                            result = allResults.firstOrNull()?.let {
+                                ClassificationResult(
+                                    sceneClass = it.sceneClass,
+                                    confidence = it.confidence,
+                                    allProbabilities = it.allProbabilities,
+                                    inferenceTimeMs = it.inferenceTimeMs
+                                )
+                            }
+                        } else {
+                            allInOneForRecord = emptyList()
+                            result = withContext(mlDispatcher) {
+                                modelInference.infer(audioSamples!!, currentMode)
+                            }
                         }
                     }
 
@@ -455,7 +524,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             modelName = _modelName,  // Model file name
                             isDevMode = _isDevMode,  // Whether Dev Mode is active
                             perSecondClips = perSecondFromAvg,
-                            longSubResults = subResults.takeIf { it.isNotEmpty() }
+                            longSubResults = subResults.takeIf { it.isNotEmpty() },
+                            allInOneResults = allInOneForRecord.takeIf { it.isNotEmpty() }
                         )
                         predictionRepository.addPrediction(record)
                         updateStatistics()
@@ -559,6 +629,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isPaused = false,
             userPauseDeadlineElapsedMs = null,
             longSubResults = emptyMap(),
+            allInOneResults = emptyMap(),
             pendingEvaluation = null
         ) }
         Log.d(TAG, "Classification stopped")
@@ -740,13 +811,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Loop continuously until user presses Stop
         while (isRecording) {
-            // Clear per-second state for this round
+            // Clear per-second state for this round. `allInOneResults` intentionally
+            // keeps last round's final averages so the All-Models card doesn't blink
+            // to "..." during the 10 s; it's overwritten in one go at round end.
             _uiState.update { it.copy(
                 perSecondResults = List(totalClips) { null },
                 runningAverageResult = null
             )}
 
             val results = mutableListOf<ClassificationResult>()
+            // ALL-IN-ONE + AVERAGE: per-model accumulator of the 10 × 1s clip results.
+            // Keyed by model filename; drives both live per-model running averages
+            // and the final AllInOneResult list written to the PredictionRecord.
+            val allInOnePerModelClips: MutableMap<String, MutableList<ClassificationResult>> = mutableMapOf()
             val startTime = System.currentTimeMillis()
 
             for (clipIndex in 0 until totalClips) {
@@ -796,6 +873,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     modelInference.infer(clipSamples!!, RecordingMode.FAST)
                 }
 
+                // ALL-IN-ONE + AVERAGE: silently accumulate each model's per-clip result.
+                // Unlike the primary AVERAGE path (which ticks per-second circles live),
+                // the All-Models card stays empty during the 10 × 1 s round — user only
+                // sees the final 10-clip average at the end of each round to avoid the
+                // numbers jumping every second.
+                if (isAllInOne) {
+                    for ((idx, inf) in allInOneInferences.withIndex()) {
+                        if (!isRecording) break
+                        if (inf === modelInference) continue  // already computed as `clipResult`
+                        val name = _allInOneModelNames.getOrNull(idx) ?: continue
+                        val r = withContext(mlDispatcher) { inf.infer(clipSamples!!, RecordingMode.FAST) } ?: continue
+                        allInOnePerModelClips.getOrPut(name) { mutableListOf() } += r
+                    }
+                    // Also accumulate primary model's clip (shared instance, already inferred above)
+                    if (clipResult != null) {
+                        val primaryName = _allInOneModelNames.firstOrNull()
+                        if (primaryName != null) {
+                            allInOnePerModelClips.getOrPut(primaryName) { mutableListOf() } += clipResult
+                        }
+                    }
+                }
+
                 if (clipResult != null) {
                     results.add(clipResult)
 
@@ -834,6 +933,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 // Save to repository
                 val top3 = finalResult.getTopPredictions(3)
                 val currentBatteryLevel = getBatteryLevel()
+                // ALL-IN-ONE + AVERAGE: per-model averaged result from this round's clips.
+                // Built from the silently-accumulated per-clip results, then pushed to the
+                // UiState in one go so the All-Models card updates once per round.
+                val allInOneForRound: List<AllInOneResult> = if (isAllInOne) {
+                    _allInOneModelNames.mapNotNull { name ->
+                        val clipsForModel = allInOnePerModelClips[name]
+                        if (clipsForModel.isNullOrEmpty()) null else {
+                            val avg = computeRunningAverage(clipsForModel, startTime)
+                            AllInOneResult(
+                                modelName = name,
+                                sceneClass = avg.sceneClass,
+                                confidence = avg.confidence,
+                                allProbabilities = avg.allProbabilities,
+                                inferenceTimeMs = avg.inferenceTimeMs
+                            )
+                        }
+                    }
+                } else emptyList()
+
+                if (allInOneForRound.isNotEmpty()) {
+                    val finalMap = allInOneForRound.associate { entry ->
+                        entry.modelName to ClassificationResult(
+                            sceneClass = entry.sceneClass,
+                            confidence = entry.confidence,
+                            allProbabilities = entry.allProbabilities,
+                            inferenceTimeMs = entry.inferenceTimeMs
+                        )
+                    }
+                    _uiState.update { it.copy(allInOneResults = finalMap) }
+                }
+
                 val record = PredictionRecord(
                     sceneClass = finalResult.sceneClass,
                     confidence = finalResult.confidence,
@@ -845,7 +975,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     batteryLevel = currentBatteryLevel,
                     modelName = _modelName,
                     isDevMode = _isDevMode,
-                    perSecondClips = clips
+                    perSecondClips = clips,
+                    allInOneResults = allInOneForRound.takeIf { it.isNotEmpty() }
                 )
                 predictionRepository.addPrediction(record)
                 updateStatistics()
@@ -974,6 +1105,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { state ->
             state.copy(longSubResults = state.longSubResults + (sub to result))
         }
+    }
+
+    /**
+     * ALL-IN-ONE fan-out: runs every selected dev model on the same audio buffer,
+     * streaming each result into [UiState.allInOneResults] as soon as it finishes
+     * so the UI can tick the rows live. Returns the full list of [AllInOneResult]
+     * entries (preserving selection order).
+     *
+     * Runs sequentially on [mlDispatcher] — parallel inference would contend for
+     * the same 2-thread ML pool and actually slow things down at this scale.
+     */
+    private suspend fun runAllInOne(
+        audioSamples: FloatArray,
+        mode: RecordingMode
+    ): List<AllInOneResult> {
+        val out = mutableListOf<AllInOneResult>()
+        // Clear previous round
+        _uiState.update { it.copy(allInOneResults = emptyMap()) }
+
+        for ((index, inference) in allInOneInferences.withIndex()) {
+            if (!isRecording) break
+            val name = _allInOneModelNames.getOrNull(index) ?: continue
+            val r = withContext(mlDispatcher) { inference.infer(audioSamples, mode) } ?: continue
+            out += AllInOneResult(
+                modelName = name,
+                sceneClass = r.sceneClass,
+                confidence = r.confidence,
+                allProbabilities = r.allProbabilities,
+                inferenceTimeMs = r.inferenceTimeMs
+            )
+            // Stream live
+            _uiState.update { state ->
+                state.copy(allInOneResults = state.allInOneResults + (name to r))
+            }
+        }
+        return out
     }
 
     /**

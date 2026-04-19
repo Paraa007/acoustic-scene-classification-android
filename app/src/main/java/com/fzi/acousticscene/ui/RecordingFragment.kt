@@ -78,6 +78,8 @@ class RecordingFragment : Fragment() {
     private lateinit var currentSceneLabel: TextView
     private lateinit var predictionsCard: MaterialCardView
     private lateinit var predictionsContainer: LinearLayout
+    private lateinit var allInOneCard: MaterialCardView
+    private lateinit var allInOneContainer: LinearLayout
     private lateinit var statisticsCard: MaterialCardView
     private lateinit var totalClassificationsText: TextView
     private lateinit var avgInferenceTimeText: TextView
@@ -115,6 +117,7 @@ class RecordingFragment : Fragment() {
     private lateinit var cbLongFast: MaterialCheckBox
     private lateinit var cbLongAverage: MaterialCheckBox
     private lateinit var mainCircleSubLabel: TextView
+    private lateinit var mainCircleModelTitle: TextView
     private lateinit var mainCircleFrame: android.widget.FrameLayout
     private lateinit var longTriangleRow: LinearLayout
     private lateinit var longFastCircleWrap: LinearLayout
@@ -204,7 +207,10 @@ class RecordingFragment : Fragment() {
             // from the active-session registry and skip the picker.
             val activeDev = com.fzi.acousticscene.data.ActiveSessionRegistry.get(isDevMode = true)
             if (activeDev != null) {
-                viewModel.setModelConfig(activeDev.modelPath, activeDev.modelName, activeDev.numClasses, true)
+                viewModel.setModelConfig(
+                    activeDev.modelPath, activeDev.modelName, activeDev.numClasses, true,
+                    activeDev.allInOneModels
+                )
                 return
             }
             // Must select a model before using Dev Mode
@@ -248,6 +254,14 @@ class RecordingFragment : Fragment() {
 
         // Change button text to "Back to User Mode"
         btnCancel.text = getString(R.string.back_to_user_mode)
+
+        // ALL IN ONE card first — lets the user compare several models on the same audio
+        if (models.size >= 2) {
+            modelListContainer.addView(createAllInOneItemView {
+                dialog.dismiss()
+                showAllInOneSelectionDialog(models)
+            })
+        }
 
         models.forEach { modelFileName ->
             val modelItem = createModelItemView(modelFileName) {
@@ -339,6 +353,126 @@ class RecordingFragment : Fragment() {
         return card
     }
 
+    /**
+     * "ALL IN ONE" card at the top of the Select Model dialog.
+     */
+    private fun createAllInOneItemView(onClick: () -> Unit): View {
+        val ctx = requireContext()
+        val card = MaterialCardView(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 12 }
+            setCardBackgroundColor(ContextCompat.getColor(ctx, R.color.dialog_surface_light))
+            radius = 16f * resources.displayMetrics.density
+            cardElevation = 0f
+            strokeWidth = 2
+            strokeColor = ContextCompat.getColor(ctx, R.color.accent_green)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+        }
+
+        val content = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(48, 40, 48, 40)
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+
+        val iconText = TextView(ctx).apply {
+            text = "🧠🧠"
+            textSize = 22f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = 32 }
+        }
+
+        val textContainer = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val nameText = TextView(ctx).apply {
+            text = getString(R.string.all_in_one)
+            textSize = 16f
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        val subText = TextView(ctx).apply {
+            text = getString(R.string.all_in_one_subtitle_short)
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(ctx, R.color.accent_green))
+        }
+
+        textContainer.addView(nameText)
+        textContainer.addView(subText)
+        content.addView(iconText)
+        content.addView(textContainer)
+        card.addView(content)
+        return card
+    }
+
+    /**
+     * Multi-select dialog for ALL IN ONE (Dev tab re-entry path).
+     */
+    private fun showAllInOneSelectionDialog(models: List<String>) {
+        val ctx = context ?: return
+        val dialog = Dialog(ctx, R.style.ModernDialog)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_all_in_one_selection)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        dialog.setCancelable(false)
+        dialog.setCanceledOnTouchOutside(false)
+
+        val container = dialog.findViewById<LinearLayout>(R.id.allInOneListContainer)
+        val btnBack = dialog.findViewById<MaterialButton>(R.id.btnAllInOneBack)
+        val btnStart = dialog.findViewById<MaterialButton>(R.id.btnAllInOneStart)
+
+        val selected = linkedSetOf<String>()
+        btnStart.isEnabled = false
+
+        models.forEach { modelFileName ->
+            val numClasses = ModelConfig.getClassCountForModel(modelFileName)
+            val cb = MaterialCheckBox(ctx).apply {
+                text = "$modelFileName · $numClasses Classes"
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.bottomMargin = 4
+                layoutParams = lp
+                setOnCheckedChangeListener { _, checked ->
+                    if (checked) selected.add(modelFileName) else selected.remove(modelFileName)
+                    btnStart.isEnabled = selected.size >= 2
+                }
+            }
+            container.addView(cb)
+        }
+
+        btnBack.setOnClickListener {
+            dialog.dismiss()
+            showModelSelectionDialog()
+        }
+
+        btnStart.setOnClickListener {
+            if (selected.size < 2) return@setOnClickListener
+            val config = ModelConfig.createAllInOne(selected.toList())
+            Toast.makeText(ctx, getString(R.string.all_in_one_started, selected.size), Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+            viewModel.setModelConfig(
+                config.modelPath, config.modelName, config.numClasses, true,
+                config.allInOneModels
+            )
+            viewModel.initializeSession()
+        }
+
+        dialog.show()
+    }
+
     private fun listDevModels(): List<String> {
         return try {
             val assetManager: AssetManager = requireContext().assets
@@ -374,6 +508,7 @@ class RecordingFragment : Fragment() {
         cbLongFast = view.findViewById(R.id.cbLongFast)
         cbLongAverage = view.findViewById(R.id.cbLongAverage)
         mainCircleSubLabel = view.findViewById(R.id.mainCircleSubLabel)
+        mainCircleModelTitle = view.findViewById(R.id.mainCircleModelTitle)
         mainCircleFrame = view.findViewById(R.id.mainCircleFrame)
         longTriangleRow = view.findViewById(R.id.longTriangleRow)
         longFastCircleWrap = view.findViewById(R.id.longFastCircleWrap)
@@ -416,6 +551,8 @@ class RecordingFragment : Fragment() {
         currentSceneLabel = view.findViewById(R.id.currentSceneLabel)
         predictionsCard = view.findViewById(R.id.predictionsCard)
         predictionsContainer = view.findViewById(R.id.predictionsContainer)
+        allInOneCard = view.findViewById(R.id.allInOneCard)
+        allInOneContainer = view.findViewById(R.id.allInOneContainer)
         statisticsCard = view.findViewById(R.id.statisticsCard)
         totalClassificationsText = view.findViewById(R.id.totalClassificationsText)
         avgInferenceTimeText = view.findViewById(R.id.avgInferenceTimeText)
@@ -938,9 +1075,109 @@ class RecordingFragment : Fragment() {
         updatePauseButton(state)
         updateUserPauseCountdown(state)
         updateLongSubModeUi(state)
+        updateAllInOneCard(state)
 
         if (state.errorMessage != null) {
             // Error shown in status label
+        }
+    }
+
+    /**
+     * Renders the live per-model predictions while an ALL-IN-ONE session runs.
+     * Card is hidden for regular single-model sessions.
+     *
+     * Each row: "🧠 <modelName>  <emoji> <Class> <XX%>" — colored by scene class,
+     * greyed out until that model has finished inferring on the current round.
+     */
+    private fun updateAllInOneCard(state: UiState) {
+        val ctx = context ?: return
+
+        // Primary-model title above the big circle — only in ALL IN ONE, so the user
+        // can see which model the big circle / triangle circles belong to. In regular
+        // single-model sessions the header model label already serves that purpose.
+        if (state.allInOneModelNames.size >= 2) {
+            val primary = state.allInOneModelNames.first()
+            mainCircleModelTitle.text = getString(R.string.all_in_one_primary_title, primary)
+            mainCircleModelTitle.visibility = View.VISIBLE
+        } else {
+            mainCircleModelTitle.visibility = View.GONE
+        }
+
+        if (state.allInOneModelNames.size < 2) {
+            allInOneCard.visibility = View.GONE
+            return
+        }
+        allInOneCard.visibility = View.VISIBLE
+        allInOneContainer.removeAllViews()
+
+        // Recording-mode label is shared across all rows (every model ran on the same clip
+        // with the same mode). In LONG ("every 30min") we also append the sub-mode —
+        // ALL IN ONE uses Standard on the full 10 s buffer for every model, not the
+        // Fast/Avg sub-modes — so the user can tell what the displayed number represents.
+        val modeLabel = if (state.recordingMode == RecordingMode.LONG) {
+            "${state.recordingMode.label} · ${getString(R.string.long_sub_label_standard)}"
+        } else {
+            state.recordingMode.label
+        }
+
+        state.allInOneModelNames.forEach { name ->
+            val result = state.allInOneResults[name]
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.bottomMargin = 6.dpToPx()
+                layoutParams = lp
+            }
+
+            val icon = TextView(ctx).apply {
+                text = "🧠"
+                textSize = 14f
+                setPadding(0, 0, 10, 0)
+            }
+
+            val nameContainer = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val nameText = TextView(ctx).apply {
+                text = name
+                textSize = 13f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+            }
+
+            val modeText = TextView(ctx).apply {
+                text = modeLabel
+                textSize = 11f
+                setTextColor(ContextCompat.getColor(ctx, R.color.accent_blue))
+            }
+
+            nameContainer.addView(nameText)
+            nameContainer.addView(modeText)
+
+            val predictionText = TextView(ctx).apply {
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                if (result != null) {
+                    val colorRes = sceneColors[result.sceneClass] ?: R.color.accent_green
+                    text = "${result.sceneClass.emoji} ${result.sceneClass.labelShort} ${(result.confidence * 100).toInt()}%"
+                    setTextColor(ContextCompat.getColor(ctx, colorRes))
+                } else {
+                    text = getString(R.string.all_in_one_row_waiting)
+                    setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                }
+            }
+
+            row.addView(icon)
+            row.addView(nameContainer)
+            row.addView(predictionText)
+            allInOneContainer.addView(row)
         }
     }
 
@@ -1066,8 +1303,12 @@ class RecordingFragment : Fragment() {
         val ctx = context ?: return
         if (isLoaded) {
             if (isDevMode) {
-                val displayName = ModelDisplayNameHelper.getDisplayName(ctx, viewModel.modelName)
-                modelStatusLabel.text = "\u2713 $displayName"
+                if (viewModel.isAllInOne) {
+                    modelStatusLabel.text = "\u2713 ${getString(R.string.all_in_one_header, viewModel.allInOneModelNames.size)}"
+                } else {
+                    val displayName = ModelDisplayNameHelper.getDisplayName(ctx, viewModel.modelName)
+                    modelStatusLabel.text = "\u2713 $displayName"
+                }
             } else {
                 modelStatusLabel.text = "\u2713 ${getString(R.string.model_loaded)}"
             }
