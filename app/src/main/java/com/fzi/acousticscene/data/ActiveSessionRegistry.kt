@@ -16,8 +16,14 @@ object ActiveSessionRegistry {
         val modelPath: String,
         val modelName: String,
         val numClasses: Int,
-        val sessionStartTime: Long
-    )
+        val sessionStartTime: Long,
+        // Filenames (not full paths) of every model when ALL IN ONE is active.
+        // null / empty = single-model session.
+        val allInOneModels: List<String>? = null
+    ) {
+        val isAllInOne: Boolean
+            get() = allInOneModels != null && allInOneModels.size >= 2
+    }
 
     private val _active = MutableStateFlow<Map<Boolean, Entry>>(emptyMap())
     val active: StateFlow<Map<Boolean, Entry>> = _active.asStateFlow()

@@ -348,6 +348,51 @@ object ModernDialogHelper {
             }
         }
 
+        // ALL-IN-ONE: Model comparison section — visible when any record carries
+        // per-model results. Shows one distribution stack per model, identical in
+        // shape to the LONG sub-mode comparison.
+        val recordsWithAllInOne = packageRecords.filter { !it.allInOneResults.isNullOrEmpty() }
+        if (recordsWithAllInOne.isNotEmpty()) {
+            dialog.findViewById<TextView>(R.id.modelDistributionHeader).visibility = View.GONE
+            distributionContainer.visibility = View.GONE
+            val mcDivider = dialog.findViewById<View>(R.id.methodComparisonDivider)
+            val mcHeader = dialog.findViewById<TextView>(R.id.methodComparisonHeader)
+            val mcContainer = dialog.findViewById<LinearLayout>(R.id.methodComparisonContainer)
+            mcDivider.visibility = View.VISIBLE
+            mcHeader.visibility = View.VISIBLE
+            mcContainer.visibility = View.VISIBLE
+            mcHeader.text = context.getString(R.string.all_in_one_comparison_header)
+
+            val modelNames = recordsWithAllInOne
+                .flatMap { it.allInOneResults ?: emptyList() }
+                .map { it.modelName }
+                .distinct()
+
+            modelNames.forEach { name ->
+                val perModelResults = recordsWithAllInOne.mapNotNull { rec ->
+                    rec.allInOneResults?.firstOrNull { it.modelName == name }
+                }
+                if (perModelResults.isEmpty()) return@forEach
+
+                val sectionLabel = TextView(context).apply {
+                    text = "🧠 $name"
+                    textSize = 14f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    setPadding(0, 12, 0, 6)
+                }
+                mcContainer.addView(sectionLabel)
+
+                val dist = perModelResults.groupBy { it.sceneClass }.mapValues { it.value.size }
+                val total = perModelResults.size.toFloat()
+                dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
+                    val percentage = if (total > 0) (count / total * 100).toInt() else 0
+                    val row = createDistributionItemWithProgress(context, scene, count, percentage)
+                    mcContainer.addView(row)
+                }
+            }
+        }
+
         // Per-second clips section - only visible for AVERAGE mode sessions
         val isAverageMode = packageRecords.firstOrNull()?.recordingMode == RecordingMode.AVERAGE
         if (isAverageMode) {

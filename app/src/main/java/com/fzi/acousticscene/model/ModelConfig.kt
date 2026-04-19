@@ -5,13 +5,22 @@ package com.fzi.acousticscene.model
  *
  * User Mode: Uses standard 9-class model from user_model/
  * Dev Mode: Uses experimental models from dev_models/ (9 classes)
+ *
+ * ALL IN ONE mode (Dev only): multiple dev models run on the same audio.
+ * When [allInOneModels] is non-null and has ≥ 2 entries, [modelPath]/[modelName]
+ * mirror the first model in the list (for legacy code that assumes a single
+ * "primary" model) and [allInOneModels] carries the full set.
  */
 data class ModelConfig(
     val modelPath: String,
     val modelName: String,
     val numClasses: Int,
-    val isDevMode: Boolean
+    val isDevMode: Boolean,
+    val allInOneModels: List<String>? = null
 ) {
+    val isAllInOne: Boolean
+        get() = allInOneModels != null && allInOneModels.size >= 2
+
     companion object {
         const val USER_MODEL_DIR = "user_model"  // Singular - matches assets folder name
         const val DEV_MODELS_DIR = "dev_models"  // Plural - matches assets folder name
@@ -39,6 +48,22 @@ data class ModelConfig(
                 modelName = modelFileName,
                 numClasses = numClasses,
                 isDevMode = true
+            )
+        }
+
+        /**
+         * Creates an ALL IN ONE (Dev) config from a list of model filenames.
+         * The first entry doubles as the "primary" model for legacy code paths.
+         */
+        fun createAllInOne(modelFileNames: List<String>): ModelConfig {
+            require(modelFileNames.isNotEmpty()) { "ALL IN ONE needs at least one model" }
+            val primary = modelFileNames.first()
+            return ModelConfig(
+                modelPath = "$DEV_MODELS_DIR/$primary",
+                modelName = primary,
+                numClasses = getClassCountForModel(primary),
+                isDevMode = true,
+                allInOneModels = modelFileNames.toList()
             )
         }
 
