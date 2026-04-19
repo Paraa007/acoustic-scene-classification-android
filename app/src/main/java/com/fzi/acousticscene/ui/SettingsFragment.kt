@@ -42,7 +42,6 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupThemeToggle(view)
         setupModelList(view)
-        setupVersionInfo(view)
         setupSceneLegend(view)
     }
 
@@ -80,7 +79,7 @@ class SettingsFragment : Fragment() {
             userModelContainer.addView(createEmptyLabel())
         } else {
             userModels.forEach { fileName ->
-                userModelContainer.addView(createModelRow(fileName, userModelContainer))
+                userModelContainer.addView(createModelRow(fileName, ModelConfig.USER_MODEL_DIR, userModelContainer))
             }
         }
 
@@ -91,7 +90,7 @@ class SettingsFragment : Fragment() {
             devModelsContainer.addView(createEmptyLabel())
         } else {
             devModels.forEach { fileName ->
-                devModelsContainer.addView(createModelRow(fileName, devModelsContainer))
+                devModelsContainer.addView(createModelRow(fileName, ModelConfig.DEV_MODELS_DIR, devModelsContainer))
             }
         }
     }
@@ -106,6 +105,39 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    /**
+     * Uncompressed size of an asset in bytes. `.pt` files are delivered through
+     * the APK asset channel (may be compressed), so we read through the stream
+     * to get the real decompressed size instead of relying on `openFd().length`.
+     * Returns -1 on failure.
+     */
+    private fun assetSizeBytes(path: String): Long {
+        return try {
+            requireContext().assets.open(path).use { input ->
+                var total = 0L
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val n = input.read(buffer)
+                    if (n < 0) break
+                    total += n
+                }
+                total
+            }
+        } catch (_: Exception) {
+            -1L
+        }
+    }
+
+    private fun formatFileSize(bytes: Long): String {
+        if (bytes < 0) return "? KB"
+        val kb = bytes / 1024.0
+        if (kb < 1024.0) return "%.0f KB".format(kb)
+        val mb = kb / 1024.0
+        if (mb < 1024.0) return "%.2f MB".format(mb)
+        val gb = mb / 1024.0
+        return "%.2f GB".format(gb)
+    }
+
     private fun createEmptyLabel(): TextView {
         return TextView(requireContext()).apply {
             text = "—"
@@ -115,10 +147,11 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    private fun createModelRow(fileName: String, parentContainer: LinearLayout): View {
+    private fun createModelRow(fileName: String, dir: String, parentContainer: LinearLayout): View {
         val ctx = requireContext()
         val displayName = ModelDisplayNameHelper.getDisplayName(ctx, fileName)
         val numClasses = ModelConfig.getClassCountForModel(fileName)
+        val sizeStr = formatFileSize(assetSizeBytes("$dir/$fileName"))
 
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -138,7 +171,11 @@ class SettingsFragment : Fragment() {
         }
 
         val detailText = TextView(ctx).apply {
-            text = if (displayName != fileName) "$fileName · $numClasses Classes" else "$numClasses Classes"
+            text = if (displayName != fileName) {
+                "$fileName · $numClasses Classes · $sizeStr"
+            } else {
+                "$numClasses Classes · $sizeStr"
+            }
             textSize = 12f
             setTextColor(ContextCompat.getColor(ctx, R.color.accent_blue))
         }
@@ -278,16 +315,6 @@ class SettingsFragment : Fragment() {
         dialog.setContentView(card)
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         dialog.show()
-    }
-
-    private fun setupVersionInfo(view: View) {
-        val versionText: TextView = view.findViewById(R.id.versionText)
-        try {
-            val pInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
-            versionText.text = pInfo.versionName
-        } catch (_: Exception) {
-            versionText.text = "1.0"
-        }
     }
 
     private fun setupSceneLegend(view: View) {

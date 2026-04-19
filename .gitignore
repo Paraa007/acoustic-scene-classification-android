@@ -13,3 +13,40 @@
 .externalNativeBuild
 .cxx
 local.properties
+CLAUDE.md
+
+# Model weights and large ML artifacts — never upload to GitHub
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
+*.ptl
+*.bin
+*.h5
+*.ckpt
+*.safetensors
+app/src/main/assets/dev_models/
+app/src/main/assets/user_model/
+
+# Build outputs / APKs / AABs / native libs — large and reproducible
+app/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.so
+# Proguard / R8
+app/proguard/
+app/release/
+mapping.txt
+
+# Claude Code internal state
+.claude/
+
+# Logs / crash dumps
+*.log
+hs_err_pid*
+
+# Kotlin compiled
+*.kotlin_module

@@ -97,6 +97,7 @@ class RecordingFragment : Fragment() {
     private lateinit var pendingEvaluationSubtitle: TextView
     private lateinit var pendingEvaluationButton: MaterialButton
     private var pendingEvaluationTickerJob: Job? = null
+    private var userPauseCountdownJob: Job? = null
 
     // Per-Second Circles Components (AVERAGE mode only)
     private lateinit var perSecondCirclesCard: MaterialCardView
@@ -358,7 +359,7 @@ class RecordingFragment : Fragment() {
         pauseResumeButton = view.findViewById(R.id.pauseResumeButton)
         pauseResumeButton.setOnClickListener {
             if (viewModel.isUserPaused()) viewModel.resumeClassification()
-            else viewModel.pauseClassification()
+            else showPauseDurationPicker()
         }
         statusLabel = view.findViewById(R.id.statusLabel)
         modelStatusLabel = view.findViewById(R.id.modelStatusLabel)
@@ -805,6 +806,67 @@ class RecordingFragment : Fragment() {
         )
     }
 
+    private fun showPauseDurationPicker() {
+        val ctx = context ?: return
+        val options = listOf(
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_no_timer), null),
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_15_min), 15L * 60_000L),
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_30_min), 30L * 60_000L),
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_1_hour), 60L * 60_000L),
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_2_hours), 2L * 60L * 60_000L),
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_4_hours), 4L * 60L * 60_000L),
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_8_hours), 8L * 60L * 60_000L),
+            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_duration_16_hours), 16L * 60L * 60_000L)
+        )
+        ModernDialogHelper.showPauseDurationDialog(
+            context = ctx,
+            title = getString(R.string.pause_duration_title),
+            subtitle = getString(R.string.pause_duration_subtitle),
+            options = options
+        ) { option ->
+            viewModel.pauseClassification(option.durationMs)
+        }
+    }
+
+    /**
+     * While the user is paused with an auto-resume timer, tick every second so
+     * the status label and timer text show a live countdown to auto-resume.
+     * Cancelled when the state leaves UserPaused or the deadline is cleared.
+     */
+    private fun updateUserPauseCountdown(state: UiState) {
+        val deadline = state.userPauseDeadlineElapsedMs
+        val isUserPaused = state.appState is AppState.UserPaused
+
+        if (!isUserPaused || deadline == null) {
+            userPauseCountdownJob?.cancel()
+            userPauseCountdownJob = null
+            return
+        }
+
+        if (userPauseCountdownJob?.isActive == true) return
+
+        userPauseCountdownJob = viewLifecycleOwner.lifecycleScope.launch {
+            while (isActive) {
+                val remainingMs = (deadline - android.os.SystemClock.elapsedRealtime())
+                    .coerceAtLeast(0L)
+                val totalSeconds = (remainingMs / 1000L).toInt()
+                val hours = totalSeconds / 3600
+                val minutes = (totalSeconds % 3600) / 60
+                val seconds = totalSeconds % 60
+                val timeStr = if (hours > 0) {
+                    "%d:%02d:%02d".format(hours, minutes, seconds)
+                } else {
+                    "%d:%02d".format(minutes, seconds)
+                }
+                statusLabel.text = getString(R.string.user_paused_auto_resume, timeStr)
+                timerText.text = timeStr
+                timerText.visibility = View.VISIBLE
+                if (remainingMs == 0L) break
+                delay(1000L)
+            }
+        }
+    }
+
     private fun updatePendingEvaluation(pending: PendingEvaluation?) {
         if (pending == null) {
             pendingEvaluationTickerJob?.cancel()
@@ -874,6 +936,7 @@ class RecordingFragment : Fragment() {
         updatePerSecondCardVisibility(state.recordingMode)
         updatePendingEvaluation(state.pendingEvaluation)
         updatePauseButton(state)
+        updateUserPauseCountdown(state)
         updateLongSubModeUi(state)
 
         if (state.errorMessage != null) {

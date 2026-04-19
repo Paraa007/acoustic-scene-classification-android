@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.BatteryManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.AndroidViewModel
@@ -147,6 +148,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var volumeJob: Job? = null
     @Volatile private var isRecording = false
     @Volatile private var isPaused = false
+    // If set, the user-triggered pause auto-resumes at this SystemClock.elapsedRealtime()
+    // deadline. null = indefinite user pause (resume only via Resume button).
+    @Volatile private var userPauseDeadlineElapsedMs: Long? = null
     private var currentMode: RecordingMode = RecordingMode.STANDARD
     private var audioRecorder: AudioRecorder = AudioRecorder(durationSeconds = currentMode.durationSeconds)
 
@@ -472,6 +476,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             var remainingSeconds = (pauseMs / 1000L).toInt()
                             while (remainingSeconds > 0 && isActive && isRecording) {
                                 if (isPaused) {
+                                    // Auto-resume when the user-set pause timer elapses.
+                                    val deadline = userPauseDeadlineElapsedMs
+                                    if (deadline != null && SystemClock.elapsedRealtime() >= deadline) {
+                                        isPaused = false
+                                        userPauseDeadlineElapsedMs = null
+                                        _uiState.update {
+                                            it.copy(isPaused = false, userPauseDeadlineElapsedMs = null)
+                                        }
+                                        Log.d(TAG, "Classification auto-resumed (user-pause timer elapsed)")
+                                        continue
+                                    }
                                     _uiState.update {
                                         it.copy(appState = AppState.UserPaused(remainingSeconds))
                                     }
@@ -525,6 +540,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun stopClassification() {
         isRecording = false
         isPaused = false
+        userPauseDeadlineElapsedMs = null
         recordingJob?.cancel()
         audioRecorder.stopRecording()
         resetAnalysisViewState()
@@ -541,6 +557,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             perSecondResults = List(10) { null },
             runningAverageResult = null,
             isPaused = false,
+            userPauseDeadlineElapsedMs = null,
             longSubResults = emptyMap(),
             pendingEvaluation = null
         ) }
@@ -551,18 +568,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * User presses Pause in LONG mode: halts both the active recording loop
      * (at the next iteration boundary) and the 30-min countdown. The session
      * stays alive; Resume continues from where Pause was hit.
+     *
+     * @param durationMs Optional auto-resume timer in milliseconds. When the
+     *   deadline elapses, the pause loop automatically resumes. null means the
+     *   pause stays active until the user presses Resume.
      */
-    fun pauseClassification() {
+    fun pauseClassification(durationMs: Long? = null) {
         if (!isRecording || isPaused) return
         isPaused = true
-        _uiState.update { it.copy(isPaused = true) }
-        Log.d(TAG, "Classification paused by user")
+        val deadline = durationMs?.let { SystemClock.elapsedRealtime() + it }
+        userPauseDeadlineElapsedMs = deadline
+        _uiState.update { it.copy(isPaused = true, userPauseDeadlineElapsedMs = deadline) }
+        Log.d(TAG, "Classification paused by user (durationMs=${durationMs ?: -1})")
     }
 
     fun resumeClassification() {
         if (!isRecording || !isPaused) return
         isPaused = false
-        _uiState.update { it.copy(isPaused = false) }
+        userPauseDeadlineElapsedMs = null
+        _uiState.update { it.copy(isPaused = false, userPauseDeadlineElapsedMs = null) }
         Log.d(TAG, "Classification resumed by user")
     }
 
