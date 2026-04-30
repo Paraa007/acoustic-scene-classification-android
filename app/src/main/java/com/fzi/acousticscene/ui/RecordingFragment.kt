@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.RecordingCategory
@@ -61,6 +62,7 @@ class RecordingFragment : Fragment() {
     private lateinit var categoryContinuousButton: MaterialButton
     private lateinit var categoryIntervalButton: MaterialButton
     private lateinit var subModeButtonRow: LinearLayout
+    private lateinit var longIntervalPrompt: TextView
     private lateinit var modeTimeline: ModeTimelineView
     private lateinit var modeDescription: TextView
     private val subModeButtons: MutableMap<RecordingMode, MaterialButton> = mutableMapOf()
@@ -487,6 +489,7 @@ class RecordingFragment : Fragment() {
         categoryContinuousButton = view.findViewById(R.id.categoryContinuousButton)
         categoryIntervalButton = view.findViewById(R.id.categoryIntervalButton)
         subModeButtonRow = view.findViewById(R.id.subModeButtonRow)
+        longIntervalPrompt = view.findViewById(R.id.longIntervalPrompt)
         modeTimeline = view.findViewById(R.id.modeTimeline)
         modeDescription = view.findViewById(R.id.modeDescription)
         startStopButton = view.findViewById(R.id.startStopButton)
@@ -696,10 +699,16 @@ class RecordingFragment : Fragment() {
             getString(R.string.app_name_full)
         }
 
-        // Restore last mode selection (category + mode) from prefs
+        // Restore last mode selection (category + mode) from prefs.
+        // The LONG-mode interval is intentionally NOT persisted — the user must explicitly
+        // pick one each time via the picker before LONG can start.
         val lastMode = loadPersistedMode()
-        selectCategory(lastMode.category, persist = false)
-        selectMode(lastMode, persist = false)
+        // Don't restore LONG as the active mode — interval is unset on launch and LONG
+        // requires an explicit pick. Fall back to the default (Standard) if the last
+        // persisted mode was LONG.
+        val effectiveMode = if (lastMode == RecordingMode.LONG) RecordingMode.DEFAULT else lastMode
+        selectCategory(effectiveMode.category, persist = false)
+        selectMode(effectiveMode, persist = false)
     }
 
     private fun prefsKey(): String = if (isDevMode) "last_mode_dev" else "last_mode_user"
@@ -735,6 +744,34 @@ class RecordingFragment : Fragment() {
     private fun persistLongSubs(subs: Set<LongSubMode>) {
         requireContext().getSharedPreferences("mode_prefs", Context.MODE_PRIVATE)
             .edit().putStringSet(longSubsPrefsKey(), subs.map { it.name }.toSet()).apply()
+    }
+
+    /** "29:47" if < 1 h, "1:05:30" otherwise. Used for the LONG-mode pause countdown. */
+    private fun formatRemaining(totalSeconds: Int): String {
+        val h = totalSeconds / 3600
+        val m = (totalSeconds % 3600) / 60
+        val s = totalSeconds % 60
+        return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    }
+
+    private fun showLongIntervalPicker() {
+        if (viewModel.isClassifying()) {
+            Toast.makeText(requireContext(), R.string.long_interval_locked_running, Toast.LENGTH_SHORT).show()
+            return
+        }
+        ModernDialogHelper.showLongIntervalDialog(
+            context = requireContext(),
+            title = getString(R.string.long_interval_picker_title),
+            subtitle = getString(R.string.long_interval_picker_subtitle),
+            options = LongInterval.values().toList(),
+            onSelected = { interval ->
+                viewModel.setLongInterval(interval)
+                // LONG mode is only activated after the user explicitly picked an interval —
+                // tapping the "Every" button alone does not switch the mode.
+                // Interval is intentionally not persisted across app launches.
+                selectMode(RecordingMode.LONG, persist = true)
+            }
+        )
     }
 
     private fun selectCategory(cat: RecordingCategory, persist: Boolean) {
@@ -776,7 +813,7 @@ class RecordingFragment : Fragment() {
         val inactiveTextColor = ContextCompat.getColor(ctx, R.color.text_secondary)
         modes.forEachIndexed { idx, mode ->
             val btn = MaterialButton(ctx).apply {
-                text = mode.label
+                text = labelForButton(mode)
                 textSize = 11f
                 cornerRadius = 12.dpToPx()
                 backgroundTintList = ColorStateList.valueOf(inactiveColor)
@@ -786,11 +823,36 @@ class RecordingFragment : Fragment() {
                     marginStart = if (idx == 0) 0 else 3.dpToPx()
                     marginEnd = if (idx == modes.size - 1) 0 else 3.dpToPx()
                 }
-                setOnClickListener { selectMode(mode, persist = true) }
+                setOnClickListener {
+                    if (mode == RecordingMode.LONG && isDevMode) {
+                        // Only open the picker — LONG mode activates from the picker callback.
+                        showLongIntervalPicker()
+                    } else {
+                        selectMode(mode, persist = true)
+                    }
+                }
             }
             subModeButtonRow.addView(btn)
             subModeButtons[mode] = btn
         }
+    }
+
+    /**
+     * LONG button text in Dev Mode:
+     *  - "Every"          while no interval has been picked yet (the user must tap to choose),
+     *  - "Every <label>"  once an interval was explicitly chosen and LONG is active.
+     */
+    private fun labelForButton(mode: RecordingMode): String {
+        if (mode == RecordingMode.LONG && isDevMode) {
+            val state = viewModel.uiState.value
+            val interval = state.selectedLongInterval
+            return if (state.recordingMode == RecordingMode.LONG && interval != null) {
+                "Every ${interval.label}"
+            } else {
+                "Every?"
+            }
+        }
+        return mode.label
     }
 
     private fun highlightSubMode(mode: RecordingMode) {
@@ -877,8 +939,33 @@ class RecordingFragment : Fragment() {
         // Hide Top Predictions card in triangle mode — it's ambiguous which circle it belongs to
         if (hasExtras) predictionsCard.visibility = View.GONE
 
-        // Reflect selected subs in the timeline summary
-        if (::modeTimeline.isInitialized) modeTimeline.setLongSubs(subs)
+        // Reflect selected subs + interval in the timeline summary. While no interval
+        // has been picked, the timeline renders "?" placeholders for the pause labels.
+        if (::modeTimeline.isInitialized) {
+            modeTimeline.setLongSubs(subs)
+            modeTimeline.setLongInterval(state.selectedLongInterval)
+        }
+
+        // Dev Mode: keep the LONG button text in sync — "Every?" until the user
+        // explicitly picked an interval, "Every <label>" while LONG is active.
+        if (isDevMode) {
+            subModeButtons[RecordingMode.LONG]?.let { btn ->
+                val interval = state.selectedLongInterval
+                btn.text = if (state.recordingMode == RecordingMode.LONG && interval != null) {
+                    "Every ${interval.label}"
+                } else {
+                    "Every?"
+                }
+            }
+        }
+
+        // Inline prompt — visible only in Dev Mode + Interval category + no interval picked yet.
+        if (::longIntervalPrompt.isInitialized) {
+            val showPrompt = isDevMode &&
+                currentCategory == RecordingCategory.INTERVAL &&
+                state.selectedLongInterval == null
+            longIntervalPrompt.visibility = if (showPrompt) View.VISIBLE else View.GONE
+        }
 
         // Main circle sub-label: only in triangle mode (compact colored label like the side circles).
         // When Standard is alone, hide this compact label — the existing big `currentSceneLabel`
@@ -1258,26 +1345,21 @@ class RecordingFragment : Fragment() {
                 timerText.visibility = View.GONE
             }
             is AppState.Paused -> {
-                val total = appState.secondsRemaining
-                val minutes = total / 60
-                val seconds = total % 60
-                val mmss = "%d:%02d".format(minutes, seconds)
-                statusLabel.text = getString(R.string.pause_mmss, mmss)
+                val timeStr = formatRemaining(appState.secondsRemaining)
+                statusLabel.text = getString(R.string.pause_mmss, timeStr)
                 statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
                 startStopButton.isEnabled = true
                 startStopButton.text = getString(R.string.stop_recording)
                 recordingProgressBar.visibility = View.GONE
-                timerText.text = mmss
+                timerText.text = timeStr
                 timerText.visibility = View.VISIBLE
             }
             is AppState.UserPaused -> {
                 val total = appState.secondsRemaining
                 if (total > 0) {
-                    val minutes = total / 60
-                    val seconds = total % 60
-                    val mmss = "%d:%02d".format(minutes, seconds)
-                    statusLabel.text = getString(R.string.user_paused_with_mmss, mmss)
-                    timerText.text = mmss
+                    val timeStr = formatRemaining(total)
+                    statusLabel.text = getString(R.string.user_paused_with_mmss, timeStr)
+                    timerText.text = timeStr
                     timerText.visibility = View.VISIBLE
                 } else {
                     statusLabel.text = getString(R.string.user_paused)
@@ -1296,6 +1378,16 @@ class RecordingFragment : Fragment() {
                 recordingProgressBar.visibility = View.GONE
                 timerText.visibility = View.GONE
             }
+        }
+
+        // Dev Mode + LONG without a chosen interval: lock Start until the user picks one.
+        // Only override while idle/ready/error — don't touch a running session.
+        val state = viewModel.uiState.value
+        val needsIntervalChoice = isDevMode &&
+            state.recordingMode == RecordingMode.LONG &&
+            state.selectedLongInterval == null
+        if (needsIntervalChoice && (appState is AppState.Ready || appState is AppState.Idle || appState is AppState.Error)) {
+            startStopButton.isEnabled = false
         }
     }
 

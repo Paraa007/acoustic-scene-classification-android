@@ -11,11 +11,14 @@
     <string name="mode_avg">Avg (10s) — 10×1s</string>
     <string name="category_continuous">Continuous</string>
     <string name="category_interval">Interval</string>
-    <string name="mode_desc_fast">Records every second and classifies immediately, no pauses in between.</string>
+    <string name="mode_desc_fast">Records every second and classifies right away, without pauses.</string>
     <string name="mode_desc_standard">Records 10 s at a time, classifies, then starts the next 10 s recording right away.</string>
-    <string name="mode_desc_long">Records 10 s, pauses 30 min, repeats. For long-term monitoring.</string>
-    <string name="mode_desc_avg">Records 10 × 1 s, classifies each clip separately, averages the probabilities.</string>
-    <string name="timeline_pause_30min">30 min pause</string>
+    <string name="mode_desc_long">Records 10 s, pauses, then records again. Use it for long-term monitoring.</string>
+    <string name="mode_desc_avg">Records 10 × 1 s, classifies each clip on its own, then averages the probabilities.</string>
+    <string name="long_interval_picker_title">Recording interval</string>
+    <string name="long_interval_picker_subtitle">Pick how often to record. Tap an option to start LONG mode with that interval.</string>
+    <string name="long_interval_prompt">Pick how often to record. Tap Every to choose an interval.</string>
+    <string name="long_interval_locked_running">Stop the running session before changing the interval.</string>
     <string name="recording_mode">Recording Mode</string>
     <string name="loading_model">Loading Model...</string>
     <string name="model_loaded">Model Loaded</string>
@@ -61,8 +64,8 @@
     <string name="timer_countdown">Timer: %1$ds</string>
 
     <!-- Permissions -->
-    <string name="permission_audio_required">Microphone permission is required for scene classification</string>
-    <string name="permission_audio_explanation">This app needs microphone access to record audio for scene classification. Please grant the permission in settings.</string>
+    <string name="permission_audio_required">Scene classification needs microphone permission</string>
+    <string name="permission_audio_explanation">The app records audio through the microphone to classify the scene. Grant the permission in settings.</string>
     <string name="permission_denied">Permission Denied</string>
     <string name="permission_granted">Permission Granted</string>
     <string name="settings">Settings</string>
@@ -74,7 +77,7 @@
     <string name="error_inference">Inference Error</string>
     <string name="error_model_load">Model could not be loaded</string>
     <string name="error_audio_permission">Microphone permission denied</string>
-    <string name="error_audio_recording">Audio recording could not be started</string>
+    <string name="error_audio_recording">Could not start audio recording</string>
     <string name="error_processing">Processing Error</string>
 
     <!-- Statistics -->
@@ -130,7 +133,7 @@
     <string name="all_in_one">ALL IN ONE</string>
     <string name="all_in_one_subtitle_short">Compare multiple models on the same audio</string>
     <string name="all_in_one_title">Select Models for ALL IN ONE</string>
-    <string name="all_in_one_subtitle">Pick at least 2 models. Every recording will run through all of them.</string>
+    <string name="all_in_one_subtitle">Pick at least 2 models. Every recording runs through all of them.</string>
     <string name="all_in_one_started">ALL IN ONE started with %1$d models</string>
     <string name="all_in_one_header">ALL IN ONE · %1$d models</string>
     <string name="all_in_one_card_title">All models</string>
@@ -160,12 +163,12 @@
 
     <!-- Battery Optimization -->
     <string name="battery_optimization_title">Important: Battery Optimization</string>
-    <string name="battery_optimization_message">For uninterrupted background recordings, battery optimization must be disabled for this app.\n\nWithout this setting, Android will restrict the app after some time, causing data gaps.\n\nWould you like to change this setting now?</string>
+    <string name="battery_optimization_message">Background recordings need battery optimization disabled for this app.\n\nOtherwise Android will throttle the app after a while and recordings will have gaps.\n\nChange the setting now?</string>
     <string name="yes_disable">Yes, Disable</string>
     <string name="later">Later</string>
-    <string name="battery_warning">Note: Without this setting, data gaps may occur!</string>
-    <string name="battery_search_app">Please search for \'%1$s\' and select \'Don\'t optimize\'</string>
-    <string name="battery_manual_disable">Please disable battery optimization manually in settings</string>
+    <string name="battery_warning">Without this setting, recordings can have gaps.</string>
+    <string name="battery_search_app">Search for \'%1$s\' and select \'Don\'t optimize\'.</string>
+    <string name="battery_manual_disable">Disable battery optimization manually in settings.</string>
 
     <!-- Dialog labels -->
     <string name="count">Count</string>
@@ -185,8 +188,8 @@
     <string name="pause_minutes">Pause: %1$d min until next recording</string>
     <string name="min">min</string>
     <string name="volume">Vol</string>
-    <string name="error_init_app">Error initializing app: %1$s</string>
-    <string name="export_email_body">Attached are the exported predictions.\n\nTotal: %1$d predictions</string>
+    <string name="error_init_app">Could not initialize app: %1$s</string>
+    <string name="export_email_body">The exported predictions are attached.\n\nTotal: %1$d predictions</string>
 
     <!-- Per-Second Analysis Card (AVERAGE mode) -->
     <string name="per_second_analysis">Per-Second Analysis</string>
@@ -199,8 +202,8 @@
     <string name="volume_graph_waiting">Waiting for recording…</string>
 
     <!-- Time Analysis / Live Data Messages -->
-    <string name="live_analysis_late_open">To view live analysis, open this window before recording.</string>
-    <string name="live_analysis_close_warning">Please do not close this window during an active recording.</string>
+    <string name="live_analysis_late_open">Open this window before recording to see the live analysis.</string>
+    <string name="live_analysis_close_warning">Don\'t close this window while a recording is running.</string>
 
     <!-- Session Naming -->
     <string name="session_rename">Rename Session</string>
@@ -238,14 +241,14 @@
     <string name="rename_model">Rename Model</string>
     <string name="model_display_name_hint">Display name</string>
     <string name="model_name_saved">Model name saved</string>
-    <string name="recording_active_other_mode">A recording is already active in another mode. Please stop it first.</string>
-    <string name="cannot_delete_while_recording">Cannot delete sessions while a recording is active. Please stop the recording first.</string>
+    <string name="recording_active_other_mode">A recording is already running in another mode. Stop it first.</string>
+    <string name="cannot_delete_while_recording">You can\'t delete sessions while a recording is running. Stop it first.</string>
 
     <!-- Evaluation Notification -->
     <string name="evaluation_title">Environment Rating</string>
     <string name="evaluation_channel_name">Rating Notifications</string>
     <string name="evaluation_channel_description">Notifications for rating environment classifications</string>
-    <string name="evaluation_question">What is the actual environment?</string>
+    <string name="evaluation_question">Which environment was it actually?</string>
     <string name="evaluation_submit">Send</string>
     <string name="evaluation_skip">Skip</string>
     <string name="evaluation_inapp_action">Rate now</string>
@@ -271,7 +274,7 @@
 
     <!-- Pause duration picker (opens when the user hits Pause in LONG mode) -->
     <string name="pause_duration_title">Pause duration</string>
-    <string name="pause_duration_subtitle">Choose how long to pause. With a timer the session resumes automatically.</string>
+    <string name="pause_duration_subtitle">Pick how long to pause. With a timer, the session resumes on its own.</string>
     <string name="pause_duration_no_timer">No timer (pause until Resume)</string>
     <string name="pause_duration_15_min">15 minutes</string>
     <string name="pause_duration_30_min">30 minutes</string>
