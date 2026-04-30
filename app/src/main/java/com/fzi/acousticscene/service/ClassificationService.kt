@@ -364,7 +364,7 @@ class ClassificationService : Service() {
                 "Classification",
                 NotificationManager.IMPORTANCE_DEFAULT  // Erhöht von LOW auf DEFAULT
             ).apply {
-                description = "Indicates that audio classification is running in the background"
+                description = "Shown while audio classification is running in the background"
                 setShowBadge(false)
                 // Deaktiviere Sound und Vibration (wir wollen nur höhere Priorität)
                 setSound(null, null)

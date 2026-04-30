@@ -24,6 +24,7 @@ import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.ml.ModelInference
 import com.fzi.acousticscene.model.AllInOneResult
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.LongSubResult
 import com.fzi.acousticscene.model.ModelConfig
@@ -525,6 +526,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             isDevMode = _isDevMode,  // Whether Dev Mode is active
                             perSecondClips = perSecondFromAvg,
                             longSubResults = subResults.takeIf { it.isNotEmpty() },
+                            longIntervalMinutes = if (currentMode == RecordingMode.LONG)
+                                _uiState.value.selectedLongInterval?.pauseMinutes else null,
                             allInOneResults = allInOneForRecord.takeIf { it.isNotEmpty() }
                         )
                         predictionRepository.addPrediction(record)
@@ -538,8 +541,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             // Send evaluation notification
                             sendEvaluationNotification(record)
 
-                            val pauseMs = currentMode.pauseAfterRecordingMs
-                            val pauseMinutes = currentMode.getPauseMinutes()
+                            // Dev Mode: user-chosen interval (set via picker before LONG could start);
+                            // User Mode: fixed 30 min from enum. Falls back to enum value if null.
+                            val pauseMs = if (_isDevMode) {
+                                _uiState.value.selectedLongInterval?.pauseMs ?: currentMode.pauseAfterRecordingMs
+                            } else {
+                                currentMode.pauseAfterRecordingMs
+                            }
+                            val pauseMinutes = (pauseMs / 60_000L).toInt()
                             Log.d(TAG, "LONG mode: Starting ${pauseMinutes} minute pause")
 
                             // Zeige Pause-Status in der UI (Sekundengenau)
@@ -678,6 +687,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val current = _uiState.value.selectedLongSubs
         val next = if (sub in current) current - sub else current + sub
         setLongSubs(next)
+    }
+
+    /**
+     * LONG-mode pause interval (Dev Mode only). User Mode keeps the static 30 min pause.
+     */
+    fun setLongInterval(interval: LongInterval) {
+        if (_uiState.value.selectedLongInterval != interval) {
+            _uiState.update { it.copy(selectedLongInterval = interval) }
+        }
     }
     
     /**

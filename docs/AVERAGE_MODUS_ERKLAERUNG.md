@@ -161,4 +161,4 @@ wobei w_i = max(P_i) (Konfidenz des Clips)
 | Standard in der Literatur | Ja | Ja | Selten |
 | Implementierungsaufwand | Gering | Gering | Mittel |
 
-**Probability Averaging** ist der Standard-Ansatz in Ensemble-Methoden und DCASE-Challenges. Es bietet die beste Balance aus Einfachheit, Informationserhalt und Robustheit. Die gemittelte Verteilung kann direkt als Konfidenz angezeigt werden, was fuer die App-Visualisierung ideal ist.
+**Probability Averaging** ist der Standard-Ansatz in Ensemble-Methoden und DCASE-Challenges. Es ist einfach, behaelt die volle Verteilung und ist robust gegen einzelne Ausreisser. Die gemittelte Verteilung laesst sich direkt als Konfidenz anzeigen, was fuer die App-Visualisierung praktisch ist.

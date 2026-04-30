@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingMode
 
@@ -24,6 +25,8 @@ class ModeTimelineView @JvmOverloads constructor(
 
     private var mode: RecordingMode = RecordingMode.STANDARD
     private var longSubs: Set<LongSubMode> = setOf(LongSubMode.STANDARD)
+    // null = the user has not picked an interval yet — labels render as "?".
+    private var longInterval: LongInterval? = null
 
     private val blockPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.accent_green)
@@ -74,6 +77,13 @@ class ModeTimelineView @JvmOverloads constructor(
         }
     }
 
+    fun setLongInterval(interval: LongInterval?) {
+        if (this.longInterval != interval) {
+            this.longInterval = interval
+            invalidate()
+        }
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
         val desiredH = dp(100f).toInt()
@@ -95,13 +105,16 @@ class ModeTimelineView @JvmOverloads constructor(
             RecordingMode.FAST -> List(6) { Segment(1f, true, "1s") }
             RecordingMode.STANDARD -> List(3) { Segment(1f, true, "10s") }
             RecordingMode.AVERAGE -> List(10) { Segment(1f, true, "1s") }
-            RecordingMode.LONG -> listOf(
-                Segment(1f, true, "10s"),
-                Segment(4f, false, null, context.getString(R.string.timeline_pause_30min)),
-                Segment(1f, true, "10s"),
-                Segment(4f, false, null, context.getString(R.string.timeline_pause_30min)),
-                Segment(1f, true, "10s")
-            )
+            RecordingMode.LONG -> {
+                val pauseLbl = longInterval?.pauseTimelineLabel ?: "?"
+                listOf(
+                    Segment(1f, true, "10s"),
+                    Segment(4f, false, null, pauseLbl),
+                    Segment(1f, true, "10s"),
+                    Segment(4f, false, null, pauseLbl),
+                    Segment(1f, true, "10s")
+                )
+            }
         }
 
         val totalWeight = segments.sumOf { it.weight.toDouble() }.toFloat()
@@ -166,7 +179,8 @@ class ModeTimelineView @JvmOverloads constructor(
                 val selected = LongSubMode.entries
                     .filter { it in longSubs }
                     .joinToString(" + ") { it.label }
-                "10 s record · 30 min pause · evaluated as: $selected"
+                val pauseLbl = longInterval?.pauseTimelineLabel ?: "?"
+                "10 s record · $pauseLbl · evaluated as: $selected"
             }
         }
         canvas.drawText(summary, w / 2f, h - dp(6f), labelPaint)

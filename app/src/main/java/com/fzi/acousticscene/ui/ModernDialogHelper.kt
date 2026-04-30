@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionStatistics
+import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
@@ -286,9 +287,16 @@ object ModernDialogHelper {
         val numClasses = ModelConfig.getClassCountForModel(modelName)
         dialog.findViewById<TextView>(R.id.modelText).text = "$modelName ($numClasses Classes)"
 
-        // Mode info
+        // Mode info — for LONG records the label reflects the user-chosen pause interval
+        // (e.g. "every 1h") instead of the static enum label.
         val isDevMode = firstRecord?.isDevMode ?: false
-        val recordingMode = firstRecord?.recordingMode?.label ?: "Standard"
+        val recordingMode = firstRecord?.let { rec ->
+            if (rec.recordingMode == RecordingMode.LONG && rec.longIntervalMinutes != null) {
+                "every ${formatLongIntervalMinutes(rec.longIntervalMinutes)}"
+            } else {
+                rec.recordingMode.label
+            }
+        } ?: "Standard"
         val modeText = if (isDevMode) "Development / $recordingMode" else "User / $recordingMode"
         dialog.findViewById<TextView>(R.id.modeText).text = modeText
 
@@ -546,6 +554,72 @@ object ModernDialogHelper {
     }
 
     /**
+     * Picker for the LONG-mode recording interval. Visually identical to
+     * [showPauseDurationDialog] (reuses the same layout) but typed against
+     * [LongInterval]. The dialog has no preselection — the user must explicitly
+     * tap an option, and only then the LONG mode is activated by the caller.
+     */
+    fun showLongIntervalDialog(
+        context: Context,
+        title: String,
+        subtitle: String,
+        options: List<LongInterval>,
+        onSelected: (LongInterval) -> Unit
+    ): Dialog {
+        val dialog = Dialog(context, R.style.ModernDialog)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_pause_duration)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        dialog.findViewById<TextView>(R.id.dialogTitle).text = title
+        dialog.findViewById<TextView>(R.id.dialogSubtitle).text = subtitle
+
+        val container = dialog.findViewById<LinearLayout>(R.id.optionsContainer)
+        val density = context.resources.displayMetrics.density
+        options.forEach { option ->
+            val btn = MaterialButton(context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = humanReadableInterval(option)
+                textSize = 15f
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                strokeColor = ContextCompat.getColorStateList(context, R.color.accent_green)
+                cornerRadius = (12 * density).toInt()
+                gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                isAllCaps = false
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (8 * density).toInt() }
+                setOnClickListener {
+                    onSelected(option)
+                    dialog.dismiss()
+                }
+            }
+            container.addView(btn)
+        }
+
+        dialog.findViewById<MaterialButton>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+        return dialog
+    }
+
+    /** "10 minutes" / "1 hour" / "3 hours" — display label for a LongInterval. */
+    private fun humanReadableInterval(i: LongInterval): String {
+        return if (i.pauseMinutes < 60) {
+            "${i.pauseMinutes} minutes"
+        } else {
+            val h = i.pauseMinutes / 60
+            if (h == 1) "1 hour" else "$h hours"
+        }
+    }
+
+    /**
      * Creates a distribution item with emoji, name, count, and progress bar
      */
     private fun createDistributionItemWithProgress(
@@ -608,5 +682,12 @@ object ModernDialogHelper {
         layout.addView(sceneText)
         layout.addView(countText)
         return layout
+    }
+
+    /** "30min" / "1h" / "1h30min" — used to format LONG-mode intervals from a stored minute count. */
+    private fun formatLongIntervalMinutes(min: Int): String = when {
+        min < 60 -> "${min}min"
+        min % 60 == 0 -> "${min / 60}h"
+        else -> "${min / 60}h${min % 60}min"
     }
 }

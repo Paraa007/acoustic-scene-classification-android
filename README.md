@@ -27,8 +27,8 @@ Insgesamt kennt die App **9 verschiedene Arten von Umgebungen**:
 ## Features im Überblick
 
 ### 1. Willkommensseite
-Beim Öffnen der App siehst du einen freundlichen Startbildschirm. Dort kannst du auswählen:
-- **User Mode** – Der normale Modus für die meisten Leute.
+Beim Öffnen der App landest du auf dem Startbildschirm. Dort kannst du auswählen:
+- **User Mode** – Der normale Modus für den Alltag.
 - **Development Mode** – Für Entwickler, die verschiedene KI-Modelle ausprobieren wollen.
 - **View History** – Um alte Aufnahmen anzusehen.
 
@@ -37,10 +37,10 @@ Ganz oben rechts gibt es einen kleinen Schalter (Sonne/Mond). Damit kannst du zw
 
 ### 3. Vier Aufnahme-Modi
 Je nachdem, wie schnell oder genau du ein Ergebnis haben willst, kannst du wählen:
-- **Fast (1 Sekunde)** – Ganz schnelles Ergebnis.
+- **Fast (1 Sekunde)** – Schnellstes Ergebnis.
 - **Medium (5 Sekunden)** – Mittelschnell und schon recht genau.
-- **Standard (10 Sekunden)** – Volle Qualität, empfohlen für den Alltag.
-- **Long (30 Minuten)** – Nimmt alle 30 Minuten kurz auf. Perfekt, wenn man über längere Zeit beobachten möchte (z. B. über Nacht).
+- **Standard (10 Sekunden)** – Der normale Modus für den Alltag.
+- **Long (30 Minuten)** – Nimmt alle 30 Minuten kurz auf. Gedacht für längere Beobachtungen, z. B. über Nacht.
 
 ### 4. Konfidenz-Anzeige (Wie sicher ist die App?)
 In der Mitte des Bildschirms siehst du einen großen Kreis mit einer Prozentzahl, z. B. „87 %". Das zeigt, **wie sicher sich die App bei ihrer Antwort ist**. Darunter steht die erkannte Umgebung mit Emoji, z. B. „🌲 Außen – naturbetont".
@@ -48,7 +48,7 @@ In der Mitte des Bildschirms siehst du einen großen Kreis mit einer Prozentzahl
 Während der Aufnahme gibt es eine kleine **Wellenanimation** rund um den Kreis, die sich an die Lautstärke anpasst – je lauter, desto größer die Wellen.
 
 ### 5. Top-3-Vorhersagen
-Die App zeigt dir nicht nur die beste Antwort, sondern die **drei wahrscheinlichsten Umgebungen**. So siehst du auf einen Blick, ob sich die App zwischen zwei Möglichkeiten schwer tut.
+Die App zeigt dir die **drei wahrscheinlichsten Umgebungen** auf einmal. So siehst du auf einen Blick, ob sich die App zwischen zwei Möglichkeiten schwer tut.
 
 ### 6. Echtzeit-Lautstärke-Diagramm
 Wenn du vor einer Aufnahme den Schalter **„Show Live Data"** einschaltest, wird während der Aufnahme ein **Liniendiagramm** gezeichnet, das die Lautstärke über die Zeit zeigt – so siehst du live, wann es laut und wann leise war.
@@ -107,4 +107,4 @@ Damit die App funktioniert, braucht sie ein paar Erlaubnisse von dir:
 
 ---
 
-*Die App wird aktiv weiterentwickelt. Feedback und Ideen sind willkommen!*
+*Die App wird laufend weiterentwickelt.*

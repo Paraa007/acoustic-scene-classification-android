@@ -79,6 +79,7 @@ data class PredictionRecord(
     val userSelectedClass: SceneClass? = null,  // User evaluation: selected scene class (null = no response)
     val perSecondClips: List<PerSecondClip>? = null,  // AVERAGE mode: individual 1s clip results
     val longSubResults: List<LongSubResult>? = null,  // LONG mode: per sub-mode evaluation of the same 10s buffer
+    val longIntervalMinutes: Int? = null,  // LONG mode (Dev): chosen pause interval between recordings, in minutes
     val allInOneResults: List<AllInOneResult>? = null  // ALL-IN-ONE mode: one entry per selected model
 ) {
     /**
@@ -152,6 +153,7 @@ data class PredictionRecord(
         val longStdStr = subCell(LongSubMode.STANDARD)
         val longFastStr = subCell(LongSubMode.FAST)
         val longAvgStr = subCell(LongSubMode.AVERAGE)
+        val longIntervalStr = longIntervalMinutes?.toString() ?: ""
 
         val baseCells = listOf(
             id.toString(),
@@ -173,7 +175,8 @@ data class PredictionRecord(
             "\"$perSecondStr\"",  // per_second_clips (AVERAGE mode)
             "\"$longStdStr\"",   // long_standard (LONG sub-mode)
             "\"$longFastStr\"",  // long_fast (LONG sub-mode)
-            "\"$longAvgStr\""    // long_average (LONG sub-mode)
+            "\"$longAvgStr\"",   // long_average (LONG sub-mode)
+            "\"$longIntervalStr\""  // long_interval_min (LONG mode pause interval, minutes)
         )
 
         // ALL-IN-ONE dynamische Spalten: eine Zelle pro bekanntem Modellnamen
@@ -206,7 +209,7 @@ data class PredictionRecord(
                     "probabilities[$probHeaders]," +
                     "user_selected_class," +
                     "per_second_clips," +
-                    "long_standard,long_fast,long_average"
+                    "long_standard,long_fast,long_average,long_interval_min"
             val allInOneCols = if (!allInOneModelNames.isNullOrEmpty()) {
                 "," + allInOneModelNames.joinToString(",") { "allinone_${it.removeSuffix(".pt")}" }
             } else ""

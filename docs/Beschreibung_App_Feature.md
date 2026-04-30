@@ -2,7 +2,7 @@
 
 ## Überblick
 
-Die App **Acoustic Scene Classification** ist eine Android-Anwendung, die mithilfe eines KI-Modells akustische Szenen in Echtzeit erkennt. Sie nimmt über das Mikrofon des Smartphones Umgebungsgeräusche auf, analysiert diese und ordnet sie einer von neun Szenenklassen zu. Die Ergebnisse werden visuell dargestellt und dauerhaft gespeichert, sodass man sie später einsehen und exportieren kann.
+Die App **Acoustic Scene Classification** ist eine Android-App, die akustische Szenen in Echtzeit über ein KI-Modell erkennt. Sie nimmt Umgebungsgeräusche über das Mikrofon des Smartphones auf, analysiert sie und ordnet sie einer von neun Szenenklassen zu. Die Ergebnisse landen direkt im UI und werden persistent gespeichert, sodass man sie später ansehen und exportieren kann.
 
 ---
 
@@ -40,14 +40,14 @@ Eine Karte zeigt die drei wahrscheinlichsten Szenenklassen für die aktuelle Auf
 - Einen farbigen Fortschrittsbalken
 
 ### 3.3 Lautstärke-Analyse (Volume Analysis)
-Eine Karte mit einem Switch „Show Live Data". Wenn man diesen aktiviert **bevor** man die Aufnahme startet, erscheint ein Liniendiagramm, das in Echtzeit die Lautstärke des aufgenommenen Audios über die Zeit darstellt. Die X-Achse passt sich automatisch an den gewählten Aufnahmemodus an. Der Switch lässt sich während einer laufenden Aufnahme nicht an- oder ausschalten, um die Datenintegrität zu gewährleisten.
+Eine Karte mit einem Switch „Show Live Data". Wenn man diesen aktiviert **bevor** man die Aufnahme startet, erscheint ein Liniendiagramm, das die Lautstärke des aufgenommenen Audios in Echtzeit über die Zeit anzeigt. Die X-Achse passt sich automatisch an den gewählten Aufnahmemodus an. Während einer laufenden Aufnahme lässt sich der Switch nicht umlegen, damit die Daten nicht verfälscht werden.
 
 ### 3.4 Aufnahmemodus (Recording Mode)
 Vier Buttons zur Auswahl des Aufnahmemodus:
-- **Fast (1s)** – 1-Sekunden-Schnellaufnahme, optimiert für Geschwindigkeit
-- **Medium (5s)** – 5-Sekunden-Aufnahme, ein Kompromiss zwischen Geschwindigkeit und Genauigkeit
-- **Standard (10s)** – 10-Sekunden-Aufnahme mit voller Qualität
-- **Long (30min)** – 10-Sekunden-Aufnahmen mit automatischer 30-Minuten-Wiederholung für Langzeit-Monitoring
+- **Fast (1s)** – 1-Sekunden-Aufnahme, schnellste Variante
+- **Medium (5s)** – 5-Sekunden-Aufnahme, Mittelweg aus Tempo und Genauigkeit
+- **Standard (10s)** – 10-Sekunden-Aufnahme, der normale Modus
+- **Long (30min)** – 10-Sekunden-Aufnahmen mit 30-Minuten-Pause dazwischen, für Langzeit-Monitoring
 
 ### 3.5 Start/Stop Button
 Ein großer grüner Button zum Starten und Stoppen der Aufnahme. Beim Aufnehmen zeigt ein Fortschrittsbalken den aktuellen Fortschritt und ein Timer die verbleibenden Sekunden an.
@@ -102,7 +102,7 @@ Jede Session wird als Karte angezeigt mit:
 Durch Tippen auf eine Session öffnet sich ein Detail-Dialog. Dort gibt es einen Stift-Button, über den man der Session einen eigenen Namen geben kann (z. B. „Morgens im Büro" oder „Spaziergang im Park").
 
 ### 5.3 Detail-Dialog
-Beim Tippen auf eine Session erscheint ein umfangreicher Dialog mit:
+Beim Tippen auf eine Session öffnet sich ein Dialog mit:
 - Session-Name und Umbenennen-Button
 - Startzeit und Endzeit der Aufnahme
 - Verwendetes Modell (z. B. model1.pt, 9 Classes)
@@ -144,17 +144,17 @@ Die App verwendet einen Foreground Service, damit Aufnahmen auch im Hintergrund 
 ## 8. Berechtigungen
 
 - **Mikrofon-Zugriff** – Wird beim ersten Starten einer Aufnahme angefordert. Die App erklärt in einem Dialog, warum die Berechtigung nötig ist.
-- **Batterie-Optimierung** – Die App bittet optional, die Batterieoptimierung für sich zu deaktivieren, um lückenlose Hintergrundaufnahmen sicherzustellen.
+- **Batterie-Optimierung** – Die App fragt optional nach, ob die Batterieoptimierung für sie deaktiviert werden darf, damit Hintergrundaufnahmen keine Lücken haben.
 
 ---
 
 ## 9. Design und Benutzeroberfläche
 
-- **Material Design 3** – Moderne, abgerundete Karten, Buttons und Dialoge
+- **Material Design 3** – Abgerundete Karten, Buttons und Dialoge
 - **Edge-to-Edge-Layout** – Die App nutzt den gesamten Bildschirm und passt sich an Status- und Navigationsleisten an
-- **Farbcodierung** – Jede Szenenklasse hat eine eigene Farbe, die sich durch die gesamte App zieht
-- **Emoji-Integration** – Szenenklassen werden mit passenden Emojis dargestellt
-- **Animationen** – Pulsierender Ripple-Effekt bei Aufnahmen, animierte Fortschrittsbalken
+- **Farbcodierung** – Jede Szenenklasse hat eine eigene Farbe, die in der ganzen App gleich bleibt
+- **Emoji-Integration** – Jede Szenenklasse hat ein passendes Emoji
+- **Animationen** – Ripple-Effekt während Aufnahmen, animierte Fortschrittsbalken
 - **Responsive** – Passt sich an verschiedene Bildschirmgrößen an
 
 ---
@@ -172,4 +172,4 @@ Die App verwendet einen Foreground Service, damit Aufnahmen auch im Hintergrund 
 9. **Detail-Dialoge** mit Szenenverteilung und Statistiken
 10. **Hintergrund-Aufnahme** mit Foreground Service
 11. **Automatische Datenpersistenz** in SharedPreferences
-12. **Material Design 3** mit modernem, ansprechendem UI
+12. **Material Design 3** als UI-Grundlage

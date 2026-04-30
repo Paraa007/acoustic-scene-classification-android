@@ -108,8 +108,7 @@ app/src/main/
 │   │   ├── AppState.kt              # App States (Sealed Class)
 │   │   ├── ConfidenceCircleView.kt  # Circular Progress Custom View
 │   │   ├── RipplePulseView.kt       # Sonar Animation
-│   │   └── VolumeLineChartView.kt   # Echtzeit-Volumen-Graph (NEU!)
-│   │
+│   │   └── VolumeLineChartView.kt   # Echtzeit-Volumen-Graph│   │
 │   ├── data/
 │   │   └── PredictionRepository.kt  # Datenpersistenz
 │   │
@@ -203,8 +202,7 @@ app/src/main/
 5. Ergebnis wird angezeigt
 6. Wiederholt sich automatisch
 
-### 5.2 Volume Visualization (NEU!)
-
+### 5.2 Volume Visualization
 **Komponente:** `VolumeLineChartView.kt`
 
 - **Zeitachse startet mit Recording** (nicht mit Switch!)
@@ -383,8 +381,7 @@ for (bin in 1 until nFft/2) {
 4. **Wiederholt sich automatisch**
 5. **"Stop Recording"** zum Beenden
 
-### 8.3 Volume Graph nutzen (NEU!)
-
+### 8.3 Volume Graph nutzen
 1. **"Show Live Data" Switch aktivieren** → Graph wird sichtbar
 2. **"Start Recording" drücken** → Graph füllt sich
 3. **Echtzeit-Visualisierung** der Lautstärke
