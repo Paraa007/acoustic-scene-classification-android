@@ -1,6 +1,7 @@
 package com.fzi.acousticscene.ui
 
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
@@ -94,6 +95,10 @@ data class UiState(
     // deadline at which the session should auto-resume. null = indefinite pause.
     val userPauseDeadlineElapsedMs: Long? = null,
     val selectedLongSubs: Set<LongSubMode> = setOf(LongSubMode.STANDARD),
+    // LONG mode (Dev Mode): user-chosen pause interval between 10 s recordings.
+    // null = the user has not picked an interval yet — must be set explicitly via the picker
+    // before the LONG mode can start. Not persisted across app launches.
+    val selectedLongInterval: LongInterval? = null,
     val longSubResults: Map<LongSubMode, ClassificationResult?> = emptyMap(),
     // ALL IN ONE: model-name-keyed live result, filled as each model finishes inferring.
     // Empty map = single-model session (regular dev / user mode).

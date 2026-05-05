@@ -463,6 +463,20 @@
                         android:textColor="@color/text_secondary" />
                 </LinearLayout>
 
+                <!-- Step 1b: Interval prompt — visible only when the user picked "Interval"
+                     and has not yet chosen a recording interval. -->
+                <TextView
+                    android:id="@+id/longIntervalPrompt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:text="@string/long_interval_prompt"
+                    android:visibility="gone" />
+
                 <!-- Step 2: Sub-mode buttons, populated dynamically -->
                 <LinearLayout
                     android:id="@+id/subModeButtonRow"
