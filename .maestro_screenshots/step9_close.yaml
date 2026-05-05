@@ -1,0 +1,6 @@
+appId: com.fzi.acousticscene
+---
+- tapOn: "Close"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: /Users/paraaafifi/Arbeit_code/the_App/.maestro_screenshots/11_final_history

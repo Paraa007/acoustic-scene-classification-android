@@ -27,7 +27,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.databinding.FragmentRecordingBinding
 import com.fzi.acousticscene.model.ClassificationResult
+import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.RecordingCategory
@@ -57,75 +59,25 @@ class RecordingFragment : Fragment() {
     // Separate ViewModel per mode - User Mode and Dev Mode don't share state
     private lateinit var viewModel: MainViewModel
 
-    // UI Components
-    private lateinit var categoryContinuousButton: MaterialButton
-    private lateinit var categoryIntervalButton: MaterialButton
-    private lateinit var subModeButtonRow: LinearLayout
-    private lateinit var modeTimeline: ModeTimelineView
-    private lateinit var modeDescription: TextView
+    private var _binding: FragmentRecordingBinding? = null
+    private val binding get() = _binding!!
+
+    // Mode picker state (not view-bound)
     private val subModeButtons: MutableMap<RecordingMode, MaterialButton> = mutableMapOf()
     private var currentCategory: RecordingCategory = RecordingCategory.CONTINUOUS
-    private lateinit var startStopButton: MaterialButton
-    private lateinit var pauseResumeButton: MaterialButton
-    private lateinit var statusLabel: TextView
-    private lateinit var modelStatusLabel: TextView
-    private lateinit var headerProcessingLabel: TextView
-    private lateinit var recordingProgressBar: ProgressBar
-    private lateinit var timerText: TextView
-    private lateinit var confidenceCircleView: com.fzi.acousticscene.ui.ConfidenceCircleView
-    private lateinit var ripplePulseView: com.fzi.acousticscene.ui.RipplePulseView
-    private lateinit var volumeLevelText: TextView
-    private lateinit var currentSceneLabel: TextView
-    private lateinit var predictionsCard: MaterialCardView
-    private lateinit var predictionsContainer: LinearLayout
-    private lateinit var allInOneCard: MaterialCardView
-    private lateinit var allInOneContainer: LinearLayout
-    private lateinit var statisticsCard: MaterialCardView
-    private lateinit var totalClassificationsText: TextView
-    private lateinit var avgInferenceTimeText: TextView
-    private lateinit var recentPredictionsCard: MaterialCardView
-    private lateinit var recentPredictionsContainer: LinearLayout
 
-    // Volume Graph Components
-    private lateinit var volumeGraphCard: MaterialCardView
-    private lateinit var switchVolumeGraph: MaterialSwitch
-    private lateinit var volumeLineChartView: com.fzi.acousticscene.ui.VolumeLineChartView
+    // Volume graph state
     private var volumeGraphJob: Job? = null
     private var isVolumeGraphActive: Boolean = false
 
-    // Pending evaluation card (foreground LONG-mode prompt, 5-min countdown)
-    private lateinit var pendingEvaluationCard: MaterialCardView
-    private lateinit var pendingEvaluationTitle: TextView
-    private lateinit var pendingEvaluationSubtitle: TextView
-    private lateinit var pendingEvaluationButton: MaterialButton
+    // Pending evaluation + user-pause timers
     private var pendingEvaluationTickerJob: Job? = null
     private var userPauseCountdownJob: Job? = null
 
-    // Per-Second Circles Components (AVERAGE mode only)
-    private lateinit var perSecondCirclesCard: MaterialCardView
-    private lateinit var switchPerSecondCircles: MaterialSwitch
-    private lateinit var perSecondCirclesContainer: LinearLayout
-    private lateinit var perSecondRow1: LinearLayout
-    private lateinit var perSecondRow2: LinearLayout
+    // Per-Second circles are dynamically created in initializeViews()
     private var perSecondCircleViews: List<ConfidenceCircleView> = emptyList()
     private var perSecondLabelViews: List<TextView> = emptyList()
     private var isPerSecondCirclesActive: Boolean = false
-
-    // LONG sub-mode chooser + triangle circles
-    private lateinit var longSubModeChooser: LinearLayout
-    private lateinit var cbLongStandard: MaterialCheckBox
-    private lateinit var cbLongFast: MaterialCheckBox
-    private lateinit var cbLongAverage: MaterialCheckBox
-    private lateinit var mainCircleSubLabel: TextView
-    private lateinit var mainCircleModelTitle: TextView
-    private lateinit var mainCircleFrame: android.widget.FrameLayout
-    private lateinit var longTriangleRow: LinearLayout
-    private lateinit var longFastCircleWrap: LinearLayout
-    private lateinit var longAvgCircleWrap: LinearLayout
-    private lateinit var longFastCircle: ConfidenceCircleView
-    private lateinit var longAvgCircle: ConfidenceCircleView
-    private lateinit var longFastLabel: TextView
-    private lateinit var longAvgLabel: TextView
 
     private var isDevMode: Boolean = false
 
@@ -161,8 +113,9 @@ class RecordingFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_recording, container, false)
+    ): View {
+        _binding = FragmentRecordingBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -171,7 +124,7 @@ class RecordingFragment : Fragment() {
         // Configure model based on mode
         configureModel()
 
-        initializeViews(view)
+        initializeViews()
         setupObservers()
     }
 
@@ -179,7 +132,7 @@ class RecordingFragment : Fragment() {
         super.onStart()
         // Resume volume graph collection if active
         if (isVolumeGraphActive && viewModel.isClassifying()) {
-            volumeLineChartView.setDrawingEnabled(true)
+            binding.volumeLineChartView.setDrawingEnabled(true)
             startVolumeGraphCollection()
         }
     }
@@ -188,13 +141,22 @@ class RecordingFragment : Fragment() {
         super.onStop()
         // Stop volume graph collection when not visible
         stopVolumeGraphCollection()
-        if (::volumeLineChartView.isInitialized) {
-            volumeLineChartView.setDrawingEnabled(false)
-        }
+        _binding?.volumeLineChartView?.setDrawingEnabled(false)
         // Reset session state when navigating away without an active recording
         if (!viewModel.isClassifying()) {
             viewModel.resetSession()
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        pendingEvaluationTickerJob?.cancel()
+        pendingEvaluationTickerJob = null
+        userPauseCountdownJob?.cancel()
+        userPauseCountdownJob = null
+        volumeGraphJob?.cancel()
+        volumeGraphJob = null
+        _binding = null
     }
 
     private fun configureModel() {
@@ -483,96 +445,38 @@ class RecordingFragment : Fragment() {
         }
     }
 
-    private fun initializeViews(view: View) {
-        categoryContinuousButton = view.findViewById(R.id.categoryContinuousButton)
-        categoryIntervalButton = view.findViewById(R.id.categoryIntervalButton)
-        subModeButtonRow = view.findViewById(R.id.subModeButtonRow)
-        modeTimeline = view.findViewById(R.id.modeTimeline)
-        modeDescription = view.findViewById(R.id.modeDescription)
-        startStopButton = view.findViewById(R.id.startStopButton)
-        pauseResumeButton = view.findViewById(R.id.pauseResumeButton)
-        pauseResumeButton.setOnClickListener {
+    private fun initializeViews() {
+        binding.pauseResumeButton.setOnClickListener {
             if (viewModel.isUserPaused()) viewModel.resumeClassification()
             else showPauseDurationPicker()
         }
-        statusLabel = view.findViewById(R.id.statusLabel)
-        modelStatusLabel = view.findViewById(R.id.modelStatusLabel)
-        headerProcessingLabel = view.findViewById(R.id.headerProcessingLabel)
 
-        categoryContinuousButton.setOnClickListener { selectCategory(RecordingCategory.CONTINUOUS, persist = true) }
-        categoryIntervalButton.setOnClickListener { selectCategory(RecordingCategory.INTERVAL, persist = true) }
+        binding.categoryContinuousButton.setOnClickListener { selectCategory(RecordingCategory.CONTINUOUS, persist = true) }
+        binding.categoryIntervalButton.setOnClickListener { selectCategory(RecordingCategory.INTERVAL, persist = true) }
 
-        // LONG sub-mode chooser + triangle circles
-        longSubModeChooser = view.findViewById(R.id.longSubModeChooser)
-        cbLongStandard = view.findViewById(R.id.cbLongStandard)
-        cbLongFast = view.findViewById(R.id.cbLongFast)
-        cbLongAverage = view.findViewById(R.id.cbLongAverage)
-        mainCircleSubLabel = view.findViewById(R.id.mainCircleSubLabel)
-        mainCircleModelTitle = view.findViewById(R.id.mainCircleModelTitle)
-        mainCircleFrame = view.findViewById(R.id.mainCircleFrame)
-        longTriangleRow = view.findViewById(R.id.longTriangleRow)
-        longFastCircleWrap = view.findViewById(R.id.longFastCircleWrap)
-        longAvgCircleWrap = view.findViewById(R.id.longAvgCircleWrap)
-        longFastCircle = view.findViewById(R.id.longFastCircle)
-        longAvgCircle = view.findViewById(R.id.longAvgCircle)
-        longFastCircle.setTargetSize(60)
-        longAvgCircle.setTargetSize(60)
-        longFastLabel = view.findViewById(R.id.longFastLabel)
-        longAvgLabel = view.findViewById(R.id.longAvgLabel)
+        binding.longFastCircle.setTargetSize(60)
+        binding.longAvgCircle.setTargetSize(60)
 
         // Restore persisted LONG sub-mode selection (Dev Mode only feature for now)
         if (isDevMode) {
             val persisted = loadPersistedLongSubs()
             viewModel.setLongSubs(persisted)
-            cbLongFast.isChecked = LongSubMode.FAST in persisted
-            cbLongAverage.isChecked = LongSubMode.AVERAGE in persisted
+            binding.cbLongFast.isChecked = LongSubMode.FAST in persisted
+            binding.cbLongAverage.isChecked = LongSubMode.AVERAGE in persisted
         }
-        cbLongFast.setOnCheckedChangeListener { _, _ ->
+        binding.cbLongFast.setOnCheckedChangeListener { _, _ ->
             if (suppressSubModeListener) return@setOnCheckedChangeListener
             viewModel.toggleLongSub(LongSubMode.FAST)
             persistLongSubs(viewModel.uiState.value.selectedLongSubs)
         }
-        cbLongAverage.setOnCheckedChangeListener { _, _ ->
+        binding.cbLongAverage.setOnCheckedChangeListener { _, _ ->
             if (suppressSubModeListener) return@setOnCheckedChangeListener
             viewModel.toggleLongSub(LongSubMode.AVERAGE)
             persistLongSubs(viewModel.uiState.value.selectedLongSubs)
         }
 
-        pendingEvaluationCard = view.findViewById(R.id.pendingEvaluationCard)
-        pendingEvaluationTitle = view.findViewById(R.id.pendingEvaluationTitle)
-        pendingEvaluationSubtitle = view.findViewById(R.id.pendingEvaluationSubtitle)
-        pendingEvaluationButton = view.findViewById(R.id.pendingEvaluationButton)
-
-        recordingProgressBar = view.findViewById(R.id.recordingProgressBar)
-        timerText = view.findViewById(R.id.timerText)
-        confidenceCircleView = view.findViewById(R.id.confidenceCircleView)
-        ripplePulseView = view.findViewById(R.id.ripplePulseView)
-        volumeLevelText = view.findViewById(R.id.volumeLevelText)
-        currentSceneLabel = view.findViewById(R.id.currentSceneLabel)
-        predictionsCard = view.findViewById(R.id.predictionsCard)
-        predictionsContainer = view.findViewById(R.id.predictionsContainer)
-        allInOneCard = view.findViewById(R.id.allInOneCard)
-        allInOneContainer = view.findViewById(R.id.allInOneContainer)
-        statisticsCard = view.findViewById(R.id.statisticsCard)
-        totalClassificationsText = view.findViewById(R.id.totalClassificationsText)
-        avgInferenceTimeText = view.findViewById(R.id.avgInferenceTimeText)
-        recentPredictionsCard = view.findViewById(R.id.recentPredictionsCard)
-        recentPredictionsContainer = view.findViewById(R.id.recentPredictionsContainer)
-
-        // Volume Graph Components
-        volumeGraphCard = view.findViewById(R.id.volumeGraphCard)
-        switchVolumeGraph = view.findViewById(R.id.switchVolumeGraph)
-        volumeLineChartView = view.findViewById(R.id.volumeLineChartView)
-
         // Initialize volume graph with current recording mode duration
-        volumeLineChartView.setMaxDuration(viewModel.getRecordingMode().durationSeconds.toFloat())
-
-        // Per-Second Circles Components
-        perSecondCirclesCard = view.findViewById(R.id.perSecondCirclesCard)
-        switchPerSecondCircles = view.findViewById(R.id.switchPerSecondCircles)
-        perSecondCirclesContainer = view.findViewById(R.id.perSecondCirclesContainer)
-        perSecondRow1 = view.findViewById(R.id.perSecondRow1)
-        perSecondRow2 = view.findViewById(R.id.perSecondRow2)
+        binding.volumeLineChartView.setMaxDuration(viewModel.getRecordingMode().durationSeconds.toFloat())
 
         // Create 10 small circle items programmatically
         val circles = mutableListOf<ConfidenceCircleView>()
@@ -599,8 +503,8 @@ class RecordingFragment : Fragment() {
             itemLayout.addView(circle)
             itemLayout.addView(label)
 
-            if (i < 5) perSecondRow1.addView(itemLayout)
-            else perSecondRow2.addView(itemLayout)
+            if (i < 5) binding.perSecondRow1.addView(itemLayout)
+            else binding.perSecondRow2.addView(itemLayout)
 
             circles.add(circle)
             labels.add(label)
@@ -610,13 +514,13 @@ class RecordingFragment : Fragment() {
 
         // Show per-second card only in Dev Mode when AVERAGE is selected
         if (isDevMode && viewModel.getRecordingMode() == RecordingMode.AVERAGE) {
-            perSecondCirclesCard.visibility = View.VISIBLE
+            binding.perSecondCirclesCard.visibility = View.VISIBLE
         }
 
         // Per-second circles toggle listener
-        switchPerSecondCircles.setOnCheckedChangeListener { _, isChecked ->
+        binding.switchPerSecondCircles.setOnCheckedChangeListener { _, isChecked ->
             isPerSecondCirclesActive = isChecked
-            perSecondCirclesContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
+            binding.perSecondCirclesContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
             if (!isChecked) {
                 // Reset all circles
                 perSecondCircleViews.forEach { it.setConfidence(0f, animate = false) }
@@ -625,7 +529,7 @@ class RecordingFragment : Fragment() {
         }
 
         // Switch listener for volume graph
-        switchVolumeGraph.setOnCheckedChangeListener { buttonView, isChecked ->
+        binding.switchVolumeGraph.setOnCheckedChangeListener { buttonView, isChecked ->
             val isRecordingActive = viewModel.isClassifying()
 
             if (isRecordingActive) {
@@ -650,23 +554,23 @@ class RecordingFragment : Fragment() {
 
             isVolumeGraphActive = isChecked
             if (isChecked) {
-                volumeLineChartView.visibility = View.VISIBLE
-                volumeLineChartView.setDrawingEnabled(true)
-                volumeLineChartView.clearData()
+                binding.volumeLineChartView.visibility = View.VISIBLE
+                binding.volumeLineChartView.setDrawingEnabled(true)
+                binding.volumeLineChartView.clearData()
             } else {
                 stopVolumeGraphCollection()
-                volumeLineChartView.setDrawingEnabled(false)
-                volumeLineChartView.clearData()
-                volumeLineChartView.visibility = View.GONE
+                binding.volumeLineChartView.setDrawingEnabled(false)
+                binding.volumeLineChartView.clearData()
+                binding.volumeLineChartView.visibility = View.GONE
             }
         }
 
-        startStopButton.setOnClickListener {
+        binding.startStopButton.setOnClickListener {
             if (viewModel.isClassifying()) {
                 viewModel.stopClassification()
                 (activity as? MainActivity)?.stopClassificationService()
                 stopVolumeGraphCollection()
-                volumeLineChartView.clearData()
+                binding.volumeLineChartView.clearData()
                 resetPerSecondCircles()
             } else {
                 // Block if the other mode already has an active recording
@@ -679,7 +583,7 @@ class RecordingFragment : Fragment() {
                     (activity as? MainActivity)?.startClassificationService()
                     viewModel.startClassification()
                     if (isVolumeGraphActive) {
-                        volumeLineChartView.clearData()
+                        binding.volumeLineChartView.clearData()
                         startVolumeGraphCollection()
                     }
                 } else {
@@ -689,17 +593,22 @@ class RecordingFragment : Fragment() {
         }
 
         // Update header title based on mode
-        val headerTitle = view.findViewById<TextView>(R.id.headerTitle)
-        headerTitle.text = if (isDevMode) {
+        binding.headerTitle.text = if (isDevMode) {
             getString(R.string.dev_mode)
         } else {
             getString(R.string.app_name_full)
         }
 
-        // Restore last mode selection (category + mode) from prefs
+        // Restore last mode selection (category + mode) from prefs.
+        // The LONG-mode interval is intentionally NOT persisted — the user must explicitly
+        // pick one each time via the picker before LONG can start.
         val lastMode = loadPersistedMode()
-        selectCategory(lastMode.category, persist = false)
-        selectMode(lastMode, persist = false)
+        // Don't restore LONG as the active mode — interval is unset on launch and LONG
+        // requires an explicit pick. Fall back to the default (Standard) if the last
+        // persisted mode was LONG.
+        val effectiveMode = if (lastMode == RecordingMode.LONG) RecordingMode.DEFAULT else lastMode
+        selectCategory(effectiveMode.category, persist = false)
+        selectMode(effectiveMode, persist = false)
     }
 
     private fun prefsKey(): String = if (isDevMode) "last_mode_dev" else "last_mode_user"
@@ -737,6 +646,34 @@ class RecordingFragment : Fragment() {
             .edit().putStringSet(longSubsPrefsKey(), subs.map { it.name }.toSet()).apply()
     }
 
+    /** "29:47" if < 1 h, "1:05:30" otherwise. Used for the LONG-mode pause countdown. */
+    private fun formatRemaining(totalSeconds: Int): String {
+        val h = totalSeconds / 3600
+        val m = (totalSeconds % 3600) / 60
+        val s = totalSeconds % 60
+        return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    }
+
+    private fun showLongIntervalPicker() {
+        if (viewModel.isClassifying()) {
+            Toast.makeText(requireContext(), R.string.long_interval_locked_running, Toast.LENGTH_SHORT).show()
+            return
+        }
+        ModernDialogHelper.showLongIntervalDialog(
+            context = requireContext(),
+            title = getString(R.string.long_interval_picker_title),
+            subtitle = getString(R.string.long_interval_picker_subtitle),
+            options = LongInterval.values().toList(),
+            onSelected = { interval ->
+                viewModel.setLongInterval(interval)
+                // LONG mode is only activated after the user explicitly picked an interval —
+                // tapping the "Every" button alone does not switch the mode.
+                // Interval is intentionally not persisted across app launches.
+                selectMode(RecordingMode.LONG, persist = true)
+            }
+        )
+    }
+
     private fun selectCategory(cat: RecordingCategory, persist: Boolean) {
         currentCategory = cat
         val ctx = context ?: return
@@ -746,9 +683,9 @@ class RecordingFragment : Fragment() {
         val inactiveTextColor = ContextCompat.getColor(ctx, R.color.text_secondary)
 
         val (sel, other) = if (cat == RecordingCategory.CONTINUOUS)
-            categoryContinuousButton to categoryIntervalButton
+            binding.categoryContinuousButton to binding.categoryIntervalButton
         else
-            categoryIntervalButton to categoryContinuousButton
+            binding.categoryIntervalButton to binding.categoryContinuousButton
         sel.backgroundTintList = ColorStateList.valueOf(activeColor)
         sel.setTextColor(activeTextColor)
         other.backgroundTintList = ColorStateList.valueOf(inactiveColor)
@@ -762,13 +699,13 @@ class RecordingFragment : Fragment() {
             selectMode(first, persist = persist)
         } else {
             highlightSubMode(current)
-            modeTimeline.setMode(current)
-            modeDescription.text = descriptionFor(current)
+            binding.modeTimeline.setMode(current)
+            binding.modeDescription.text = descriptionFor(current)
         }
     }
 
     private fun rebuildSubModeButtons() {
-        subModeButtonRow.removeAllViews()
+        binding.subModeButtonRow.removeAllViews()
         subModeButtons.clear()
         val ctx = context ?: return
         val modes = RecordingMode.forCategory(currentCategory, isDevMode)
@@ -776,7 +713,7 @@ class RecordingFragment : Fragment() {
         val inactiveTextColor = ContextCompat.getColor(ctx, R.color.text_secondary)
         modes.forEachIndexed { idx, mode ->
             val btn = MaterialButton(ctx).apply {
-                text = mode.label
+                text = labelForButton(mode)
                 textSize = 11f
                 cornerRadius = 12.dpToPx()
                 backgroundTintList = ColorStateList.valueOf(inactiveColor)
@@ -786,11 +723,36 @@ class RecordingFragment : Fragment() {
                     marginStart = if (idx == 0) 0 else 3.dpToPx()
                     marginEnd = if (idx == modes.size - 1) 0 else 3.dpToPx()
                 }
-                setOnClickListener { selectMode(mode, persist = true) }
+                setOnClickListener {
+                    if (mode == RecordingMode.LONG && isDevMode) {
+                        // Only open the picker — LONG mode activates from the picker callback.
+                        showLongIntervalPicker()
+                    } else {
+                        selectMode(mode, persist = true)
+                    }
+                }
             }
-            subModeButtonRow.addView(btn)
+            binding.subModeButtonRow.addView(btn)
             subModeButtons[mode] = btn
         }
+    }
+
+    /**
+     * LONG button text in Dev Mode:
+     *  - "Every"          while no interval has been picked yet (the user must tap to choose),
+     *  - "Every <label>"  once an interval was explicitly chosen and LONG is active.
+     */
+    private fun labelForButton(mode: RecordingMode): String {
+        if (mode == RecordingMode.LONG && isDevMode) {
+            val state = viewModel.uiState.value
+            val interval = state.selectedLongInterval
+            return if (state.recordingMode == RecordingMode.LONG && interval != null) {
+                "Every ${interval.label}"
+            } else {
+                "Every?"
+            }
+        }
+        return mode.label
     }
 
     private fun highlightSubMode(mode: RecordingMode) {
@@ -813,8 +775,8 @@ class RecordingFragment : Fragment() {
     private fun selectMode(mode: RecordingMode, persist: Boolean) {
         viewModel.setRecordingMode(mode)
         highlightSubMode(mode)
-        modeTimeline.setMode(mode)
-        modeDescription.text = descriptionFor(mode)
+        binding.modeTimeline.setMode(mode)
+        binding.modeDescription.text = descriptionFor(mode)
         updateVolumeGraphForMode(mode)
         if (persist && mode == RecordingMode.LONG
             && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
@@ -838,71 +800,92 @@ class RecordingFragment : Fragment() {
     )
 
     private fun updateLongSubModeUi(state: UiState) {
-        if (!::longSubModeChooser.isInitialized) return
+        if (_binding == null) return
         val isLong = state.recordingMode == RecordingMode.LONG
         // Chooser only for Dev Mode + LONG
-        longSubModeChooser.visibility = if (isDevMode && isLong) View.VISIBLE else View.GONE
+        binding.longSubModeChooser.visibility = if (isDevMode && isLong) View.VISIBLE else View.GONE
 
         // Reflect selection into checkboxes (don't trigger listener recursion)
         val subs = state.selectedLongSubs
-        syncCheckbox(cbLongFast, LongSubMode.FAST in subs)
-        syncCheckbox(cbLongAverage, LongSubMode.AVERAGE in subs)
+        syncCheckbox(binding.cbLongFast, LongSubMode.FAST in subs)
+        syncCheckbox(binding.cbLongAverage, LongSubMode.AVERAGE in subs)
 
         // Lock sub-mode selection while a session is active
         val locked = viewModel.isClassifying()
-        cbLongFast.isEnabled = !locked
-        cbLongAverage.isEnabled = !locked
+        binding.cbLongFast.isEnabled = !locked
+        binding.cbLongAverage.isEnabled = !locked
 
         // Triangle circles: only when LONG is active and at least one extra sub-mode selected
         val hasExtras = isLong && (LongSubMode.FAST in subs || LongSubMode.AVERAGE in subs)
-        longTriangleRow.visibility = if (hasExtras) View.VISIBLE else View.GONE
-        longFastCircleWrap.visibility = if (isLong && LongSubMode.FAST in subs) View.VISIBLE else View.GONE
-        longAvgCircleWrap.visibility = if (isLong && LongSubMode.AVERAGE in subs) View.VISIBLE else View.GONE
+        binding.longTriangleRow.visibility = if (hasExtras) View.VISIBLE else View.GONE
+        binding.longFastCircleWrap.visibility = if (isLong && LongSubMode.FAST in subs) View.VISIBLE else View.GONE
+        binding.longAvgCircleWrap.visibility = if (isLong && LongSubMode.AVERAGE in subs) View.VISIBLE else View.GONE
 
         // Shrink main circle when triangle is on
         val targetMain = if (hasExtras) 150 else 200
-        confidenceCircleView.setTargetSize(targetMain)
+        binding.confidenceCircleView.setTargetSize(targetMain)
 
         // Shrink frame so the Standard sub-label sits close under the circle
         val frameDp = if (hasExtras) 170 else 240
         val density = resources.displayMetrics.density
         val framePx = (frameDp * density).toInt()
-        if (mainCircleFrame.layoutParams.height != framePx) {
-            mainCircleFrame.layoutParams = mainCircleFrame.layoutParams.apply {
+        if (binding.mainCircleFrame.layoutParams.height != framePx) {
+            binding.mainCircleFrame.layoutParams = binding.mainCircleFrame.layoutParams.apply {
                 width = framePx
                 height = framePx
             }
         }
 
         // Hide Top Predictions card in triangle mode — it's ambiguous which circle it belongs to
-        if (hasExtras) predictionsCard.visibility = View.GONE
+        if (hasExtras) binding.predictionsCard.visibility = View.GONE
 
-        // Reflect selected subs in the timeline summary
-        if (::modeTimeline.isInitialized) modeTimeline.setLongSubs(subs)
+        // Reflect selected subs + interval in the timeline summary. While no interval
+        // has been picked, the timeline renders "?" placeholders for the pause labels.
+        binding.modeTimeline.setLongSubs(subs)
+        binding.modeTimeline.setLongInterval(state.selectedLongInterval)
+
+        // Dev Mode: keep the LONG button text in sync — "Every?" until the user
+        // explicitly picked an interval, "Every <label>" while LONG is active.
+        if (isDevMode) {
+            subModeButtons[RecordingMode.LONG]?.let { btn ->
+                val interval = state.selectedLongInterval
+                btn.text = if (state.recordingMode == RecordingMode.LONG && interval != null) {
+                    "Every ${interval.label}"
+                } else {
+                    "Every?"
+                }
+            }
+        }
+
+        // Inline prompt — visible only in Dev Mode + Interval category + no interval picked yet.
+        val showPrompt = isDevMode &&
+            currentCategory == RecordingCategory.INTERVAL &&
+            state.selectedLongInterval == null
+        binding.longIntervalPrompt.visibility = if (showPrompt) View.VISIBLE else View.GONE
 
         // Main circle sub-label: only in triangle mode (compact colored label like the side circles).
-        // When Standard is alone, hide this compact label — the existing big `currentSceneLabel`
+        // When Standard is alone, hide this compact label — the existing big `binding.currentSceneLabel`
         // keeps showing the full "Emoji Class" style.
-        mainCircleSubLabel.visibility = if (hasExtras) View.VISIBLE else View.GONE
+        binding.mainCircleSubLabel.visibility = if (hasExtras) View.VISIBLE else View.GONE
         val ctx = context
         if (hasExtras && ctx != null) {
             val stdResult = state.longSubResults[LongSubMode.STANDARD] ?: state.currentResult
             if (stdResult != null) {
-                mainCircleSubLabel.text =
+                binding.mainCircleSubLabel.text =
                     "${getString(R.string.long_sub_label_standard)}\n${stdResult.sceneClass.emoji} ${stdResult.sceneClass.labelShort} ${(stdResult.confidence * 100).toInt()}%"
                 val colorRes = sceneColors[stdResult.sceneClass] ?: R.color.accent_green
-                mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, colorRes))
+                binding.mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, colorRes))
             } else {
-                mainCircleSubLabel.text = getString(R.string.long_sub_label_standard)
-                mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                binding.mainCircleSubLabel.text = getString(R.string.long_sub_label_standard)
+                binding.mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
             }
             // Hide the big full-class label when triangle is active (compact label takes over)
-            currentSceneLabel.visibility = View.GONE
+            binding.currentSceneLabel.visibility = View.GONE
         }
 
         // Bind per-sub results
-        bindSubCircle(longFastCircle, longFastLabel, state.longSubResults[LongSubMode.FAST], R.string.long_sub_label_fast)
-        bindSubCircle(longAvgCircle, longAvgLabel, state.longSubResults[LongSubMode.AVERAGE], R.string.long_sub_label_average)
+        bindSubCircle(binding.longFastCircle, binding.longFastLabel, state.longSubResults[LongSubMode.FAST], R.string.long_sub_label_fast)
+        bindSubCircle(binding.longAvgCircle, binding.longAvgLabel, state.longSubResults[LongSubMode.AVERAGE], R.string.long_sub_label_average)
     }
 
     private var suppressSubModeListener = false
@@ -935,10 +918,10 @@ class RecordingFragment : Fragment() {
     }
 
     private fun updatePauseButton(state: UiState) {
-        if (!::pauseResumeButton.isInitialized) return
+        if (_binding == null) return
         val show = state.recordingMode == RecordingMode.LONG && viewModel.isClassifying()
-        pauseResumeButton.visibility = if (show) View.VISIBLE else View.GONE
-        pauseResumeButton.text = getString(
+        binding.pauseResumeButton.visibility = if (show) View.VISIBLE else View.GONE
+        binding.pauseResumeButton.text = getString(
             if (state.isPaused) R.string.resume_recording else R.string.pause_recording
         )
     }
@@ -995,9 +978,9 @@ class RecordingFragment : Fragment() {
                 } else {
                     "%d:%02d".format(minutes, seconds)
                 }
-                statusLabel.text = getString(R.string.user_paused_auto_resume, timeStr)
-                timerText.text = timeStr
-                timerText.visibility = View.VISIBLE
+                binding.statusLabel.text = getString(R.string.user_paused_auto_resume, timeStr)
+                binding.timerText.text = timeStr
+                binding.timerText.visibility = View.VISIBLE
                 if (remainingMs == 0L) break
                 delay(1000L)
             }
@@ -1008,14 +991,12 @@ class RecordingFragment : Fragment() {
         if (pending == null) {
             pendingEvaluationTickerJob?.cancel()
             pendingEvaluationTickerJob = null
-            if (::pendingEvaluationCard.isInitialized) {
-                pendingEvaluationCard.visibility = View.GONE
-            }
+            _binding?.pendingEvaluationCard?.visibility = View.GONE
             return
         }
 
-        pendingEvaluationCard.visibility = View.VISIBLE
-        pendingEvaluationTitle.text = getString(R.string.evaluation_inapp_message)
+        binding.pendingEvaluationCard.visibility = View.VISIBLE
+        binding.pendingEvaluationTitle.text = getString(R.string.evaluation_inapp_message)
         val launchAction = View.OnClickListener {
             val intent = android.content.Intent(requireContext(), EvaluationActivity::class.java).apply {
                 putExtra(EvaluationActivity.EXTRA_PREDICTION_ID, pending.predictionId)
@@ -1023,8 +1004,8 @@ class RecordingFragment : Fragment() {
             }
             startActivity(intent)
         }
-        pendingEvaluationButton.setOnClickListener(launchAction)
-        pendingEvaluationCard.setOnClickListener(launchAction)
+        binding.pendingEvaluationButton.setOnClickListener(launchAction)
+        binding.pendingEvaluationCard.setOnClickListener(launchAction)
 
         // Start a per-second ticker for the countdown if not already running for this prediction
         pendingEvaluationTickerJob?.cancel()
@@ -1034,7 +1015,7 @@ class RecordingFragment : Fragment() {
                     .coerceAtLeast(0L)
                 val minutes = (remainingMs / 1000) / 60
                 val seconds = (remainingMs / 1000) % 60
-                pendingEvaluationSubtitle.text = "${pending.modelClass.emoji} ${pending.modelClass.labelShort} · %d:%02d".format(minutes, seconds)
+                binding.pendingEvaluationSubtitle.text = "${pending.modelClass.emoji} ${pending.modelClass.labelShort} · %d:%02d".format(minutes, seconds)
                 if (remainingMs == 0L) break
                 delay(1000L)
             }
@@ -1097,18 +1078,18 @@ class RecordingFragment : Fragment() {
         // single-model sessions the header model label already serves that purpose.
         if (state.allInOneModelNames.size >= 2) {
             val primary = state.allInOneModelNames.first()
-            mainCircleModelTitle.text = getString(R.string.all_in_one_primary_title, primary)
-            mainCircleModelTitle.visibility = View.VISIBLE
+            binding.mainCircleModelTitle.text = getString(R.string.all_in_one_primary_title, primary)
+            binding.mainCircleModelTitle.visibility = View.VISIBLE
         } else {
-            mainCircleModelTitle.visibility = View.GONE
+            binding.mainCircleModelTitle.visibility = View.GONE
         }
 
         if (state.allInOneModelNames.size < 2) {
-            allInOneCard.visibility = View.GONE
+            binding.allInOneCard.visibility = View.GONE
             return
         }
-        allInOneCard.visibility = View.VISIBLE
-        allInOneContainer.removeAllViews()
+        binding.allInOneCard.visibility = View.VISIBLE
+        binding.allInOneContainer.removeAllViews()
 
         // Recording-mode label is shared across all rows (every model ran on the same clip
         // with the same mode). In LONG ("every 30min") we also append the sub-mode —
@@ -1177,125 +1158,130 @@ class RecordingFragment : Fragment() {
             row.addView(icon)
             row.addView(nameContainer)
             row.addView(predictionText)
-            allInOneContainer.addView(row)
+            binding.allInOneContainer.addView(row)
         }
     }
 
     private fun updateVolumeDisplay(volume: Float, appState: AppState) {
         when (appState) {
             is AppState.Recording -> {
-                ripplePulseView.setVolume(volume)
-                volumeLevelText.visibility = View.VISIBLE
+                binding.ripplePulseView.setVolume(volume)
+                binding.volumeLevelText.visibility = View.VISIBLE
                 val volumePercent = (volume * 100).toInt()
-                volumeLevelText.text = "${getString(R.string.volume)}: $volumePercent"
+                binding.volumeLevelText.text = "${getString(R.string.volume)}: $volumePercent"
             }
             else -> {
-                ripplePulseView.clear()
-                volumeLevelText.visibility = View.GONE
+                binding.ripplePulseView.clear()
+                binding.volumeLevelText.visibility = View.GONE
             }
         }
     }
 
     private fun syncModeSelection(mode: RecordingMode) {
-        if (!::modeTimeline.isInitialized) return
+        if (_binding == null) return
         if (mode.category != currentCategory) {
             selectCategory(mode.category, persist = false)
         }
         highlightSubMode(mode)
-        modeTimeline.setMode(mode)
-        modeDescription.text = descriptionFor(mode)
+        binding.modeTimeline.setMode(mode)
+        binding.modeDescription.text = descriptionFor(mode)
     }
 
     private fun updateAppState(appState: AppState) {
         val ctx = context ?: return
 
         // Show processing indicator in header instead of status card
-        headerProcessingLabel.visibility = if (appState is AppState.Processing) View.VISIBLE else View.GONE
+        binding.headerProcessingLabel.visibility = if (appState is AppState.Processing) View.VISIBLE else View.GONE
 
         when (appState) {
             is AppState.Idle -> {
-                statusLabel.text = getString(R.string.status_idle)
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
-                startStopButton.isEnabled = false
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
+                binding.statusLabel.text = getString(R.string.status_idle)
+                binding.statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
+                binding.startStopButton.isEnabled = false
+                binding.recordingProgressBar.visibility = View.GONE
+                binding.timerText.visibility = View.GONE
             }
             is AppState.Loading -> {
-                statusLabel.text = getString(R.string.status_idle)
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
-                startStopButton.isEnabled = false
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
+                binding.statusLabel.text = getString(R.string.status_idle)
+                binding.statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
+                binding.startStopButton.isEnabled = false
+                binding.recordingProgressBar.visibility = View.GONE
+                binding.timerText.visibility = View.GONE
             }
             is AppState.Ready -> {
-                statusLabel.text = getString(R.string.status_idle)
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.start_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
+                binding.statusLabel.text = getString(R.string.status_idle)
+                binding.statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
+                binding.startStopButton.isEnabled = true
+                binding.startStopButton.text = getString(R.string.start_recording)
+                binding.recordingProgressBar.visibility = View.GONE
+                binding.timerText.visibility = View.GONE
             }
             is AppState.Recording -> {
-                statusLabel.text = getString(R.string.status_recording)
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_recording))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.stop_recording)
+                binding.statusLabel.text = getString(R.string.status_recording)
+                binding.statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_recording))
+                binding.startStopButton.isEnabled = true
+                binding.startStopButton.text = getString(R.string.stop_recording)
 
                 val seconds = appState.secondsRemaining
-                timerText.text = getString(R.string.timer_countdown, seconds)
-                timerText.visibility = View.VISIBLE
+                binding.timerText.text = getString(R.string.timer_countdown, seconds)
+                binding.timerText.visibility = View.VISIBLE
 
                 val recordingProgress = viewModel.uiState.value.recordingProgress
                 val progress = (recordingProgress * 100).toInt()
-                setProgressAnimated(recordingProgressBar, progress)
-                recordingProgressBar.visibility = View.VISIBLE
+                setProgressAnimated(binding.recordingProgressBar, progress)
+                binding.recordingProgressBar.visibility = View.VISIBLE
             }
             is AppState.Processing -> {
-                // Status text stays as previous state (no change to statusLabel)
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.stop_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
+                // Status text stays as previous state (no change to binding.statusLabel)
+                binding.startStopButton.isEnabled = true
+                binding.startStopButton.text = getString(R.string.stop_recording)
+                binding.recordingProgressBar.visibility = View.GONE
+                binding.timerText.visibility = View.GONE
             }
             is AppState.Paused -> {
-                val total = appState.secondsRemaining
-                val minutes = total / 60
-                val seconds = total % 60
-                val mmss = "%d:%02d".format(minutes, seconds)
-                statusLabel.text = getString(R.string.pause_mmss, mmss)
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.stop_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.text = mmss
-                timerText.visibility = View.VISIBLE
+                val timeStr = formatRemaining(appState.secondsRemaining)
+                binding.statusLabel.text = getString(R.string.pause_mmss, timeStr)
+                binding.statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
+                binding.startStopButton.isEnabled = true
+                binding.startStopButton.text = getString(R.string.stop_recording)
+                binding.recordingProgressBar.visibility = View.GONE
+                binding.timerText.text = timeStr
+                binding.timerText.visibility = View.VISIBLE
             }
             is AppState.UserPaused -> {
                 val total = appState.secondsRemaining
                 if (total > 0) {
-                    val minutes = total / 60
-                    val seconds = total % 60
-                    val mmss = "%d:%02d".format(minutes, seconds)
-                    statusLabel.text = getString(R.string.user_paused_with_mmss, mmss)
-                    timerText.text = mmss
-                    timerText.visibility = View.VISIBLE
+                    val timeStr = formatRemaining(total)
+                    binding.statusLabel.text = getString(R.string.user_paused_with_mmss, timeStr)
+                    binding.timerText.text = timeStr
+                    binding.timerText.visibility = View.VISIBLE
                 } else {
-                    statusLabel.text = getString(R.string.user_paused)
-                    timerText.visibility = View.GONE
+                    binding.statusLabel.text = getString(R.string.user_paused)
+                    binding.timerText.visibility = View.GONE
                 }
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.stop_recording)
-                recordingProgressBar.visibility = View.GONE
+                binding.statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.status_idle))
+                binding.startStopButton.isEnabled = true
+                binding.startStopButton.text = getString(R.string.stop_recording)
+                binding.recordingProgressBar.visibility = View.GONE
             }
             is AppState.Error -> {
-                statusLabel.text = appState.message
-                statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.error))
-                startStopButton.isEnabled = true
-                startStopButton.text = getString(R.string.start_recording)
-                recordingProgressBar.visibility = View.GONE
-                timerText.visibility = View.GONE
+                binding.statusLabel.text = appState.message
+                binding.statusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.error))
+                binding.startStopButton.isEnabled = true
+                binding.startStopButton.text = getString(R.string.start_recording)
+                binding.recordingProgressBar.visibility = View.GONE
+                binding.timerText.visibility = View.GONE
             }
+        }
+
+        // Dev Mode + LONG without a chosen interval: lock Start until the user picks one.
+        // Only override while idle/ready/error — don't touch a running session.
+        val state = viewModel.uiState.value
+        val needsIntervalChoice = isDevMode &&
+            state.recordingMode == RecordingMode.LONG &&
+            state.selectedLongInterval == null
+        if (needsIntervalChoice && (appState is AppState.Ready || appState is AppState.Idle || appState is AppState.Error)) {
+            binding.startStopButton.isEnabled = false
         }
     }
 
@@ -1304,46 +1290,46 @@ class RecordingFragment : Fragment() {
         if (isLoaded) {
             if (isDevMode) {
                 if (viewModel.isAllInOne) {
-                    modelStatusLabel.text = "\u2713 ${getString(R.string.all_in_one_header, viewModel.allInOneModelNames.size)}"
+                    binding.modelStatusLabel.text = "\u2713 ${getString(R.string.all_in_one_header, viewModel.allInOneModelNames.size)}"
                 } else {
                     val displayName = ModelDisplayNameHelper.getDisplayName(ctx, viewModel.modelName)
-                    modelStatusLabel.text = "\u2713 $displayName"
+                    binding.modelStatusLabel.text = "\u2713 $displayName"
                 }
             } else {
-                modelStatusLabel.text = "\u2713 ${getString(R.string.model_loaded)}"
+                binding.modelStatusLabel.text = "\u2713 ${getString(R.string.model_loaded)}"
             }
-            modelStatusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.accent_green))
+            binding.modelStatusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.accent_green))
         } else {
-            modelStatusLabel.text = "\u26A0 ${getString(R.string.loading_model)}"
-            modelStatusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.error))
+            binding.modelStatusLabel.text = "\u26A0 ${getString(R.string.loading_model)}"
+            binding.modelStatusLabel.setTextColor(ContextCompat.getColor(ctx, R.color.error))
         }
     }
 
     private fun updateCurrentResult(result: ClassificationResult?) {
         val ctx = context ?: return
         if (result != null) {
-            confidenceCircleView.setConfidence(result.confidence, animate = true)
-            currentSceneLabel.text = "${result.sceneClass.emoji} ${result.sceneClass.label}"
-            currentSceneLabel.visibility = View.VISIBLE
+            binding.confidenceCircleView.setConfidence(result.confidence, animate = true)
+            binding.currentSceneLabel.text = "${result.sceneClass.emoji} ${result.sceneClass.label}"
+            binding.currentSceneLabel.visibility = View.VISIBLE
             val colorRes = sceneColors[result.sceneClass] ?: R.color.accent_green
-            currentSceneLabel.setTextColor(ContextCompat.getColor(ctx, colorRes))
+            binding.currentSceneLabel.setTextColor(ContextCompat.getColor(ctx, colorRes))
         } else {
-            currentSceneLabel.visibility = View.GONE
-            confidenceCircleView.setConfidence(0f, animate = false)
+            binding.currentSceneLabel.visibility = View.GONE
+            binding.confidenceCircleView.setConfidence(0f, animate = false)
         }
     }
 
     private fun updatePredictions(result: ClassificationResult?) {
-        predictionsContainer.removeAllViews()
+        binding.predictionsContainer.removeAllViews()
         if (result != null) {
-            predictionsCard.visibility = View.VISIBLE
+            binding.predictionsCard.visibility = View.VISIBLE
             val topPredictions = result.getTopPredictions(3)
             topPredictions.forEachIndexed { index, (scene, confidence) ->
                 val predictionView = createPredictionView(scene, confidence, index + 1)
-                predictionsContainer.addView(predictionView)
+                binding.predictionsContainer.addView(predictionView)
             }
         } else {
-            predictionsCard.visibility = View.GONE
+            binding.predictionsCard.visibility = View.GONE
         }
     }
 
@@ -1426,21 +1412,21 @@ class RecordingFragment : Fragment() {
 
     private fun updateStatistics(total: Int, avgTime: Long) {
         if (total > 0) {
-            statisticsCard.visibility = View.VISIBLE
-            totalClassificationsText.text = total.toString()
+            binding.statisticsCard.visibility = View.VISIBLE
+            binding.totalClassificationsText.text = total.toString()
             val seconds = avgTime / 1000.0
-            avgInferenceTimeText.text = String.format("%.2f s", seconds)
+            binding.avgInferenceTimeText.text = String.format("%.2f s", seconds)
         } else {
-            statisticsCard.visibility = View.GONE
+            binding.statisticsCard.visibility = View.GONE
         }
     }
 
     private fun updateRecentPredictions(history: List<ClassificationResult>) {
         val ctx = context ?: return
-        recentPredictionsContainer.removeAllViews()
+        binding.recentPredictionsContainer.removeAllViews()
 
         if (history.isNotEmpty()) {
-            recentPredictionsCard.visibility = View.VISIBLE
+            binding.recentPredictionsCard.visibility = View.VISIBLE
             val last5 = history.reversed().take(5)
 
             last5.forEach { result ->
@@ -1469,10 +1455,10 @@ class RecordingFragment : Fragment() {
 
                 row.addView(sceneText)
                 row.addView(confText)
-                recentPredictionsContainer.addView(row)
+                binding.recentPredictionsContainer.addView(row)
             }
         } else {
-            recentPredictionsCard.visibility = View.GONE
+            binding.recentPredictionsCard.visibility = View.GONE
         }
     }
 
@@ -1481,7 +1467,7 @@ class RecordingFragment : Fragment() {
         volumeGraphJob = viewLifecycleOwner.lifecycleScope.launch {
             while (isVolumeGraphActive) {
                 val currentVolume = viewModel.uiState.value.currentVolume
-                volumeLineChartView.addDataPoint(currentVolume)
+                binding.volumeLineChartView.addDataPoint(currentVolume)
                 delay(com.fzi.acousticscene.ui.VolumeLineChartView.DATA_INTERVAL_MS)
             }
         }
@@ -1493,8 +1479,8 @@ class RecordingFragment : Fragment() {
     }
 
     private fun updateVolumeGraphForMode(mode: RecordingMode) {
-        volumeLineChartView.setMaxDuration(mode.durationSeconds.toFloat())
-        volumeLineChartView.clearData()
+        binding.volumeLineChartView.setMaxDuration(mode.durationSeconds.toFloat())
+        binding.volumeLineChartView.clearData()
     }
 
     private fun updatePerSecondCircles(perSecondResults: List<ClassificationResult?>) {
@@ -1519,16 +1505,14 @@ class RecordingFragment : Fragment() {
     }
 
     private fun updatePerSecondCardVisibility(mode: RecordingMode) {
-        if (!::perSecondCirclesCard.isInitialized) return
+        if (_binding == null) return
         val longWithAvg = mode == RecordingMode.LONG &&
             LongSubMode.AVERAGE in viewModel.uiState.value.selectedLongSubs
         if (isDevMode && (mode == RecordingMode.AVERAGE || longWithAvg)) {
-            perSecondCirclesCard.visibility = View.VISIBLE
+            binding.perSecondCirclesCard.visibility = View.VISIBLE
         } else {
-            perSecondCirclesCard.visibility = View.GONE
-            if (::switchPerSecondCircles.isInitialized) {
-                switchPerSecondCircles.isChecked = false
-            }
+            binding.perSecondCirclesCard.visibility = View.GONE
+            binding.switchPerSecondCircles.isChecked = false
         }
     }
 
@@ -1563,7 +1547,7 @@ class RecordingFragment : Fragment() {
                 (activity as? MainActivity)?.startClassificationService()
                 viewModel.startClassification()
                 if (isVolumeGraphActive) {
-                    volumeLineChartView.clearData()
+                    binding.volumeLineChartView.clearData()
                     startVolumeGraphCollection()
                 }
             } else {
