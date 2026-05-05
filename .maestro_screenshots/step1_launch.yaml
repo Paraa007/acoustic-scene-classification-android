@@ -1,0 +1,7 @@
+appId: com.fzi.acousticscene
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: /Users/paraaafifi/Arbeit_code/the_App/.maestro_screenshots/01_welcome
