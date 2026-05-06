@@ -94,12 +94,16 @@ data class UiState(
     // When the user pauses with a timer, this holds the SystemClock.elapsedRealtime()
     // deadline at which the session should auto-resume. null = indefinite pause.
     val userPauseDeadlineElapsedMs: Long? = null,
-    val selectedLongSubs: Set<LongSubMode> = setOf(LongSubMode.STANDARD),
+    // Multi-Model Evaluation (LONG mode): per-model sub-mode selection.
+    // Key = model filename, value = checked sub-modes for that model. The locked
+    // default (Fast for _1s_ models, Standard for the rest) is always part of the set.
+    val selectedLongSubsByModel: Map<String, Set<LongSubMode>> = emptyMap(),
     // LONG mode (Dev Mode): user-chosen pause interval between 10 s recordings.
     // null = the user has not picked an interval yet — must be set explicitly via the picker
     // before the LONG mode can start. Not persisted across app launches.
     val selectedLongInterval: LongInterval? = null,
-    val longSubResults: Map<LongSubMode, ClassificationResult?> = emptyMap(),
+    // Multi-Model Evaluation: per-(model, sub-mode) live result, keyed first by model.
+    val longSubResultsByModel: Map<String, Map<LongSubMode, ClassificationResult>> = emptyMap(),
     // ALL IN ONE: model-name-keyed live result, filled as each model finishes inferring.
     // Empty map = single-model session (regular dev / user mode).
     val allInOneResults: Map<String, ClassificationResult> = emptyMap(),

@@ -317,9 +317,10 @@ object ModernDialogHelper {
                 distributionContainer.addView(itemView)
             }
 
-        // Method Comparison section - visible when any LONG record carries sub-mode results.
-        // When present, it replaces the generic "Model predictions" distribution above —
-        // the per-sub-mode stacks already cover the same information.
+        // Method Comparison section — visible when any LONG record carries sub-mode results.
+        // Multi-Model Evaluation: each LongSubResult also carries a `modelName`. We group
+        // first by model, then per (model × sub-mode) show one distribution stack so the
+        // user sees how each model performs under each evaluation method.
         val recordsWithSubs = packageRecords.filter { !it.longSubResults.isNullOrEmpty() }
         if (recordsWithSubs.isNotEmpty()) {
             dialog.findViewById<TextView>(R.id.modelDistributionHeader).visibility = View.GONE
@@ -331,27 +332,49 @@ object ModernDialogHelper {
             mcHeader.visibility = View.VISIBLE
             mcContainer.visibility = View.VISIBLE
 
-            LongSubMode.entries.forEach { sub ->
-                val subRecords = recordsWithSubs.mapNotNull { rec ->
-                    rec.longSubResults?.firstOrNull { it.subMode == sub }
-                }
-                if (subRecords.isEmpty()) return@forEach
+            // Distinct model names actually present in the LONG sub-results. Records
+            // persisted before the Multi-Model migration carry modelName == null —
+            // those collapse into a single "primary" group keyed by `null`.
+            val modelNames = recordsWithSubs
+                .flatMap { it.longSubResults ?: emptyList() }
+                .map { it.modelName }
+                .distinct()
 
-                val sectionLabel = TextView(context).apply {
-                    text = "${sub.label} (${sub.hint})"
+            modelNames.forEach { mName ->
+                // Per-model header — for legacy null-named entries, fall back to the
+                // record's primary model name so the stack still reads coherently.
+                val displayedModel = mName ?: recordsWithSubs.firstOrNull()?.modelName ?: "model"
+                val modelHeader = TextView(context).apply {
+                    text = "🧠 $displayedModel"
                     textSize = 14f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                    setPadding(0, 12, 0, 6)
+                    setPadding(0, 16, 0, 4)
                 }
-                mcContainer.addView(sectionLabel)
+                mcContainer.addView(modelHeader)
 
-                val dist = subRecords.groupBy { it.sceneClass }.mapValues { it.value.size }
-                val total = subRecords.size.toFloat()
-                dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
-                    val percentage = if (total > 0) (count / total * 100).toInt() else 0
-                    val row = createDistributionItemWithProgress(context, scene, count, percentage)
-                    mcContainer.addView(row)
+                LongSubMode.entries.forEach { sub ->
+                    val subRecords = recordsWithSubs.mapNotNull { rec ->
+                        rec.longSubResults?.firstOrNull { it.subMode == sub && it.modelName == mName }
+                    }
+                    if (subRecords.isEmpty()) return@forEach
+
+                    val sectionLabel = TextView(context).apply {
+                        text = "  ${sub.label} (${sub.hint})"
+                        textSize = 13f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                        setPadding(0, 8, 0, 4)
+                    }
+                    mcContainer.addView(sectionLabel)
+
+                    val dist = subRecords.groupBy { it.sceneClass }.mapValues { it.value.size }
+                    val total = subRecords.size.toFloat()
+                    dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
+                        val percentage = if (total > 0) (count / total * 100).toInt() else 0
+                        val row = createDistributionItemWithProgress(context, scene, count, percentage)
+                        mcContainer.addView(row)
+                    }
                 }
             }
         }

@@ -28,6 +28,7 @@ import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.LongSubResult
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.ModelTrainingDuration
 import com.fzi.acousticscene.model.PerSecondClip
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
@@ -470,13 +471,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val result: ClassificationResult?
                     val allInOneForRecord: List<AllInOneResult>
                     if (currentMode == RecordingMode.LONG) {
-                        val (pri, subs) = runLongSubModes(audioSamples!!, _uiState.value.selectedLongSubs)
+                        // Multi-Model Evaluation: every active model runs every checked
+                        // sub-mode on the same 10 s buffer. The Multi-Model card below the
+                        // big circle is fed from the `longSubResultsByModel` map, so the
+                        // separate `runAllInOne` pass is unnecessary in LONG mode.
+                        ensureLongSubsInitialized()
+                        val (pri, subs) = runLongSubModes(audioSamples!!, _uiState.value.selectedLongSubsByModel)
                         result = pri
                         subResults = subs
-                        // LONG + ALL-IN-ONE: run every selected model on the full 10s buffer.
-                        // The LONG sub-modes (Standard/Fast/Avg) continue to use the primary
-                        // model only to keep the comparison matrix tractable.
-                        allInOneForRecord = if (isAllInOne) runAllInOne(audioSamples!!, currentMode) else emptyList()
+                        allInOneForRecord = emptyList()
                     } else {
                         subResults = emptyList()
                         if (isAllInOne) {
@@ -508,10 +511,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         // Akkustand zum Zeitpunkt der Vorhersage erfassen
                         val currentBatteryLevel = getBatteryLevel()
 
-                        // Falls AVERAGE-Sub aktiv war, dessen PerSecondClips mit aufnehmen
+                        // The persistent perSecondClips field reflects the primary model's
+                        // AVERAGE clips only; additional Multi-Model rows store theirs inside
+                        // their own LongSubResult.perSecondClips inside `longSubResults`.
                         val perSecondFromAvg = subResults
-                            .firstOrNull { it.subMode == LongSubMode.AVERAGE }
+                            .firstOrNull { it.subMode == LongSubMode.AVERAGE && it.modelName == _modelName }
                             ?.perSecondClips
+                            ?: subResults.firstOrNull { it.subMode == LongSubMode.AVERAGE }?.perSecondClips
 
                         val record = PredictionRecord(
                             sceneClass = result.sceneClass,
@@ -637,7 +643,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             runningAverageResult = null,
             isPaused = false,
             userPauseDeadlineElapsedMs = null,
-            longSubResults = emptyMap(),
+            longSubResultsByModel = emptyMap(),
             allInOneResults = emptyMap(),
             pendingEvaluation = null
         ) }
@@ -673,20 +679,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun isUserPaused(): Boolean = isPaused
 
     /**
-     * LONG sub-mode selection. STANDARD is always included (default, cannot be removed).
+     * Multi-Model Evaluation: list of model filenames currently active in this
+     * session. Single-model = [primary], multi-model = primary + extras.
      */
-    fun setLongSubs(subs: Set<LongSubMode>) {
-        val normalized = (subs + LongSubMode.STANDARD).toSet()
-        if (_uiState.value.selectedLongSubs != normalized) {
-            _uiState.update { it.copy(selectedLongSubs = normalized) }
+    fun activeModelNames(): List<String> =
+        if (_allInOneModelNames.isNotEmpty()) _allInOneModelNames
+        else listOf(_modelName)
+
+    /** Locked-default sub-mode for a given model, derived from its filename. */
+    fun defaultSubFor(modelName: String): LongSubMode =
+        ModelTrainingDuration.defaultSubMode(modelName)
+
+    /**
+     * Replaces the per-model sub-mode selection wholesale. The locked default for
+     * each model is always merged back in, so callers can pass only the optional
+     * extras and not worry about accidentally unchecking the default.
+     */
+    fun setLongSubsForModel(modelName: String, subs: Set<LongSubMode>) {
+        val locked = defaultSubFor(modelName)
+        val normalized = (subs + locked).toSet()
+        val current = _uiState.value.selectedLongSubsByModel
+        if (current[modelName] == normalized) return
+        _uiState.update {
+            it.copy(selectedLongSubsByModel = current + (modelName to normalized))
         }
     }
 
-    fun toggleLongSub(sub: LongSubMode) {
-        if (sub == LongSubMode.STANDARD) return  // locked on
-        val current = _uiState.value.selectedLongSubs
+    fun toggleLongSubForModel(modelName: String, sub: LongSubMode) {
+        if (sub == defaultSubFor(modelName)) return  // locked on
+        val current = _uiState.value.selectedLongSubsByModel[modelName] ?: setOf(defaultSubFor(modelName))
         val next = if (sub in current) current - sub else current + sub
-        setLongSubs(next)
+        setLongSubsForModel(modelName, next)
+    }
+
+    /** Ensures every active model has at least its locked-default sub-mode in the map. */
+    fun ensureLongSubsInitialized(extras: Map<String, Set<LongSubMode>> = emptyMap()) {
+        val models = activeModelNames()
+        val current = _uiState.value.selectedLongSubsByModel
+        val merged = models.associateWith { name ->
+            val fromExtras = extras[name] ?: emptySet()
+            val locked = defaultSubFor(name)
+            (current[name] ?: emptySet()) + fromExtras + locked
+        }
+        // Drop entries for models that are no longer active so the map doesn't grow forever.
+        if (merged != current.filterKeys { it in models }) {
+            _uiState.update { it.copy(selectedLongSubsByModel = merged) }
+        }
     }
 
     /**
@@ -1008,120 +1046,157 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * LONG-mode fan-out: apply each selected sub-mode to the same 10 s buffer.
-     * Returns (primaryResult, subResults). primaryResult mirrors the Standard sub-mode
-     * (fallback: first ran sub-mode) so the existing record / UI pipeline stays untouched
-     * at the top level. UI's longSubResults map is updated live per sub-mode.
+     * LONG-mode Multi-Model fan-out: every active model evaluates the same 10 s
+     * buffer with each of its selected sub-modes. The primary model's locked-
+     * default-method result drives the existing single-circle UI; the full
+     * (model × method) matrix lands in `longSubResultsByModel` for History.
+     *
+     * Returns (primaryResult, subResults) — primaryResult is the primary model's
+     * locked-default outcome (Standard for 10s-trained, Fast for 1s-trained), with
+     * fallback to any other ran combo so the record always carries something.
      */
     private suspend fun runLongSubModes(
         audioSamples: FloatArray,
-        subs: Set<LongSubMode>
+        subsByModel: Map<String, Set<LongSubMode>>
     ): Pair<ClassificationResult?, List<LongSubResult>> {
         val sampleRate = 32000
         val out = mutableListOf<LongSubResult>()
-        var standardResult: ClassificationResult? = null
+        var primaryResult: ClassificationResult? = null
         var anyResult: ClassificationResult? = null
+        val primaryName = _modelName
+        val primarySub = ModelTrainingDuration.defaultSubMode(primaryName)
 
         // Reset live state for this iteration
         _uiState.update { it.copy(
-            longSubResults = emptyMap(),
+            longSubResultsByModel = emptyMap(),
             perSecondResults = List(10) { null },
             runningAverageResult = null
         )}
 
-        // Standard — full 10s
-        if (LongSubMode.STANDARD in subs) {
-            val r = withContext(mlDispatcher) {
-                modelInference.infer(audioSamples, RecordingMode.STANDARD)
-            }
-            if (r != null) {
-                standardResult = r
-                anyResult = anyResult ?: r
-                pushLongSubUi(LongSubMode.STANDARD, r)
-                out += LongSubResult(
-                    subMode = LongSubMode.STANDARD,
-                    sceneClass = r.sceneClass,
-                    confidence = r.confidence,
-                    allProbabilities = r.allProbabilities,
-                    inferenceTimeMs = r.inferenceTimeMs
-                )
-            }
+        // Build (modelName -> ModelInference) lookup. In single-model sessions we have
+        // only modelInference; in Multi-Model sessions allInOneInferences carries one
+        // entry per selected model in selection order.
+        val inferenceByName: Map<String, ModelInference> = if (allInOneInferences.isNotEmpty()) {
+            _allInOneModelNames.zip(allInOneInferences).toMap()
+        } else {
+            mapOf(primaryName to modelInference)
         }
 
-        // Fast — middle 1s
-        if (LongSubMode.FAST in subs && audioSamples.size >= sampleRate * 10) {
-            val from = (sampleRate * 4.5f).toInt()
-            val to = (sampleRate * 5.5f).toInt()
-            val slice = audioSamples.copyOfRange(from, to)
-            val r = withContext(mlDispatcher) {
-                modelInference.infer(slice, RecordingMode.FAST)
-            }
-            if (r != null) {
-                anyResult = anyResult ?: r
-                pushLongSubUi(LongSubMode.FAST, r)
-                out += LongSubResult(
-                    subMode = LongSubMode.FAST,
-                    sceneClass = r.sceneClass,
-                    confidence = r.confidence,
-                    allProbabilities = r.allProbabilities,
-                    inferenceTimeMs = r.inferenceTimeMs
-                )
-            }
-        }
+        for ((modelName, subs) in subsByModel) {
+            val inference = inferenceByName[modelName] ?: continue
+            if (!isRecording) break
 
-        // Average — 10 × 1s slices, averaged, streamed live
-        if (LongSubMode.AVERAGE in subs && audioSamples.size >= sampleRate * 10) {
-            val startTime = System.currentTimeMillis()
-            val clipResults = mutableListOf<ClassificationResult>()
-            for (i in 0 until 10) {
-                if (!isRecording) break
-                val slice = audioSamples.copyOfRange(i * sampleRate, (i + 1) * sampleRate)
-                val clipResult = withContext(mlDispatcher) {
-                    modelInference.infer(slice, RecordingMode.FAST)
-                } ?: continue
-                clipResults += clipResult
-                val runningAvg = computeRunningAverage(clipResults, startTime)
-                _uiState.update { current ->
-                    val per = current.perSecondResults.toMutableList()
-                    if (i < per.size) per[i] = clipResult
-                    current.copy(
-                        perSecondResults = per,
-                        runningAverageResult = runningAvg
+            // Standard — full 10s
+            if (LongSubMode.STANDARD in subs) {
+                val r = withContext(mlDispatcher) {
+                    inference.infer(audioSamples, RecordingMode.STANDARD)
+                }
+                if (r != null) {
+                    if (modelName == primaryName && primarySub == LongSubMode.STANDARD) {
+                        primaryResult = r
+                    }
+                    anyResult = anyResult ?: r
+                    pushLongSubUi(modelName, LongSubMode.STANDARD, r)
+                    out += LongSubResult(
+                        subMode = LongSubMode.STANDARD,
+                        sceneClass = r.sceneClass,
+                        confidence = r.confidence,
+                        allProbabilities = r.allProbabilities,
+                        inferenceTimeMs = r.inferenceTimeMs,
+                        modelName = modelName
                     )
                 }
-                // Brief pacing so the live per-second circles animate visibly
-                delay(350L)
             }
-            if (clipResults.isNotEmpty()) {
-                val avg = computeRunningAverage(clipResults, startTime)
-                anyResult = anyResult ?: avg
-                pushLongSubUi(LongSubMode.AVERAGE, avg)
-                val clips = clipResults.mapIndexed { idx, cr ->
-                    PerSecondClip(
-                        clipIndex = idx,
-                        sceneClass = cr.sceneClass,
-                        confidence = cr.confidence,
-                        allProbabilities = cr.allProbabilities
+
+            // Fast — middle 1s
+            if (LongSubMode.FAST in subs && audioSamples.size >= sampleRate * 10) {
+                val from = (sampleRate * 4.5f).toInt()
+                val to = (sampleRate * 5.5f).toInt()
+                val slice = audioSamples.copyOfRange(from, to)
+                val r = withContext(mlDispatcher) {
+                    inference.infer(slice, RecordingMode.FAST)
+                }
+                if (r != null) {
+                    if (modelName == primaryName && primarySub == LongSubMode.FAST) {
+                        primaryResult = r
+                    }
+                    anyResult = anyResult ?: r
+                    pushLongSubUi(modelName, LongSubMode.FAST, r)
+                    out += LongSubResult(
+                        subMode = LongSubMode.FAST,
+                        sceneClass = r.sceneClass,
+                        confidence = r.confidence,
+                        allProbabilities = r.allProbabilities,
+                        inferenceTimeMs = r.inferenceTimeMs,
+                        modelName = modelName
                     )
                 }
-                out += LongSubResult(
-                    subMode = LongSubMode.AVERAGE,
-                    sceneClass = avg.sceneClass,
-                    confidence = avg.confidence,
-                    allProbabilities = avg.allProbabilities,
-                    inferenceTimeMs = avg.inferenceTimeMs,
-                    perSecondClips = clips
-                )
+            }
+
+            // Average — 10 × 1s slices, averaged. Live per-second circles only render
+            // for the primary model; for additional models the clips are still collected
+            // but not streamed into UiState (would race with the primary's animation).
+            if (LongSubMode.AVERAGE in subs && audioSamples.size >= sampleRate * 10) {
+                val startTime = System.currentTimeMillis()
+                val clipResults = mutableListOf<ClassificationResult>()
+                val streamLive = (modelName == primaryName)
+                for (i in 0 until 10) {
+                    if (!isRecording) break
+                    val slice = audioSamples.copyOfRange(i * sampleRate, (i + 1) * sampleRate)
+                    val clipResult = withContext(mlDispatcher) {
+                        inference.infer(slice, RecordingMode.FAST)
+                    } ?: continue
+                    clipResults += clipResult
+                    if (streamLive) {
+                        val runningAvg = computeRunningAverage(clipResults, startTime)
+                        _uiState.update { current ->
+                            val per = current.perSecondResults.toMutableList()
+                            if (i < per.size) per[i] = clipResult
+                            current.copy(
+                                perSecondResults = per,
+                                runningAverageResult = runningAvg
+                            )
+                        }
+                        delay(350L)
+                    }
+                }
+                if (clipResults.isNotEmpty()) {
+                    val avg = computeRunningAverage(clipResults, startTime)
+                    if (modelName == primaryName && primarySub == LongSubMode.AVERAGE) {
+                        primaryResult = avg
+                    }
+                    anyResult = anyResult ?: avg
+                    pushLongSubUi(modelName, LongSubMode.AVERAGE, avg)
+                    val clips = clipResults.mapIndexed { idx, cr ->
+                        PerSecondClip(
+                            clipIndex = idx,
+                            sceneClass = cr.sceneClass,
+                            confidence = cr.confidence,
+                            allProbabilities = cr.allProbabilities
+                        )
+                    }
+                    out += LongSubResult(
+                        subMode = LongSubMode.AVERAGE,
+                        sceneClass = avg.sceneClass,
+                        confidence = avg.confidence,
+                        allProbabilities = avg.allProbabilities,
+                        inferenceTimeMs = avg.inferenceTimeMs,
+                        perSecondClips = clips,
+                        modelName = modelName
+                    )
+                }
             }
         }
 
-        val primary = standardResult ?: anyResult
-        return primary to out
+        return (primaryResult ?: anyResult) to out
     }
 
-    private fun pushLongSubUi(sub: LongSubMode, result: ClassificationResult) {
+    private fun pushLongSubUi(modelName: String, sub: LongSubMode, result: ClassificationResult) {
         _uiState.update { state ->
-            state.copy(longSubResults = state.longSubResults + (sub to result))
+            val prev = state.longSubResultsByModel[modelName].orEmpty()
+            state.copy(
+                longSubResultsByModel = state.longSubResultsByModel + (modelName to (prev + (sub to result)))
+            )
         }
     }
 
