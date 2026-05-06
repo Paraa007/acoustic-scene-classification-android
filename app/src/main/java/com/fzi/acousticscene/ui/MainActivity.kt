@@ -16,27 +16,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.navigation.NavController
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.setupWithNavController
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.service.ClassificationService
 import com.fzi.acousticscene.util.ThemeHelper
-import com.google.android.material.bottomnavigation.BottomNavigationView
 
 /**
- * MainActivity - Single Activity host with Bottom Navigation
+ * MainActivity — single Activity that hosts the new wizard-driven nav graph.
  *
- * Hosts 4 fragments via NavHostFragment:
- * - User Mode (RecordingFragment with isDevMode=false)
- * - Dev Mode (RecordingFragment with isDevMode=true)
- * - History (HistoryFragment)
- * - Settings (SettingsFragment)
- *
- * Manages:
- * - ClassificationService binding
- * - Battery optimization
- * - Edge-to-Edge display
+ * Bottom navigation is gone (per UI_REDESIGN_WIZARD.md): every screen is reached
+ * either from the welcome page or by walking forward/back through the wizard.
+ * Battery optimization + foreground service binding are unchanged.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -44,7 +33,6 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
     }
 
-    // Service for background operation
     private var classificationService: ClassificationService? = null
     private var serviceBound = false
 
@@ -53,48 +41,26 @@ class MainActivity : AppCompatActivity() {
             val binder = service as ClassificationService.LocalBinder
             classificationService = binder.getService()
             serviceBound = true
-            android.util.Log.d(TAG, "Service connected")
         }
-
         override fun onServiceDisconnected(name: ComponentName?) {
             classificationService = null
             serviceBound = false
-            android.util.Log.d(TAG, "Service disconnected")
         }
     }
 
-    private lateinit var navController: NavController
-    private lateinit var bottomNav: BottomNavigationView
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply saved theme before super.onCreate()
         ThemeHelper.applySavedTheme(this)
-
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
-
         setContentView(R.layout.activity_main)
 
-        // Window Insets for dynamic padding (don't add bottom padding - bottom nav handles it)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        // Setup Navigation
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        navController = navHostFragment.navController
-
-        bottomNav = findViewById(R.id.bottom_navigation)
-        bottomNav.setupWithNavController(navController)
-
-        // Bind service
         bindClassificationService()
-
-        // Check battery optimization
         checkBatteryOptimization()
     }
 
@@ -106,33 +72,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Binds the ClassificationService
-     */
     private fun bindClassificationService() {
         val intent = Intent(this, ClassificationService::class.java)
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
-    /**
-     * Starts the ClassificationService (for background operation)
-     * Called by RecordingFragment
-     */
+    /** Public so LiveRecordingFragment can ask the foreground service to start. */
     fun startClassificationService() {
         val intent = Intent(this, ClassificationService::class.java).apply {
             action = ClassificationService.ACTION_START
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+        else startService(intent)
     }
 
-    /**
-     * Stops the ClassificationService
-     * Called by RecordingFragment
-     */
     fun stopClassificationService() {
         val intent = Intent(this, ClassificationService::class.java).apply {
             action = ClassificationService.ACTION_STOP
@@ -140,9 +93,6 @@ class MainActivity : AppCompatActivity() {
         startService(intent)
     }
 
-    /**
-     * Checks battery optimization status
-     */
     private fun checkBatteryOptimization() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -174,21 +124,16 @@ class MainActivity : AppCompatActivity() {
                     data = Uri.parse("package:$packageName")
                 }
                 startActivity(intent)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 try {
-                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    startActivity(intent)
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                     Toast.makeText(
                         this,
                         getString(R.string.battery_search_app, getString(R.string.app_name)),
                         Toast.LENGTH_LONG
                     ).show()
-                } catch (e2: Exception) {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.battery_manual_disable),
-                        Toast.LENGTH_LONG
-                    ).show()
+                } catch (_: Exception) {
+                    Toast.makeText(this, getString(R.string.battery_manual_disable), Toast.LENGTH_LONG).show()
                 }
             }
         }

@@ -289,7 +289,6 @@ object ModernDialogHelper {
 
         // Mode info — for LONG records the label reflects the user-chosen pause interval
         // (e.g. "every 1h") instead of the static enum label.
-        val isDevMode = firstRecord?.isDevMode ?: false
         val recordingMode = firstRecord?.let { rec ->
             if (rec.recordingMode == RecordingMode.LONG && rec.longIntervalMinutes != null) {
                 "every ${formatLongIntervalMinutes(rec.longIntervalMinutes)}"
@@ -297,8 +296,7 @@ object ModernDialogHelper {
                 rec.recordingMode.label
             }
         } ?: "Standard"
-        val modeText = if (isDevMode) "Development / $recordingMode" else "User / $recordingMode"
-        dialog.findViewById<TextView>(R.id.modeText).text = modeText
+        dialog.findViewById<TextView>(R.id.modeText).text = recordingMode
 
         // Count and confidence
         dialog.findViewById<TextView>(R.id.countText).text = "${packageRecords.size} ${context.getString(R.string.recordings)}"

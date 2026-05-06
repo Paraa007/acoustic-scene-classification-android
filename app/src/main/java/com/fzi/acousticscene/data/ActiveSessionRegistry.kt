@@ -5,19 +5,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Process-wide registry of currently active recording sessions, keyed by mode (User vs Dev).
- * Survives fragment/activity destruction as long as the process is alive (e.g., foreground service).
- * Used to (a) skip the Dev Mode model picker when a session is already running and
- * (b) render an "active" badge next to the matching session in History.
+ * Process-wide registry of the currently active recording session. Survives
+ * fragment/activity destruction as long as the process is alive (foreground
+ * service). With the wizard redesign there's only ever one session at a time;
+ * this registry exists so the History tile can render an "active" badge and
+ * survive process revival.
  */
 object ActiveSessionRegistry {
     data class Entry(
-        val isDevMode: Boolean,
         val modelPath: String,
         val modelName: String,
         val numClasses: Int,
         val sessionStartTime: Long,
-        // Filenames (not full paths) of every model when ALL IN ONE is active.
+        // Filenames (not full paths) of every model when Multi-Model is active.
         // null / empty = single-model session.
         val allInOneModels: List<String>? = null
     ) {
@@ -25,19 +25,19 @@ object ActiveSessionRegistry {
             get() = allInOneModels != null && allInOneModels.size >= 2
     }
 
-    private val _active = MutableStateFlow<Map<Boolean, Entry>>(emptyMap())
-    val active: StateFlow<Map<Boolean, Entry>> = _active.asStateFlow()
+    private val _active = MutableStateFlow<Entry?>(null)
+    val active: StateFlow<Entry?> = _active.asStateFlow()
 
     fun register(entry: Entry) {
-        _active.value = _active.value + (entry.isDevMode to entry)
+        _active.value = entry
     }
 
-    fun unregister(isDevMode: Boolean) {
-        _active.value = _active.value - isDevMode
+    fun unregister() {
+        _active.value = null
     }
 
-    fun get(isDevMode: Boolean): Entry? = _active.value[isDevMode]
+    fun get(): Entry? = _active.value
 
     fun activeSessionStartTimes(): Set<Long> =
-        _active.value.values.map { it.sessionStartTime }.toSet()
+        _active.value?.let { setOf(it.sessionStartTime) } ?: emptySet()
 }
