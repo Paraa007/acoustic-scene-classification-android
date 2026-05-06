@@ -63,6 +63,27 @@ class AudioRecorder(
     private val _volumeFlow = MutableStateFlow(0f)
     val volumeFlow: StateFlow<Float> = _volumeFlow.asStateFlow()
 
+    // Aggregated volume over the active recording window. Reset at the start of
+    // every `startRecording()` call, snapshot via [snapshotVolumeStats] once the
+    // recording completes so the cycle's PredictionRecord can carry mean/peak.
+    @Volatile private var volumeSampleSum: Double = 0.0
+    @Volatile private var volumeSampleCount: Int = 0
+    @Volatile private var volumeSamplePeak: Float = 0f
+
+    /** Mean/peak of the RMS samples since the last `startRecording()` call. */
+    data class VolumeStats(val mean: Float, val peak: Float)
+
+    fun snapshotVolumeStats(): VolumeStats {
+        val mean = if (volumeSampleCount > 0) (volumeSampleSum / volumeSampleCount).toFloat() else 0f
+        return VolumeStats(mean = mean, peak = volumeSamplePeak)
+    }
+
+    private fun resetVolumeStats() {
+        volumeSampleSum = 0.0
+        volumeSampleCount = 0
+        volumeSamplePeak = 0f
+    }
+
     /**
      * Berechnet den RMS (Root Mean Square) Wert eines Audio-Buffers.
      * RMS ist ein guter Indikator für die "gefühlte" Lautstärke.
@@ -109,7 +130,8 @@ class AudioRecorder(
         
         // Emit: Recording gestartet
         emit(RecordingState.Started)
-        
+        resetVolumeStats()
+
         val bufferSize = calculateBufferSize(sampleRate)
         
         try {
@@ -155,6 +177,10 @@ class AudioRecorder(
                     // Berechne Echtzeit-Lautstärke (für Visualisierung)
                     val volume = calculateRmsVolume(readBuffer, read)
                     _volumeFlow.value = volume
+                    // Track aggregate stats so the cycle can be tagged with mean/peak.
+                    volumeSampleSum += volume
+                    volumeSampleCount++
+                    if (volume > volumeSamplePeak) volumeSamplePeak = volume
 
                     // Progress Update (nicht zu oft!)
                     if (samplesRead - lastProgressUpdate >= progressInterval) {

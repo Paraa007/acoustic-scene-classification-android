@@ -27,7 +27,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AcousticSceneClassifier">
 
-        <!-- Main Activity - Single Activity Host with Bottom Navigation (Launcher) -->
+        <!-- Main Activity - hosts the wizard-driven nav graph (launcher) -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
@@ -37,6 +37,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- History Activity - reachable from Welcome and Results Summary -->
+        <activity
+            android:name=".ui.HistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AcousticSceneClassifier" />
 
         <!-- FileProvider für CSV Export -->
         <provider

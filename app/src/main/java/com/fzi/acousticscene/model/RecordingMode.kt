@@ -11,26 +11,38 @@ package com.fzi.acousticscene.model
  * LONG-Modus: Macht 10s Aufnahme, dann 30 Minuten Pause (für Langzeit-Monitoring)
  */
 enum class RecordingCategory(val label: String) {
-    CONTINUOUS("Durchgehend"),
-    INTERVAL("Intervall")
+    CONTINUOUS("Continuous"),
+    INTERVAL("Interval")
 }
 
 /**
  * LONG-mode evaluation sub-modes: applied to the same 10 s recording.
  * STANDARD is always selected (default, cannot be unchecked).
+ *
+ * [sliceSeconds] is the audio length each individual inference call sees —
+ * STANDARD feeds the full 10 s buffer, FAST takes a 1 s middle slice,
+ * AVERAGE slices the buffer into ten 1 s clips and infers per clip. The model's
+ * training duration must match this slice for the inference to be valid.
  */
-enum class LongSubMode(val label: String, val hint: String) {
-    STANDARD("Standard", "full 10 s"),
-    FAST("Fast", "middle 1 s"),
-    AVERAGE("Avg", "10 × 1 s → Ø")
+enum class LongSubMode(val label: String, val hint: String, val sliceSeconds: Int) {
+    STANDARD("Standard", "full 10 s", 10),
+    FAST("Fast", "middle 1 s", 1),
+    AVERAGE("Avg", "10 × 1 s → Ø", 1);
+
+    /**
+     * Whether this method's slice duration matches the model's training
+     * duration. Mismatch either crashes the tensor reshape or returns garbage —
+     * the wizard greys out incompatible methods so the user can't pick them.
+     */
+    fun isCompatibleWith(modelTrainingSeconds: Int): Boolean =
+        sliceSeconds == modelTrainingSeconds
 }
 
 enum class RecordingMode(
     val durationSeconds: Int,
     val label: String,
     val category: RecordingCategory,
-    val pauseAfterRecordingMs: Long = 0L,
-    val devOnly: Boolean = false
+    val pauseAfterRecordingMs: Long = 0L
 ) {
     STANDARD(
         durationSeconds = 10,
@@ -49,15 +61,13 @@ enum class RecordingMode(
         pauseAfterRecordingMs = 30 * 60 * 1000L
     ),
     /**
-     * AVERAGE-Modus (nur Dev Mode):
      * Nimmt 10s auf, teilt in 10x 1s-Clips, führt Inferenz pro Clip aus,
      * und berechnet den Durchschnitt der 10 Vorhersagen als Ergebnis.
      */
     AVERAGE(
         durationSeconds = 10,
         label = "Avg (10s)",
-        category = RecordingCategory.CONTINUOUS,
-        devOnly = true
+        category = RecordingCategory.CONTINUOUS
     );
 
     fun hasPauseAfterRecording(): Boolean = pauseAfterRecordingMs > 0
@@ -66,8 +76,5 @@ enum class RecordingMode(
 
     companion object {
         val DEFAULT = STANDARD
-
-        fun forCategory(category: RecordingCategory, isDevMode: Boolean): List<RecordingMode> =
-            values().filter { it.category == category && (isDevMode || !it.devOnly) }
     }
 }

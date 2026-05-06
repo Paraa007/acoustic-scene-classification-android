@@ -141,7 +141,9 @@ class VolumeLineChartView @JvmOverloads constructor(
      * Based on the recording mode (1s, 5s, 10s, etc.)
      */
     fun setMaxDuration(seconds: Float) {
-        maxDurationSeconds = max(1f, seconds)
+        val next = max(1f, seconds)
+        if (next == maxDurationSeconds) return
+        maxDurationSeconds = next
         // Clear data when duration changes
         dataPoints.clear()
         invalidate()

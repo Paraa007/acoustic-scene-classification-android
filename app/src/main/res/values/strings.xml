@@ -325,4 +325,62 @@
     <string name="long_sub_label_fast">Fast (middle 1 s)</string>
     <string name="long_sub_label_average">Avg (10 × 1 s)</string>
     <string name="history_method_comparison">Method comparison</string>
+
+    <!-- Welcome / Home -->
+    <string name="welcome_new_session">Start new session</string>
+    <string name="welcome_last_config">Use last config</string>
+    <string name="welcome_no_models">No models found — drop a .pt file into dev_models/.</string>
+
+    <!-- Wizard -->
+    <string name="wizard_back">Back</string>
+    <string name="wizard_next">Next</string>
+    <string name="wizard_start">Start</string>
+    <string name="wizard_step_label">Step %1$d of %2$d</string>
+    <string name="wizard_models_hint">Pick at least one model.</string>
+    <string name="wizard_category_continuous_hint">Recordings run back-to-back.</string>
+    <string name="wizard_category_interval_hint">One recording, then a pause, then again.</string>
+    <string name="wizard_clip_fast">Fast (1 s)</string>
+    <string name="wizard_clip_standard">Standard (10 s)</string>
+    <string name="wizard_clip_avg">Avg (10 × 1 s)</string>
+    <string name="wizard_methods_per_model">Methods for %1$s</string>
+    <string name="wizard_method_locked">default method (locked)</string>
+    <string name="wizard_method_incompatible">not available (model trained on %1$d s clips)</string>
+    <string name="wizard_clip_mixed_durations">You picked models trained on different clip lengths (1 s and 10 s). In Continuous mode the same clip length runs against every model, so no option is valid. Go back and pick models with the same training duration, or use Interval mode.</string>
+    <string name="wizard_clip_incompatible_for_models">incompatible with the selected models</string>
+    <string name="wizard_summary_title">Summary</string>
+    <string name="wizard_summary_models">Models</string>
+    <string name="wizard_summary_category">Mode</string>
+    <string name="wizard_summary_clip">Recording</string>
+    <string name="wizard_summary_pause">Interval</string>
+    <string name="wizard_summary_methods">Methods</string>
+    <string name="wizard_summary_session">Session duration</string>
+
+    <!-- Session Duration -->
+    <string name="session_duration_5min">5 min</string>
+    <string name="session_duration_15min">15 min</string>
+    <string name="session_duration_30min">30 min</string>
+    <string name="session_duration_1h">1 h</string>
+    <string name="session_duration_3h">3 h</string>
+    <string name="session_duration_6h">6 h</string>
+    <string name="session_duration_12h">12 h</string>
+    <string name="session_duration_manual">Stop manually</string>
+
+    <!-- Live Recording -->
+    <string name="live_show_live_data">Show Live Data</string>
+    <string name="live_pause">Pause</string>
+    <string name="live_resume">Resume</string>
+    <string name="live_stop">Stop</string>
+    <string name="live_volume_label">Volume</string>
+    <string name="live_loading_models">Loading models…</string>
+    <string name="pause_picker_title">Pause for how long?</string>
+    <string name="pause_picker_subtitle">Pick a timer or pause without a limit. The current cycle finishes before the pause begins.</string>
+    <string name="pause_picker_no_timer">No timer (manual resume)</string>
+
+    <!-- Results Summary -->
+    <string name="results_summary_title">Session ended</string>
+    <string name="results_back_home">Back to home</string>
+    <string name="results_open_history">Open history</string>
+    <string name="results_cycles">Cycles: %1$d</string>
+    <string name="results_top_class">Top class: %1$s</string>
+    <string name="results_avg_volume">Avg volume: %1$.2f</string>
 </resources>

@@ -22,7 +22,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
+import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.PredictionRecord
+import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.util.ThemeHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -478,25 +480,23 @@ class HistoryActivity : AppCompatActivity() {
                 val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
                 sessionNameText.text = displayName
 
-                // Mode badge (Dev or User)
-                val isDevMode = packageRecords.first().isDevMode
-                if (isDevMode) {
-                    modeBadge.text = "Dev"
-                    modeBadge.setBackgroundResource(R.drawable.bg_mode_badge_dev)
-                } else {
-                    modeBadge.text = "User"
-                    modeBadge.setBackgroundResource(R.drawable.bg_mode_badge_user)
-                }
-                modeBadge.setTextColor(itemView.context.getColor(R.color.on_primary))
+                // Old "Dev" / "User" badge is gone — replaced by a compact config label
+                // derived from the records ("🧠 model · Continuous · Standard 10s" etc.).
+                modeBadge.visibility = View.GONE
 
-                // Dauer berechnen
+                // Pause synthetic records inflate counts and don't represent actual
+                // recordings, so they're filtered out of the headline numbers and the
+                // config-label derivation.
+                val recordingRecords = packageRecords.filterNot { it.isPause }
                 val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
                 val durationStr = formatDuration(durationMs)
-                countAndDurationText.text = "${packageRecords.size} ${itemView.context.getString(R.string.recordings)} • $durationStr"
+                val configLabel = configLabel(recordingRecords.ifEmpty { packageRecords })
+                countAndDurationText.text =
+                    "$configLabel\n${recordingRecords.size} ${itemView.context.getString(R.string.recordings)} • $durationStr"
 
                 // Batterie-Verbrauch berechnen und anzeigen
-                val firstRecord = packageRecords.first()
-                val lastRecord = packageRecords.last()
+                val firstRecord = recordingRecords.firstOrNull() ?: packageRecords.first()
+                val lastRecord = recordingRecords.lastOrNull() ?: packageRecords.last()
                 val startBattery = firstRecord.batteryLevel
                 val endBattery = lastRecord.batteryLevel
 
@@ -549,6 +549,48 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     companion object {
+        /**
+         * Builds a compact one-line config label for a session tile, replacing
+         * the old "Dev" / "User" badge with what was actually configured.
+         * Examples:
+         *   🧠 model1.pt · Continuous · Standard (10s)
+         *   🧠 3 models · Interval every 30 min · 2 methods
+         */
+        fun configLabel(records: List<PredictionRecord>): String {
+            if (records.isEmpty()) return ""
+            val first = records.first()
+
+            val multiModelCount = records
+                .mapNotNull { it.allInOneResults }
+                .firstOrNull { it.isNotEmpty() }
+                ?.size ?: 1
+            val modelLabel = if (multiModelCount >= 2) "🧠 $multiModelCount models"
+            else "🧠 ${first.modelName}"
+
+            val pathLabel = if (first.recordingMode == RecordingMode.LONG) {
+                val interval = first.longIntervalMinutes
+                val intervalStr = interval?.let { mins ->
+                    if (mins >= 60 && mins % 60 == 0) "every ${mins / 60} h"
+                    else "every $mins min"
+                } ?: "Interval"
+                val methodCount = records
+                    .mapNotNull { it.longSubResults }
+                    .flatten()
+                    .map { it.subMode }
+                    .toSet()
+                    .size
+                val methodsStr = when {
+                    methodCount <= 1 -> ""
+                    else -> " · $methodCount methods"
+                }
+                "Interval $intervalStr$methodsStr"
+            } else {
+                "Continuous · ${first.recordingMode.label}"
+            }
+
+            return "$modelLabel · $pathLabel"
+        }
+
         /**
          * Formatiert eine Dauer in Millisekunden als lesbaren deutschen String.
          * Beispiele: "12 s", "5 min 30 s", "1 h 15 min"
