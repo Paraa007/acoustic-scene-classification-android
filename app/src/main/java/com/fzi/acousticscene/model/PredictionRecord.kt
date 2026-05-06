@@ -40,6 +40,10 @@ data class AllInOneResult(
 
 /**
  * LONG-mode sub-mode result (Standard / Fast / Avg applied to the same 10 s recording).
+ *
+ * `modelName` was added with the Multi-Model Evaluation feature: each
+ * (model, sub-mode) combination produces its own [LongSubResult]. Older records
+ * persisted before the migration carry `null` here and are treated as primary-model.
  */
 data class LongSubResult(
     val subMode: LongSubMode,
@@ -47,14 +51,15 @@ data class LongSubResult(
     val confidence: Float,
     val allProbabilities: FloatArray,
     val inferenceTimeMs: Long,
-    val perSecondClips: List<PerSecondClip>? = null  // Only for AVERAGE sub-mode
+    val perSecondClips: List<PerSecondClip>? = null,  // Only for AVERAGE sub-mode
+    val modelName: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LongSubResult) return false
-        return subMode == other.subMode
+        return subMode == other.subMode && modelName == other.modelName
     }
-    override fun hashCode(): Int = subMode.hashCode()
+    override fun hashCode(): Int = 31 * subMode.hashCode() + (modelName?.hashCode() ?: 0)
 }
 
 /**
@@ -145,10 +150,20 @@ data class PredictionRecord(
             }
         } else ""
 
-        // LONG sub-mode results
+        // LONG sub-mode results.
+        // Multi-Model Evaluation: each (model, sub-mode) gets its own LongSubResult.
+        // The 3 fixed CSV columns (long_standard / long_fast / long_average) carry pipe-
+        // serialised per-model entries: "m1:Park:80%|m2:Park:75%". Records from before
+        // the migration (modelName == null) emit a single unprefixed entry.
         fun subCell(sub: LongSubMode): String {
-            val r = longSubResults?.firstOrNull { it.subMode == sub } ?: return ""
-            return "${r.sceneClass.label}:${(r.confidence * 100).toInt()}%"
+            val matching = longSubResults?.filter { it.subMode == sub }.orEmpty()
+            if (matching.isEmpty()) return ""
+            return matching.joinToString("|") { r ->
+                val name = r.modelName
+                val pct = (r.confidence * 100).toInt()
+                if (name.isNullOrBlank()) "${r.sceneClass.label}:$pct%"
+                else "$name:${r.sceneClass.label}:$pct%"
+            }
         }
         val longStdStr = subCell(LongSubMode.STANDARD)
         val longFastStr = subCell(LongSubMode.FAST)

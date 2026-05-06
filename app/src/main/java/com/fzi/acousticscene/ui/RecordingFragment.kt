@@ -32,6 +32,7 @@ import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.ModelTrainingDuration
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
@@ -457,22 +458,12 @@ class RecordingFragment : Fragment() {
         binding.longFastCircle.setTargetSize(60)
         binding.longAvgCircle.setTargetSize(60)
 
-        // Restore persisted LONG sub-mode selection (Dev Mode only feature for now)
+        // Multi-Model Evaluation: restore persisted per-model sub-mode selection.
+        // Built/refreshed lazily each time the active-model set changes (via observer
+        // in setupObservers + rebuildMultiModelEvalRows).
         if (isDevMode) {
-            val persisted = loadPersistedLongSubs()
-            viewModel.setLongSubs(persisted)
-            binding.cbLongFast.isChecked = LongSubMode.FAST in persisted
-            binding.cbLongAverage.isChecked = LongSubMode.AVERAGE in persisted
-        }
-        binding.cbLongFast.setOnCheckedChangeListener { _, _ ->
-            if (suppressSubModeListener) return@setOnCheckedChangeListener
-            viewModel.toggleLongSub(LongSubMode.FAST)
-            persistLongSubs(viewModel.uiState.value.selectedLongSubs)
-        }
-        binding.cbLongAverage.setOnCheckedChangeListener { _, _ ->
-            if (suppressSubModeListener) return@setOnCheckedChangeListener
-            viewModel.toggleLongSub(LongSubMode.AVERAGE)
-            persistLongSubs(viewModel.uiState.value.selectedLongSubs)
+            val persisted = loadPersistedLongSubsByModel()
+            viewModel.ensureLongSubsInitialized(persisted)
         }
 
         // Initialize volume graph with current recording mode duration
@@ -632,18 +623,31 @@ class RecordingFragment : Fragment() {
     private fun longSubsPrefsKey(): String =
         if (isDevMode) "long_sub_modes_dev" else "long_sub_modes_user"
 
-    private fun loadPersistedLongSubs(): Set<LongSubMode> {
+    /**
+     * Multi-Model Evaluation persistence: per-(model, sub-mode) entries flattened
+     * into a single Set<String> as `"<modelName>::<SubMode>"`. Stays compatible with
+     * SharedPreferences' string-set-only storage and survives Add/Remove of models
+     * from the Multi-Model selection — entries for inactive models simply lay dormant.
+     */
+    private fun loadPersistedLongSubsByModel(): Map<String, Set<LongSubMode>> {
         val prefs = requireContext().getSharedPreferences("mode_prefs", Context.MODE_PRIVATE)
-        val stored = prefs.getStringSet(longSubsPrefsKey(), null) ?: return setOf(LongSubMode.STANDARD)
-        val parsed = stored.mapNotNull {
-            runCatching { LongSubMode.valueOf(it) }.getOrNull()
-        }.toSet()
-        return parsed + LongSubMode.STANDARD
+        val stored = prefs.getStringSet(longSubsPrefsKey(), null) ?: return emptyMap()
+        val byModel = mutableMapOf<String, MutableSet<LongSubMode>>()
+        stored.forEach { entry ->
+            val sep = entry.indexOf("::")
+            if (sep <= 0) return@forEach
+            val name = entry.substring(0, sep)
+            val subStr = entry.substring(sep + 2)
+            val sub = runCatching { LongSubMode.valueOf(subStr) }.getOrNull() ?: return@forEach
+            byModel.getOrPut(name) { mutableSetOf() } += sub
+        }
+        return byModel
     }
 
-    private fun persistLongSubs(subs: Set<LongSubMode>) {
+    private fun persistLongSubsByModel(byModel: Map<String, Set<LongSubMode>>) {
+        val flat = byModel.flatMap { (name, subs) -> subs.map { "$name::${it.name}" } }.toSet()
         requireContext().getSharedPreferences("mode_prefs", Context.MODE_PRIVATE)
-            .edit().putStringSet(longSubsPrefsKey(), subs.map { it.name }.toSet()).apply()
+            .edit().putStringSet(longSubsPrefsKey(), flat).apply()
     }
 
     /** "29:47" if < 1 h, "1:05:30" otherwise. Used for the LONG-mode pause countdown. */
@@ -805,27 +809,36 @@ class RecordingFragment : Fragment() {
         // Chooser only for Dev Mode + LONG
         binding.longSubModeChooser.visibility = if (isDevMode && isLong) View.VISIBLE else View.GONE
 
-        // Reflect selection into checkboxes (don't trigger listener recursion)
-        val subs = state.selectedLongSubs
-        syncCheckbox(binding.cbLongFast, LongSubMode.FAST in subs)
-        syncCheckbox(binding.cbLongAverage, LongSubMode.AVERAGE in subs)
+        // Multi-Model Evaluation: keep `selectedLongSubsByModel` in sync with the
+        // active-model set (Multi-Model picker can add/remove models mid-session).
+        // ensureLongSubsInitialized is idempotent — only triggers a state update when
+        // the model set or locked defaults actually changed.
+        if (isDevMode) viewModel.ensureLongSubsInitialized()
+        // Cheap rebuild — full container clear + re-add per state collect.
+        if (isDevMode && isLong) rebuildMultiModelEvalRows(state)
 
-        // Lock sub-mode selection while a session is active
-        val locked = viewModel.isClassifying()
-        binding.cbLongFast.isEnabled = !locked
-        binding.cbLongAverage.isEnabled = !locked
+        // The live Triangle UI only ever reflects the primary model's results — no
+        // expansion to N triangles for Multi-Model (per design: live UI stays simple).
+        val primaryName = viewModel.modelName
+        val primarySub = ModelTrainingDuration.defaultSubMode(primaryName)
+        val primarySubs = state.selectedLongSubsByModel[primaryName] ?: setOf(primarySub)
+        val primaryResults = state.longSubResultsByModel[primaryName] ?: emptyMap()
 
-        // Triangle circles: only when LONG is active and at least one extra sub-mode selected
-        val hasExtras = isLong && (LongSubMode.FAST in subs || LongSubMode.AVERAGE in subs)
+        // Triangle circles: only when LONG is active and the primary has any non-default
+        // sub-mode checked. The big circle shows the locked-default; small circles
+        // (Fast / Avg slots) show whatever non-default Fast/Avg are checked.
+        val showFastSmall = isLong && LongSubMode.FAST in primarySubs && primarySub != LongSubMode.FAST
+        val showAvgSmall = isLong && LongSubMode.AVERAGE in primarySubs && primarySub != LongSubMode.AVERAGE
+        val hasExtras = showFastSmall || showAvgSmall
         binding.longTriangleRow.visibility = if (hasExtras) View.VISIBLE else View.GONE
-        binding.longFastCircleWrap.visibility = if (isLong && LongSubMode.FAST in subs) View.VISIBLE else View.GONE
-        binding.longAvgCircleWrap.visibility = if (isLong && LongSubMode.AVERAGE in subs) View.VISIBLE else View.GONE
+        binding.longFastCircleWrap.visibility = if (showFastSmall) View.VISIBLE else View.GONE
+        binding.longAvgCircleWrap.visibility = if (showAvgSmall) View.VISIBLE else View.GONE
 
         // Shrink main circle when triangle is on
         val targetMain = if (hasExtras) 150 else 200
         binding.confidenceCircleView.setTargetSize(targetMain)
 
-        // Shrink frame so the Standard sub-label sits close under the circle
+        // Shrink frame so the default sub-label sits close under the circle
         val frameDp = if (hasExtras) 170 else 240
         val density = resources.displayMetrics.density
         val framePx = (frameDp * density).toInt()
@@ -839,9 +852,11 @@ class RecordingFragment : Fragment() {
         // Hide Top Predictions card in triangle mode — it's ambiguous which circle it belongs to
         if (hasExtras) binding.predictionsCard.visibility = View.GONE
 
-        // Reflect selected subs + interval in the timeline summary. While no interval
-        // has been picked, the timeline renders "?" placeholders for the pause labels.
-        binding.modeTimeline.setLongSubs(subs)
+        // Reflect the union of all selected subs across models in the timeline schema.
+        // The timeline doesn't differentiate by model — it only needs to know which
+        // method labels appear at all, so the user sees a coherent footprint.
+        val allActiveSubs = state.selectedLongSubsByModel.values.flatten().toSet()
+        binding.modeTimeline.setLongSubs(allActiveSubs)
         binding.modeTimeline.setLongInterval(state.selectedLongInterval)
 
         // Dev Mode: keep the LONG button text in sync — "Every?" until the user
@@ -863,38 +878,141 @@ class RecordingFragment : Fragment() {
             state.selectedLongInterval == null
         binding.longIntervalPrompt.visibility = if (showPrompt) View.VISIBLE else View.GONE
 
-        // Main circle sub-label: only in triangle mode (compact colored label like the side circles).
-        // When Standard is alone, hide this compact label — the existing big `binding.currentSceneLabel`
-        // keeps showing the full "Emoji Class" style.
+        // Main circle sub-label: only in triangle mode. Renders the primary's locked
+        // default method (Standard for 10 s models, Fast for 1 s models).
         binding.mainCircleSubLabel.visibility = if (hasExtras) View.VISIBLE else View.GONE
         val ctx = context
         if (hasExtras && ctx != null) {
-            val stdResult = state.longSubResults[LongSubMode.STANDARD] ?: state.currentResult
-            if (stdResult != null) {
+            val defaultLabelRes = when (primarySub) {
+                LongSubMode.STANDARD -> R.string.long_sub_label_standard
+                LongSubMode.FAST -> R.string.long_sub_label_fast
+                LongSubMode.AVERAGE -> R.string.long_sub_label_average
+            }
+            val defaultResult = primaryResults[primarySub] ?: state.currentResult
+            if (defaultResult != null) {
                 binding.mainCircleSubLabel.text =
-                    "${getString(R.string.long_sub_label_standard)}\n${stdResult.sceneClass.emoji} ${stdResult.sceneClass.labelShort} ${(stdResult.confidence * 100).toInt()}%"
-                val colorRes = sceneColors[stdResult.sceneClass] ?: R.color.accent_green
+                    "${getString(defaultLabelRes)}\n${defaultResult.sceneClass.emoji} ${defaultResult.sceneClass.labelShort} ${(defaultResult.confidence * 100).toInt()}%"
+                val colorRes = sceneColors[defaultResult.sceneClass] ?: R.color.accent_green
                 binding.mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, colorRes))
             } else {
-                binding.mainCircleSubLabel.text = getString(R.string.long_sub_label_standard)
+                binding.mainCircleSubLabel.text = getString(defaultLabelRes)
                 binding.mainCircleSubLabel.setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
             }
             // Hide the big full-class label when triangle is active (compact label takes over)
             binding.currentSceneLabel.visibility = View.GONE
         }
 
-        // Bind per-sub results
-        bindSubCircle(binding.longFastCircle, binding.longFastLabel, state.longSubResults[LongSubMode.FAST], R.string.long_sub_label_fast)
-        bindSubCircle(binding.longAvgCircle, binding.longAvgLabel, state.longSubResults[LongSubMode.AVERAGE], R.string.long_sub_label_average)
+        // Bind small-circle slots — Fast / Avg results from primary, only when those
+        // sub-modes are checked AND aren't already serving as the locked default.
+        bindSubCircle(binding.longFastCircle, binding.longFastLabel,
+            if (showFastSmall) primaryResults[LongSubMode.FAST] else null,
+            R.string.long_sub_label_fast)
+        bindSubCircle(binding.longAvgCircle, binding.longAvgLabel,
+            if (showAvgSmall) primaryResults[LongSubMode.AVERAGE] else null,
+            R.string.long_sub_label_average)
     }
 
-    private var suppressSubModeListener = false
+    /**
+     * Multi-Model Evaluation: builds one row per active model inside
+     * `multiModelEvalContainer`. Each row carries: brain icon + model filename
+     * (ellipsised) + duration badge ([1s] blue, [10s] green) + 3 checkboxes
+     * (Standard / Fast / Avg). The locked-default checkbox per row is disabled
+     * and always checked; the others are user-toggleable.
+     */
+    private fun rebuildMultiModelEvalRows(state: UiState) {
+        val ctx = context ?: return
+        val container = binding.multiModelEvalContainer
+        val activeModels = viewModel.activeModelNames()
+        val locked = viewModel.isClassifying()
 
-    private fun syncCheckbox(cb: MaterialCheckBox, checked: Boolean) {
-        if (cb.isChecked != checked) {
-            suppressSubModeListener = true
-            cb.isChecked = checked
-            suppressSubModeListener = false
+        // Cheap rebuild — full container clear + re-add. Only triggered while LONG is
+        // visible and selection state changed; a few text views per model is nothing.
+        container.removeAllViews()
+
+        activeModels.forEach { modelName ->
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = 8.dpToPx() }
+            }
+
+            // Header: 🧠 modelname [duration badge]
+            val header = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val brain = TextView(ctx).apply {
+                text = "🧠"
+                textSize = 14f
+                setPadding(0, 0, 8, 0)
+            }
+            val nameText = TextView(ctx).apply {
+                text = modelName
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            val durationSec = ModelTrainingDuration.secondsForFilename(modelName)
+            val badge = TextView(ctx).apply {
+                text = if (durationSec == 1) getString(R.string.model_badge_1s) else getString(R.string.model_badge_10s)
+                textSize = 10f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                val bgColor = ContextCompat.getColor(
+                    ctx,
+                    if (durationSec == 1) R.color.accent_blue else R.color.accent_green
+                )
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 8f * resources.displayMetrics.density
+                    setColor(bgColor)
+                }
+                setPadding(8.dpToPx(), 2.dpToPx(), 8.dpToPx(), 2.dpToPx())
+            }
+            header.addView(brain)
+            header.addView(nameText)
+            header.addView(badge)
+            row.addView(header)
+
+            // Three checkboxes
+            val cbRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = 2.dpToPx() }
+            }
+            val defaultSub = ModelTrainingDuration.defaultSubMode(modelName)
+            val selectedForModel = state.selectedLongSubsByModel[modelName] ?: setOf(defaultSub)
+            listOf(
+                LongSubMode.STANDARD to R.string.long_sub_standard,
+                LongSubMode.FAST to R.string.long_sub_fast,
+                LongSubMode.AVERAGE to R.string.long_sub_average
+            ).forEach { (sub, labelRes) ->
+                val isLockedDefault = sub == defaultSub
+                val cb = MaterialCheckBox(ctx).apply {
+                    text = getString(labelRes)
+                    textSize = 12f
+                    setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+                    isChecked = sub in selectedForModel
+                    isEnabled = !locked && !isLockedDefault
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                if (!isLockedDefault) {
+                    cb.setOnCheckedChangeListener { _, _ ->
+                        viewModel.toggleLongSubForModel(modelName, sub)
+                        persistLongSubsByModel(viewModel.uiState.value.selectedLongSubsByModel)
+                    }
+                }
+                cbRow.addView(cb)
+            }
+            row.addView(cbRow)
+
+            container.addView(row)
         }
     }
 
@@ -1064,7 +1182,28 @@ class RecordingFragment : Fragment() {
     }
 
     /**
-     * Renders the live per-model predictions while an ALL-IN-ONE session runs.
+     * Builds the secondary label (under the model filename) for a LONG-mode
+     * Multi-Model row. Returns null/empty until the user has picked an interval
+     * via the "Every?" picker — that suppresses the misleading "every 30min ·
+     * Standard (10 s)" label that used to flash up before any choice was made.
+     *
+     * Once an interval is set, the label includes both the chosen pause length
+     * and the model's locked-default method (Standard for 10 s models, Fast for
+     * 1 s models), so the row tells the full story at a glance.
+     */
+    private fun buildLongRowLabel(state: UiState, modelName: String): String {
+        val interval = state.selectedLongInterval ?: return ""
+        val defaultSub = ModelTrainingDuration.defaultSubMode(modelName)
+        val subLabel = when (defaultSub) {
+            LongSubMode.STANDARD -> getString(R.string.long_sub_label_standard)
+            LongSubMode.FAST -> getString(R.string.long_sub_label_fast)
+            LongSubMode.AVERAGE -> getString(R.string.long_sub_label_average)
+        }
+        return "every ${interval.label} · $subLabel"
+    }
+
+    /**
+     * Renders the live per-model predictions while a Multi-Model Evaluation runs.
      * Card is hidden for regular single-model sessions.
      *
      * Each row: "🧠 <modelName>  <emoji> <Class> <XX%>" — colored by scene class,
@@ -1091,15 +1230,11 @@ class RecordingFragment : Fragment() {
         binding.allInOneCard.visibility = View.VISIBLE
         binding.allInOneContainer.removeAllViews()
 
-        // Recording-mode label is shared across all rows (every model ran on the same clip
-        // with the same mode). In LONG ("every 30min") we also append the sub-mode —
-        // ALL IN ONE uses Standard on the full 10 s buffer for every model, not the
-        // Fast/Avg sub-modes — so the user can tell what the displayed number represents.
-        val modeLabel = if (state.recordingMode == RecordingMode.LONG) {
-            "${state.recordingMode.label} · ${getString(R.string.long_sub_label_standard)}"
-        } else {
-            state.recordingMode.label
-        }
+        // Recording-mode label per row. In LONG mode the row label reflects the
+        // user-chosen interval (e.g. "every 15 min") AND the per-model locked-default
+        // method — so each row's label is built individually below. Otherwise (Continuous
+        // modes) all rows share the same global label.
+        val sharedModeLabel = if (state.recordingMode != RecordingMode.LONG) state.recordingMode.label else null
 
         state.allInOneModelNames.forEach { name ->
             val result = state.allInOneResults[name]
@@ -1134,9 +1269,10 @@ class RecordingFragment : Fragment() {
             }
 
             val modeText = TextView(ctx).apply {
-                text = modeLabel
+                text = sharedModeLabel ?: buildLongRowLabel(state, name)
                 textSize = 11f
                 setTextColor(ContextCompat.getColor(ctx, R.color.accent_blue))
+                visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
             }
 
             nameContainer.addView(nameText)
@@ -1506,8 +1642,12 @@ class RecordingFragment : Fragment() {
 
     private fun updatePerSecondCardVisibility(mode: RecordingMode) {
         if (_binding == null) return
-        val longWithAvg = mode == RecordingMode.LONG &&
-            LongSubMode.AVERAGE in viewModel.uiState.value.selectedLongSubs
+        // Per-second circles in LONG mode: only when the primary model has Avg checked.
+        // Multi-Model Evaluation can have Avg active on additional models too, but the
+        // live circles bind to the primary's per-second clips only — so this gate stays.
+        val primaryName = viewModel.modelName
+        val primarySubs = viewModel.uiState.value.selectedLongSubsByModel[primaryName].orEmpty()
+        val longWithAvg = mode == RecordingMode.LONG && LongSubMode.AVERAGE in primarySubs
         if (isDevMode && (mode == RecordingMode.AVERAGE || longWithAvg)) {
             binding.perSecondCirclesCard.visibility = View.VISIBLE
         } else {

@@ -129,17 +129,22 @@
     <string name="model_info">Model: %1$s (%2$d Classes)</string>
     <string name="back_to_user_mode">Back to User Mode</string>
 
-    <!-- ALL IN ONE mode: multi-model comparison (Dev only) -->
-    <string name="all_in_one">ALL IN ONE</string>
+    <!-- Multi-Model Evaluation: side-by-side multi-model comparison (Dev only) -->
+    <string name="all_in_one">Multi-Model Evaluation</string>
     <string name="all_in_one_subtitle_short">Compare multiple models on the same audio</string>
-    <string name="all_in_one_title">Select Models for ALL IN ONE</string>
+    <string name="all_in_one_title">Select models to compare</string>
     <string name="all_in_one_subtitle">Pick at least 2 models. Every recording runs through all of them.</string>
-    <string name="all_in_one_started">ALL IN ONE started with %1$d models</string>
-    <string name="all_in_one_header">ALL IN ONE · %1$d models</string>
+    <string name="all_in_one_started">Multi-Model Evaluation started with %1$d models</string>
+    <string name="all_in_one_header">Multi-Model · %1$d models</string>
     <string name="all_in_one_card_title">All models</string>
     <string name="all_in_one_row_waiting">…</string>
     <string name="all_in_one_comparison_header">Model comparison</string>
     <string name="all_in_one_primary_title">🧠 %1$s</string>
+
+    <!-- Multi-Model Evaluation: training-clip length badges shown next to each model
+         row in the per-model sub-mode chooser. -->
+    <string name="model_badge_1s">1s</string>
+    <string name="model_badge_10s">10s</string>
     <string name="session_details">Session Details</string>
     <string name="model_label">Model</string>
     <string name="mode_label">Mode</string>

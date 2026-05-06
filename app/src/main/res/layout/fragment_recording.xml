@@ -486,7 +486,10 @@
                     android:gravity="center"
                     android:layout_marginTop="10dp" />
 
-                <!-- Step 2b: LONG sub-mode chooser (Standard locked + Fast + Avg checkboxes) -->
+                <!-- Step 2b: Multi-Model Evaluation — per-model sub-mode chooser. One row
+                     per active model, dynamically populated in RecordingFragment. The locked
+                     default depends on the model's training-clip length (Fast for *_1s_*,
+                     Standard for everything else). -->
                 <LinearLayout
                     android:id="@+id/longSubModeChooser"
                     android:layout_width="match_parent"
@@ -504,40 +507,10 @@
                         android:layout_marginBottom="6dp" />
 
                     <LinearLayout
+                        android:id="@+id/multiModelEvalContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <com.google.android.material.checkbox.MaterialCheckBox
-                            android:id="@+id/cbLongStandard"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:checked="true"
-                            android:enabled="false"
-                            android:text="@string/long_sub_standard"
-                            android:textSize="12sp"
-                            android:textColor="@color/text_primary" />
-
-                        <com.google.android.material.checkbox.MaterialCheckBox
-                            android:id="@+id/cbLongFast"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/long_sub_fast"
-                            android:textSize="12sp"
-                            android:textColor="@color/text_primary" />
-
-                        <com.google.android.material.checkbox.MaterialCheckBox
-                            android:id="@+id/cbLongAverage"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/long_sub_average"
-                            android:textSize="12sp"
-                            android:textColor="@color/text_primary" />
-                    </LinearLayout>
+                        android:orientation="vertical" />
 
                     <TextView
                         android:id="@+id/longSubModeHint"
