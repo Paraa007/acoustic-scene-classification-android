@@ -1,14 +1,14 @@
 # Acoustic Scene Classification
 
-Eine Android-App, die über das Mikrofon deines Smartphones Umgebungsgeräusche aufnimmt und mithilfe von künstlicher Intelligenz erkennt, in welcher Art von Umgebung du dich gerade befindest – zum Beispiel „Park", „Büro" oder „Einkaufszentrum".
+Eine Android-App, die über das Mikrofon des Smartphones Umgebungsgeräusche aufnimmt und mit einem KI-Modell erkennt, in welcher Art von Umgebung du dich gerade befindest – zum Beispiel „Park", „Büro" oder „Einkaufszentrum".
 
 ---
 
-## Was kann die App?
+## Was macht die App?
 
-Die App hört sich die Geräusche um dich herum an und sagt dir, wo du wahrscheinlich bist. Das funktioniert in Echtzeit: Du drückst einen Knopf, die App nimmt ein paar Sekunden Audio auf, und kurz danach erscheint das Ergebnis auf dem Bildschirm.
+Die App ist auf Modell-Vergleich ausgelegt: pro Aufnahme können mehrere KI-Modelle parallel laufen, und jedes Ergebnis landet in der History und im CSV-Export. Der Bedien-Flow ist als geleiteter Wizard angelegt: Welcome → Wizard (5 oder 6 Schritte) → Live-Recording → Results-Summary.
 
-Insgesamt kennt die App **9 verschiedene Arten von Umgebungen**:
+Insgesamt kennt die App **9 verschiedene Umgebungen**:
 
 | Emoji | Umgebung |
 |-------|----------|
@@ -26,84 +26,84 @@ Insgesamt kennt die App **9 verschiedene Arten von Umgebungen**:
 
 ## Features im Überblick
 
-### 1. Willkommensseite
-Beim Öffnen der App landest du auf dem Startbildschirm. Dort kannst du auswählen:
-- **User Mode** – Der normale Modus für den Alltag.
-- **Development Mode** – Für Entwickler, die verschiedene KI-Modelle ausprobieren wollen.
-- **View History** – Um alte Aufnahmen anzusehen.
+### 1. Welcome-Page
+Auf dem Startbildschirm gibt es vier Buttons:
+- **Start new session** – öffnet den Wizard, um eine neue Aufnahme einzurichten.
+- **Use last config** – startet mit der zuletzt verwendeten Config, ohne den Wizard. Erscheint erst, wenn schon einmal eine Session lief.
+- **History** – öffnet die Liste aller bisherigen Aufnahmen.
+- **Settings** – öffnet die App-Einstellungen.
 
-### 2. Hell- und Dunkelmodus
-Ganz oben rechts gibt es einen kleinen Schalter (Sonne/Mond). Damit kannst du zwischen einem **hellen** und einem **dunklen Design** wechseln. Die App merkt sich deine Auswahl.
+Oben rechts ein Schalter (Sonne/Mond) für Hell- und Dunkelmodus. Die Wahl wird gespeichert.
 
-### 3. Vier Aufnahme-Modi
-Je nachdem, wie schnell oder genau du ein Ergebnis haben willst, kannst du wählen:
-- **Fast (1 Sekunde)** – Schnellstes Ergebnis.
-- **Medium (5 Sekunden)** – Mittelschnell und schon recht genau.
-- **Standard (10 Sekunden)** – Der normale Modus für den Alltag.
-- **Long (30 Minuten)** – Nimmt alle 30 Minuten kurz auf. Gedacht für längere Beobachtungen, z. B. über Nacht.
+### 2. Wizard (Setup)
+Schritt für Schritt durch die Konfiguration:
+1. **Modelle** – ein oder mehrere KI-Modelle auswählen.
+2. **Aufnahme-Kategorie** – Continuous (durchgehend) oder Interval (mit Pausen).
+3. **Bei Continuous:** Clip-Dauer (Fast 1 s, Standard 10 s, oder Avg = 10 × 1 s gemittelt).
+   **Bei Interval:** Pausen-Intervall (10 min bis 3 h).
+4. **Bei Interval:** Methoden pro Modell (Standard / Fast / Avg, je nach Trainings-Dauer des Modells).
+5. **Session-Dauer** – 30 min, 1 h, 3 h, 6 h, 12 h oder Stop manually.
+6. **Übersicht** – jede Sektion klickbar, springt zum entsprechenden Schritt zurück.
 
-### 4. Konfidenz-Anzeige (Wie sicher ist die App?)
-In der Mitte des Bildschirms siehst du einen großen Kreis mit einer Prozentzahl, z. B. „87 %". Das zeigt, **wie sicher sich die App bei ihrer Antwort ist**. Darunter steht die erkannte Umgebung mit Emoji, z. B. „🌲 Außen – naturbetont".
+Inkompatible Kombinationen werden automatisch ausgegraut. 10s-Modelle dürfen nur Standard, 1s-Modelle nur Fast und Avg.
 
-Während der Aufnahme gibt es eine kleine **Wellenanimation** rund um den Kreis, die sich an die Lautstärke anpasst – je lauter, desto größer die Wellen.
+### 3. Live-Recording
+Während der Session zeigt die App:
+- **Konzentrische Stopp-Uhr** – äußerer Ring = Session-Progress, innerer Ring = Cycle-Progress. Bei Avg in 10 Segmente unterteilt.
+- **Eine Card pro Modell** mit 9 horizontalen Bars (eine pro Klasse) für jede aktive Methode. Bar-Farbe entspricht der Klassenfarbe (Park grün, Verkehr rot, etc.).
+- **Volume-Graph** unten – Lautstärke über die Zeit, permanent sichtbar.
+- **Pause** – Tap öffnet einen Picker mit `No timer` · 5 min · 10 min · 30 min · 1 h. Bei Timer-Wahl resumed die Session automatisch.
+- **Stop** – beendet die Session, wechselt auf Results.
 
-### 5. Top-3-Vorhersagen
-Die App zeigt dir die **drei wahrscheinlichsten Umgebungen** auf einmal. So siehst du auf einen Blick, ob sich die App zwischen zwei Möglichkeiten schwer tut.
+### 4. Results-Summary
+Nach Stop oder Auto-Stop landet man auf einem Screen, der pro Modell × Methode die finalen Bar-Distributions zeigt (aggregiert über alle Cycles). Pro Card: Anzahl Cycles, häufigste Klasse, Durchschnitts-Volume. Zwei Buttons: **Back to Home** und **Open History**.
 
-### 6. Echtzeit-Lautstärke-Diagramm
-Wenn du vor einer Aufnahme den Schalter **„Show Live Data"** einschaltest, wird während der Aufnahme ein **Liniendiagramm** gezeichnet, das die Lautstärke über die Zeit zeigt – so siehst du live, wann es laut und wann leise war.
+### 5. History
+Alle Sessions als Karten mit kompaktem Config-Label (`🧠 model · Continuous · Standard 10s` o. ä.). Tap auf eine Session öffnet einen Detail-Dialog mit Distribution, Method Comparison (bei mehreren Methoden), Per-Second Clips (bei Avg), User Evaluations (bei Interval) und einer Pausen-Sektion mit grauen Trennlinien für jede Pause.
 
-### 7. Sitzungs-Statistiken
-Nach der ersten Aufnahme erscheint eine kleine Karte, die zeigt:
-- Wie viele Aufnahmen du in dieser Sitzung schon gemacht hast.
-- Wie lange die App im Durchschnitt für eine Vorhersage braucht.
+Long-Press aktiviert die Mehrfachauswahl, um Sessions im Bulk zu exportieren oder zu löschen.
 
-### 8. Letzte Vorhersagen
-Eine Liste mit den **letzten 5 Ergebnissen** deiner aktuellen Sitzung, damit du den Verlauf im Blick hast.
+### 6. CSV-Export
+Sessions als CSV speichern und per Android-Teilen-Menü versenden. Pro Aufnahme-Cycle eine Zeile mit Klasse, Konfidenz, Top-3, Inferenzzeit, Modell, Modus, Batterie und Volume (Mean + Peak). Pause-Records erscheinen als eigene Zeilen mit `mode_label = "PAUSE"` und `pause_duration_sec` — in Pandas einfach mit `.filter(mode_label == "PAUSE")` herauszuziehen.
 
-### 9. Aufnahme-Historie
-Alle Aufnahme-Sitzungen werden **automatisch gespeichert**. Du kannst sie später jederzeit wieder anschauen:
-- Jede Sitzung hat einen Namen (standardmäßig z. B. „Session 1", „Session 2" …).
-- Du kannst jede Sitzung in einen **eigenen Namen umbenennen**, z. B. „Morgens im Büro" oder „Spaziergang im Park".
-- Beim Antippen einer Sitzung öffnet sich ein Detail-Fenster mit Startzeit, Endzeit, verwendetem Modell, Durchschnittskonfidenz und einem **bunten Balkendiagramm**, das zeigt, welche Umgebungen wie oft erkannt wurden.
+### 7. Evaluation (Interval-only)
+Nach jeder Interval-Aufnahme bekommt der User eine Notification (Background) bzw. eine in-App-Card (Foreground), wo er die tatsächliche Szene angeben kann. Das Timing folgt dem im Wizard gewählten Pausen-Intervall. Im Continuous gibt es keine Evaluation-Card.
 
-### 10. Mehrere Sitzungen gleichzeitig verwalten
-Durch **langes Drücken** auf eine Sitzung kannst du mehrere auswählen und auf einmal löschen oder exportieren.
+### 8. Aufnahme im Hintergrund
+Auch wenn die App minimiert oder der Bildschirm aus ist, läuft die Aufnahme weiter. Ein Foreground-Service mit WakeLock hält das Gerät wach. Für lange Sessions bitte die Batterie-Optimierung deaktivieren.
 
-### 11. CSV-Export
-Du kannst Sitzungen als **CSV-Datei exportieren** (einzeln oder mehrere zusammen) und z. B. per E-Mail, Cloud oder einer anderen App teilen. So kannst du deine Daten in Excel oder anderen Programmen weiterverwenden.
-
-### 12. Aufnahme im Hintergrund
-Auch wenn du die App minimierst oder den Bildschirm ausschaltest, **läuft die Aufnahme weiter**. Das ist besonders nützlich für den Long-Modus (30-Minuten-Intervall), z. B. für Langzeit-Beobachtungen über Nacht.
-
-### 13. Automatisches Speichern
-Du musst nichts manuell speichern – **alle Ergebnisse werden automatisch gesichert**. Beim nächsten Start der App sind sie direkt wieder da.
+### 9. Automatisches Speichern
+Alle Ergebnisse werden automatisch gespeichert. Beim nächsten App-Start sind sie sofort wieder da. Speicherlimit: 10.000 Records — danach werden die ältesten automatisch gelöscht.
 
 ---
 
 ## Berechtigungen
 
-Damit die App funktioniert, braucht sie ein paar Erlaubnisse von dir:
-- **Mikrofon** – Ohne Mikrofon kann die App natürlich nichts hören.
-- **Batterie-Optimierung deaktivieren** (optional) – Damit die App auch bei langen Aufnahmen nicht vom System gestoppt wird.
+- **Mikrofon** – Pflicht, sonst kann die App nichts hören.
+- **Notifications** (Android 13+) – für die Foreground-Service-Notification und Evaluation-Prompts.
+- **Batterie-Optimierung deaktivieren** – optional, aber empfohlen für lange Sessions.
 
 ---
 
 ## Für wen ist die App?
 
-- **Normale Nutzer** – Neugierige, die wissen wollen, welche Umgebungen die KI erkennt.
-- **Forscher & Entwickler** – Die eigene KI-Modelle testen oder Daten exportieren wollen.
-- **Langzeit-Beobachtung** – Z. B. für Lärm- oder Aktivitätsmuster über mehrere Stunden.
+- **Forscher & Entwickler** – um eigene KI-Modelle zu testen oder Daten für Auswertungen zu sammeln.
+- **Modell-Vergleich** – um mehrere Modelle parallel auf demselben Audio laufen zu lassen.
+- **Langzeit-Beobachtung** – z. B. für Geräusch- oder Aktivitätsmuster über mehrere Stunden.
 
 ---
 
 ## Technik im Hintergrund (kurz)
 
-- **Plattform:** Android (ab Version 8.0 / SDK 26)
-- **Sprache:** Kotlin
-- **KI-Framework:** PyTorch Mobile
+- **Plattform:** Android (ab Version 8.0 / SDK 26, Target SDK 36)
+- **Sprache:** Kotlin 2.0.21
+- **KI-Framework:** PyTorch Mobile 1.13.1
+- **Audio:** TarsosDSP für FFT, Android AudioRecord
+- **Architektur:** Single Activity + Navigation Component, MVVM mit StateFlow
 - **Design:** Material Design 3
 - **Projekt:** FZI Forschungszentrum Informatik, Karlsruhe – DCASE 2025
+
+Mehr Details für Entwickler: `CLAUDE.md`, `docs/PROJEKT_DOKUMENTATION.md`, `docs/UI_REDESIGN_WIZARD.md`, `docs/MODEL_INTEGRATION_SPEC.md`.
 
 ---
 
