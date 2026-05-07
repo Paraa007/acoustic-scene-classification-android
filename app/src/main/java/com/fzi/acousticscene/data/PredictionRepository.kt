@@ -351,24 +351,28 @@ class PredictionRepository private constructor(private val context: Context) {
      * Gibt Statistiken zurück
      */
     fun getStatistics(): PredictionStatistics {
-        if (predictions.isEmpty()) {
+        // Pause-Records sind synthetisch (sceneClass-Placeholder, confidence=0) und
+        // verfälschen sonst Distribution + Avg-Confidence.
+        val real = predictions.filterNot { it.isPause }
+        if (real.isEmpty()) {
             return PredictionStatistics()
         }
-        
-        val today = getTodaysPredictions()
-        val classDistribution = predictions.groupBy { it.sceneClass }
+
+        val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val today = real.filter { it.getFormattedDate() == todayKey }
+        val classDistribution = real.groupBy { it.sceneClass }
             .mapValues { it.value.size }
-        val avgConfidence = predictions.map { it.confidence * 100 }.average()
-        val avgInferenceTime = predictions.map { it.inferenceTimeMs }.average()
-        
+        val avgConfidence = real.map { it.confidence * 100 }.average()
+        val avgInferenceTime = real.map { it.inferenceTimeMs }.average()
+
         return PredictionStatistics(
-            totalCount = predictions.size,
+            totalCount = real.size,
             todayCount = today.size,
             classDistribution = classDistribution,
             averageConfidence = avgConfidence,
             averageInferenceTimeMs = avgInferenceTime,
-            firstPrediction = predictions.firstOrNull()?.timestamp,
-            lastPrediction = predictions.lastOrNull()?.timestamp
+            firstPrediction = real.firstOrNull()?.timestamp,
+            lastPrediction = real.lastOrNull()?.timestamp
         )
     }
 }

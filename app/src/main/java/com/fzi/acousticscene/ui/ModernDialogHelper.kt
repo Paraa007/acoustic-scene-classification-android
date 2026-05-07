@@ -273,8 +273,12 @@ object ModernDialogHelper {
         }
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val firstRecord = packageRecords.firstOrNull()
-        val lastRecord = packageRecords.lastOrNull()
+        // Pause-Records sind synthetisch — Model/Mode/Avg-Detection orientiert sich
+        // ausschließlich an echten Aufnahmen, sonst zeigt der Header bei einer Session,
+        // die mit einer Pause endet, einen Pause-Placeholder statt des Modus.
+        val realRecords = packageRecords.filterNot { it.isPause }
+        val firstRecord = realRecords.firstOrNull() ?: packageRecords.firstOrNull()
+        val lastRecord = realRecords.lastOrNull() ?: packageRecords.lastOrNull()
 
         // Time info
         dialog.findViewById<TextView>(R.id.startTimeText).text =
@@ -298,8 +302,8 @@ object ModernDialogHelper {
         } ?: "Standard"
         dialog.findViewById<TextView>(R.id.modeText).text = recordingMode
 
-        // Count and confidence
-        dialog.findViewById<TextView>(R.id.countText).text = "${packageRecords.size} ${context.getString(R.string.recordings)}"
+        // Count and confidence — Pause-Records inflate sonst die "recordings"-Zahl.
+        dialog.findViewById<TextView>(R.id.countText).text = "${realRecords.size} ${context.getString(R.string.recordings)}"
         dialog.findViewById<TextView>(R.id.avgConfidenceText).text =
             String.format(Locale.US, "%.1f%%", stats.averageConfidence)
 
@@ -423,7 +427,7 @@ object ModernDialogHelper {
         }
 
         // Per-second clips section - only visible for AVERAGE mode sessions
-        val isAverageMode = packageRecords.firstOrNull()?.recordingMode == RecordingMode.AVERAGE
+        val isAverageMode = realRecords.firstOrNull()?.recordingMode == RecordingMode.AVERAGE
         if (isAverageMode) {
             val perSecondDivider = dialog.findViewById<View>(R.id.perSecondDivider)
             val perSecondHeader = dialog.findViewById<TextView>(R.id.perSecondHeader)
@@ -455,14 +459,14 @@ object ModernDialogHelper {
         val userDistributionContainer = dialog.findViewById<LinearLayout>(R.id.userDistributionContainer)
         val evaluationCountText = dialog.findViewById<TextView>(R.id.evaluationCountText)
         val userDivider = dialog.findViewById<View>(R.id.userDistributionDivider)
-        val isLongMode = packageRecords.firstOrNull()?.recordingMode?.hasPauseAfterRecording() == true
+        val isLongMode = realRecords.firstOrNull()?.recordingMode?.hasPauseAfterRecording() == true
 
         if (isLongMode) {
-            val evaluatedRecords = packageRecords.filter { it.userSelectedClass != null }
+            val evaluatedRecords = realRecords.filter { it.userSelectedClass != null }
 
             evaluationCountText.text = String.format(
                 context.getString(R.string.n_of_m_evaluated),
-                evaluatedRecords.size, packageRecords.size
+                evaluatedRecords.size, realRecords.size
             )
 
             if (evaluatedRecords.isNotEmpty()) {
@@ -493,6 +497,11 @@ object ModernDialogHelper {
             userDistributionContainer.visibility = View.GONE
         }
 
+        // Pauses section — shown whenever the session contains synthetic PAUSE records.
+        // Each pause renders as a thin grey divider with the duration centered on it,
+        // matching the spec ("graue Trennlinie zwischen Recording-Kacheln").
+        renderPausesSection(context, dialog, packageRecords)
+
         dialog.findViewById<MaterialButton>(R.id.btnDelete).setOnClickListener {
             dialog.dismiss()
             onDelete()
@@ -509,6 +518,84 @@ object ModernDialogHelper {
 
         dialog.show()
         return dialog
+    }
+
+    private fun renderPausesSection(
+        context: Context,
+        dialog: Dialog,
+        packageRecords: List<PredictionRecord>
+    ) {
+        val divider = dialog.findViewById<View>(R.id.pausesDivider)
+        val header = dialog.findViewById<TextView>(R.id.pausesHeader)
+        val container = dialog.findViewById<LinearLayout>(R.id.pausesContainer)
+
+        val pauses = packageRecords.filter { it.isPause }
+        if (pauses.isEmpty()) {
+            divider.visibility = View.GONE
+            header.visibility = View.GONE
+            container.visibility = View.GONE
+            return
+        }
+
+        divider.visibility = View.VISIBLE
+        header.visibility = View.VISIBLE
+        container.visibility = View.VISIBLE
+        container.removeAllViews()
+
+        val totalSec = pauses.sumOf { it.pauseDurationSec ?: 0L }
+        header.text = String.format(
+            context.getString(R.string.history_pauses_header),
+            pauses.size,
+            formatPauseDuration(totalSec)
+        )
+
+        val dividerColor = ContextCompat.getColor(context, R.color.surface_variant)
+        val labelColor = ContextCompat.getColor(context, R.color.text_secondary)
+
+        pauses.forEach { pause ->
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 6, 0, 6) }
+            }
+            val leftLine = View(context).apply {
+                setBackgroundColor(dividerColor)
+                layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+            }
+            val label = TextView(context).apply {
+                text = String.format(
+                    context.getString(R.string.history_pause_row),
+                    formatPauseDuration(pause.pauseDurationSec ?: 0L)
+                )
+                textSize = 12f
+                setTextColor(labelColor)
+                setPadding(12, 0, 12, 0)
+            }
+            val rightLine = View(context).apply {
+                setBackgroundColor(dividerColor)
+                layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+            }
+            row.addView(leftLine)
+            row.addView(label)
+            row.addView(rightLine)
+            container.addView(row)
+        }
+    }
+
+    private fun formatPauseDuration(totalSec: Long): String {
+        if (totalSec <= 0L) return "0s"
+        val h = totalSec / 3600
+        val m = (totalSec % 3600) / 60
+        val s = totalSec % 60
+        return when {
+            h > 0 && m > 0 -> "${h}h ${m}min"
+            h > 0 -> "${h}h"
+            m > 0 -> "${m} min"
+            else -> "${s}s"
+        }
     }
 
     /**

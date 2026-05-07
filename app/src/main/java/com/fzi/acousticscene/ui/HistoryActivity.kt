@@ -315,19 +315,22 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun calculatePackageStatistics(records: List<PredictionRecord>): PredictionStatistics {
-        val classDistribution = records.groupBy { it.sceneClass }
+        // Pause-Records sind synthetisch und gehören nicht in die Aggregate.
+        val real = records.filterNot { it.isPause }
+        if (real.isEmpty()) return PredictionStatistics()
+        val classDistribution = real.groupBy { it.sceneClass }
             .mapValues { it.value.size }
-        val avgConfidence = records.map { it.confidence * 100 }.average()
-        val avgInferenceTime = records.map { it.inferenceTimeMs }.average()
+        val avgConfidence = real.map { it.confidence * 100 }.average()
+        val avgInferenceTime = real.map { it.inferenceTimeMs }.average()
 
         return PredictionStatistics(
-            totalCount = records.size,
-            todayCount = records.size,
+            totalCount = real.size,
+            todayCount = real.size,
             classDistribution = classDistribution,
             averageConfidence = avgConfidence,
             averageInferenceTimeMs = avgInferenceTime,
-            firstPrediction = records.first().timestamp,
-            lastPrediction = records.last().timestamp
+            firstPrediction = real.first().timestamp,
+            lastPrediction = real.last().timestamp
         )
     }
 
