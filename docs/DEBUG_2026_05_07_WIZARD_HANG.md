@@ -74,3 +74,11 @@ Drei Maestro-Flows decken die Reparatur ab:
 ## Was ich beim nächsten Mal anders machen würde
 
 Vor dem ersten Lauf war meine Hypothese, dass nur der AudioRecord-Leak und ein nicht-propagierender CancellationException den Bug verursachen. Das stimmte nur teilweise — der eigentliche Trigger war der versteckte zweite `startSession()`-Aufruf aus `LiveRecordingFragment.render()`. Ohne Maestro-Reproduktion hätte ich den Hang erst beim Code-Review viel später gefunden — wenn überhaupt. Ein Smoke-Test mit Maestro pro Wizard-Anpassung wäre eine gute Default-Routine.
+
+## Stolperfalle Maestro: `waitForAnimationToEnd` ist kein `sleep`
+
+Mein erster Repro-Versuch sah aus, als würde der ResultsSummary-Screen seine Bar-Distributions verlieren — nur „Avg volume: 0.00" pro Modell, keine Top-Klasse. Tatsächlich war das ein Test-Artefakt: ich hatte `waitForAnimationToEnd: { timeout: 25000 }` zwischen Start und Stop gesetzt, in der Annahme dass das wie ein 25 s Sleep funktioniert. In Wahrheit ist `waitForAnimationToEnd` ein **Timeout**, der returnt sobald keine Animation mehr läuft — auf einer ruhigen Live-Recording-Page also fast sofort. Maestro hat den Stop-Button nach 6 s gedrückt, mitten im ersten Cycle, also gab es nie ein vollständiges `accumulateAggregate()`. Workaround: `extendedWaitUntil { notVisible: "Stop", timeout: 25000 }` als bewusster „warte bis das nie passiert"-Block, und die Stop-Sequenz danach in einem zweiten Maestro-Flow. Damit lief die Session lang genug für drei Cycles, ResultsSummary zeigte alle Bar-Distributions wie spec'd.
+
+## Settings-Aufräumarbeiten
+
+Beim Smoke-Test entdeckt: der Settings-Screen trug noch eine „User Model"-Sektion mit „—", obwohl das Mode-Konzept seit dem Wizard-Umbau weg ist (siehe CLAUDE.md vom 2026-05-07). Ein Überbleibsel, das die App als unfertig wirken lässt. Gleichzeitig fehlte der Back-Pfeil im Settings-Header — Wizard und LiveRecording haben einen, Settings hatte nur Hardware-Back. Beides in einem `chore(settings)`-Commit nachgezogen: tote Sektion entfernt, Header analog zum Wizard mit ic_arrow_back + 44 dp Tap-Target ausgestattet. Ohne Maestro-Smoke-Test wäre auch das untergegangen — der Code hatte keine offensichtlichen Hinweise, dass die User-Model-Sektion praktisch leer ist.
