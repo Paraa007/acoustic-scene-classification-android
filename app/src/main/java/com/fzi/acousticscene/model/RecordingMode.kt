@@ -21,8 +21,9 @@ enum class RecordingCategory(val label: String) {
  *
  * [sliceSeconds] is the audio length each individual inference call sees —
  * STANDARD feeds the full 10 s buffer, FAST takes a 1 s middle slice,
- * AVERAGE slices the buffer into ten 1 s clips and infers per clip. The model's
- * training duration must match this slice for the inference to be valid.
+ * AVERAGE adapts per model: 1 s-models get ten per-slice inferences averaged,
+ * 10 s-models get the full 10 s buffer in one shot. The model's training
+ * duration must match the slice the model receives.
  */
 enum class LongSubMode(val label: String, val hint: String, val sliceSeconds: Int) {
     STANDARD("Standard", "full 10 s", 10),
@@ -30,12 +31,16 @@ enum class LongSubMode(val label: String, val hint: String, val sliceSeconds: In
     AVERAGE("Avg", "10 × 1 s → Ø", 1);
 
     /**
-     * Whether this method's slice duration matches the model's training
-     * duration. Mismatch either crashes the tensor reshape or returns garbage —
-     * the wizard greys out incompatible methods so the user can't pick them.
+     * Whether this method can drive a model trained on [modelTrainingSeconds]-long
+     * clips. STANDARD/FAST require an exact slice match. AVERAGE is neutral and
+     * adapts: for 1 s-models it runs ten per-slice inferences and averages them,
+     * for 10 s-models it concatenates the slices and runs a single full-window
+     * inference.
      */
-    fun isCompatibleWith(modelTrainingSeconds: Int): Boolean =
-        sliceSeconds == modelTrainingSeconds
+    fun isCompatibleWith(modelTrainingSeconds: Int): Boolean = when (this) {
+        AVERAGE -> modelTrainingSeconds == 1 || modelTrainingSeconds == 10
+        else -> sliceSeconds == modelTrainingSeconds
+    }
 }
 
 enum class RecordingMode(

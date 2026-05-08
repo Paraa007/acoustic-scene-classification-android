@@ -347,7 +347,7 @@
     <string name="wizard_methods_per_model">Methods for %1$s</string>
     <string name="wizard_method_locked">default method (locked)</string>
     <string name="wizard_method_incompatible">not available (model trained on %1$d s clips)</string>
-    <string name="wizard_clip_mixed_durations">You picked models trained on different clip lengths (1 s and 10 s). In Continuous mode the same clip length runs against every model, so no option is valid. Go back and pick models with the same training duration, or use Interval mode.</string>
+    <string name="wizard_clip_mixed_durations">You picked models trained on different clip lengths (1 s and 10 s). Only Avg covers both — it averages ten per-slice predictions for 1 s-models and feeds the full 10 s window to 10 s-models. Fast and Standard need a single shared clip length.</string>
     <string name="wizard_clip_incompatible_for_models">incompatible with the selected models</string>
     <string name="wizard_summary_title">Summary</string>
     <string name="wizard_summary_models">Models</string>
