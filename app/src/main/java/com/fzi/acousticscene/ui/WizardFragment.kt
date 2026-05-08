@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -43,7 +44,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     private val viewModel: MainViewModel by activityViewModels()
 
     private lateinit var headerText: TextView
-    private lateinit var stepIndicator: TextView
+    private lateinit var stepDots: LinearLayout
     private lateinit var contentRoot: LinearLayout
     private lateinit var primaryButton: MaterialButton
     private lateinit var backButton: ImageButton
@@ -51,7 +52,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         headerText = view.findViewById(R.id.wizardHeader)
-        stepIndicator = view.findViewById(R.id.wizardStepIndicator)
+        stepDots = view.findViewById(R.id.wizardStepDots)
         contentRoot = view.findViewById(R.id.wizardContent)
         primaryButton = view.findViewById(R.id.wizardPrimary)
         backButton = view.findViewById(R.id.wizardBack)
@@ -93,7 +94,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         headerText.text = state.step.headerText
         val order = state.stepOrder()
         val pos = order.indexOf(state.step) + 1
-        stepIndicator.text = getString(R.string.wizard_step_label, pos, order.size)
+        renderStepDots(pos, order.size)
         primaryButton.text = if (state.step == WizardStep.Summary) {
             getString(R.string.wizard_start)
         } else {
@@ -110,6 +111,27 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             WizardStep.IntervalMethods -> renderIntervalMethods(state)
             WizardStep.SessionDuration -> renderSessionDuration(state)
             WizardStep.Summary -> renderSummary(state)
+        }
+    }
+
+    private fun renderStepDots(active: Int, total: Int) {
+        stepDots.removeAllViews()
+        val ctx = requireContext()
+        val gap = dp(4f)
+        for (i in 1..total) {
+            val isActive = i == active
+            val sizePx = dp(if (isActive) 8f else 6f)
+            val view = ImageView(ctx).apply {
+                setImageDrawable(ContextCompat.getDrawable(ctx,
+                    if (isActive) R.drawable.wizard_dot_active
+                    else R.drawable.wizard_dot_inactive
+                ))
+                layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
+                    if (i > 1) marginStart = gap
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+            }
+            stepDots.addView(view)
         }
     }
 
