@@ -41,7 +41,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -383,6 +385,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun runSessionLoop(config: SessionConfig) {
         while (isRunning) {
+            // Bail immediately if the coroutine has been cancelled — covers the
+            // race where stopSession() flips isRunning AND cancels the job, but
+            // a fresh startSession() flips isRunning back to true before the old
+            // loop observes cancellation at a suspension point. Without this
+            // every old loop would keep spinning against the new session's mic.
+            currentCoroutineContext().ensureActive()
             // Hold here while paused (clip-accurate: we never enter mid-cycle).
             while (isPaused && isRunning) {
                 delay(300L)
@@ -391,6 +399,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val cycleStartedAt = System.currentTimeMillis()
             val mode = effectiveModeFor(config)
+            // Release the previous AudioRecord native resource before swapping in
+            // a new instance — Android limits concurrent open AudioRecords and
+            // leaked references make the next session unable to acquire the mic.
+            audioRecorder.stopRecording()
             audioRecorder = AudioRecorder(durationSeconds = mode.durationSeconds)
             startVolumeObservation()
 
@@ -477,56 +489,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * One Continuous AVERAGE cycle: 10 × 1 s recordings, each fed through every
-     * model. Per-second circles update for the primary model only (UX choice).
+     * One Continuous AVERAGE cycle: ten 1 s recordings.
+     *
+     * Per model, the inference path depends on the model's training duration:
+     *  - 1 s-models infer per slice and we average the ten results
+     *  - 10 s-models receive the concatenated 10 s buffer for one inference
+     *
+     * Per-second circles update for the primary model only and only when it is
+     * 1 s-trained (otherwise no per-slice predictions exist mid-cycle).
      */
     private suspend fun runAverageCycle(config: SessionConfig): CycleOutcome? {
         val totalClips = 10
+        val sampleRate = 32000
         _uiState.update { it.copy(
             perSecondResults = List(totalClips) { null },
             runningAverageResult = null,
             liveResultsByModel = emptyMap()
         ) }
+
+        val oneSecModels = inferencesByName.filter {
+            ModelTrainingDuration.secondsForFilename(it.key) == 1
+        }
+        val tenSecModels = inferencesByName.filter {
+            ModelTrainingDuration.secondsForFilename(it.key) == 10
+        }
+        val primaryName = config.modelNames.first()
+        val primaryIs1s = ModelTrainingDuration.secondsForFilename(primaryName) == 1
+
         val perModelClips: MutableMap<String, MutableList<ClassificationResult>> = mutableMapOf()
+        val collectedSlices = mutableListOf<FloatArray>()
         val volMeans = mutableListOf<Float>()
         var volPeak = 0f
         val cycleStart = System.currentTimeMillis()
+
         for (i in 0 until totalClips) {
             if (!isRunning || isPaused) break
+            // Release the previous 1-second recorder before allocating the next one.
+            audioRecorder.stopRecording()
             val recorder = AudioRecorder(durationSeconds = 1)
             audioRecorder = recorder
             startVolumeObservation()
             var clipSamples: FloatArray? = null
-            try {
-                recorder.startRecording().collect { state ->
-                    when (state) {
-                        is RecordingState.Completed -> clipSamples = state.samples
-                        is RecordingState.Progress -> {
-                            val overall = (i + state.progress) / totalClips
-                            _uiState.update {
-                                it.copy(
-                                    appState = AppState.Recording(totalClips - i),
-                                    recordingProgress = overall
-                                )
-                            }
+            // No CancellationException catch — propagate up so the recording job
+            // can actually terminate. See comment in recordCycleAudio() for why.
+            recorder.startRecording().collect { state ->
+                when (state) {
+                    is RecordingState.Completed -> clipSamples = state.samples
+                    is RecordingState.Progress -> {
+                        val overall = (i + state.progress) / totalClips
+                        _uiState.update {
+                            it.copy(
+                                appState = AppState.Recording(totalClips - i),
+                                recordingProgress = overall
+                            )
                         }
-                        else -> Unit
                     }
+                    else -> Unit
                 }
-            } catch (_: CancellationException) {
-                return null
             }
             val samples = clipSamples ?: break
+            collectedSlices += samples
             val volStats = recorder.snapshotVolumeStats()
             volMeans += volStats.mean
             if (volStats.peak > volPeak) volPeak = volStats.peak
 
-            for ((name, inf) in inferencesByName) {
+            // 1 s-models: infer per slice immediately, accumulate, stream live UI.
+            for ((name, inf) in oneSecModels) {
                 if (!isRunning) break
                 val r = withContext(mlDispatcher) { inf.infer(samples, RecordingMode.FAST) } ?: continue
                 perModelClips.getOrPut(name) { mutableListOf() } += r
-                if (name == config.modelNames.first()) {
-                    val running = computeRunningAverage(perModelClips[name]!!, cycleStart)
+                val running = computeRunningAverage(perModelClips[name]!!, cycleStart)
+                if (name == primaryName) {
                     _uiState.update { state ->
                         val per = state.perSecondResults.toMutableList()
                         if (i < per.size) per[i] = r
@@ -537,36 +570,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                 } else {
-                    val running = computeRunningAverage(perModelClips[name]!!, cycleStart)
                     _uiState.update { state ->
                         state.copy(liveResultsByModel = state.liveResultsByModel + (name to mapOf(LongSubMode.AVERAGE to running)))
                     }
                 }
             }
         }
+
+        if (collectedSlices.isEmpty()) return null
+
+        // 10 s-models: assemble the concatenated 10 s buffer and infer once each.
+        if (tenSecModels.isNotEmpty() && collectedSlices.size == totalClips) {
+            val concatBuffer = FloatArray(sampleRate * totalClips)
+            var offset = 0
+            for (slice in collectedSlices) {
+                val take = minOf(slice.size, sampleRate)
+                slice.copyInto(concatBuffer, offset, 0, take)
+                offset += sampleRate
+            }
+            for ((name, inf) in tenSecModels) {
+                if (!isRunning) break
+                val r = withContext(mlDispatcher) { inf.infer(concatBuffer, RecordingMode.STANDARD) } ?: continue
+                perModelClips.getOrPut(name) { mutableListOf() } += r
+                _uiState.update { state ->
+                    state.copy(liveResultsByModel = state.liveResultsByModel + (name to mapOf(LongSubMode.AVERAGE to r)))
+                }
+            }
+        }
+
         if (perModelClips.isEmpty()) return null
 
         val perModel = mutableMapOf<String, MutableMap<LongSubMode, ClassificationResult>>()
         for ((name, clips) in perModelClips) {
-            val avg = computeRunningAverage(clips, cycleStart)
-            perModel.getOrPut(name) { mutableMapOf() }[LongSubMode.AVERAGE] = avg
+            val finalResult = if (clips.size == 1) clips.first() else computeRunningAverage(clips, cycleStart)
+            perModel.getOrPut(name) { mutableMapOf() }[LongSubMode.AVERAGE] = finalResult
         }
         accumulateAggregate(perModel)
         val cycleVolMean = if (volMeans.isNotEmpty()) volMeans.average().toFloat() else 0f
         accumulateSessionVolume(cycleVolMean)
-        // Per-second clips (primary model only, for History compatibility).
-        val primaryName = config.modelNames.first()
-        val primaryClips = perModelClips[primaryName].orEmpty()
-        val perSecondClips = primaryClips.mapIndexed { idx, cr ->
-            PerSecondClip(
-                clipIndex = idx,
-                sceneClass = cr.sceneClass,
-                confidence = cr.confidence,
-                allProbabilities = cr.allProbabilities,
-                volumeMean = volMeans.getOrNull(idx),
-                volumePeak = null
-            )
-        }
+
+        // Per-second clips (History detail view) only carry meaning when the
+        // primary model is 1 s-trained — that's where the per-slice predictions
+        // come from. For a 10 s primary we leave the field null.
+        val perSecondClips: List<PerSecondClip>? = if (primaryIs1s) {
+            val primaryClips = perModelClips[primaryName].orEmpty()
+            primaryClips.mapIndexed { idx, cr ->
+                PerSecondClip(
+                    clipIndex = idx,
+                    sceneClass = cr.sceneClass,
+                    confidence = cr.confidence,
+                    allProbabilities = cr.allProbabilities,
+                    volumeMean = volMeans.getOrNull(idx),
+                    volumePeak = null
+                )
+            }
+        } else null
         return CycleOutcome(
             perModel = perModel,
             volume = AudioRecorder.VolumeStats(mean = cycleVolMean, peak = volPeak),
@@ -603,7 +661,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     LongSubMode.AVERAGE -> {
                         if (samples.size < sampleRate * 10) null
-                        else {
+                        else if (ModelTrainingDuration.secondsForFilename(modelName) == 10) {
+                            // 10 s-model in AVG: feed the full 10 s buffer once.
+                            // The per-second-circles UI stays untouched because
+                            // per-slice predictions don't exist for this path.
+                            withContext(mlDispatcher) { inf.infer(samples, RecordingMode.STANDARD) }
+                        } else {
                             val clipResults = mutableListOf<ClassificationResult>()
                             val startTime = System.currentTimeMillis()
                             for (i in 0 until 10) {
@@ -668,26 +731,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             recordingProgress = 0f
         ) }
         var captured: FloatArray? = null
-        try {
-            audioRecorder.startRecording().collect { state ->
-                when (state) {
-                    is RecordingState.Started -> Unit
-                    is RecordingState.Progress -> {
-                        val remaining = (durationSeconds * (1f - state.progress)).toInt()
-                        _uiState.update { it.copy(
-                            appState = AppState.Recording(remaining),
-                            recordingProgress = state.progress
-                        ) }
-                    }
-                    is RecordingState.Completed -> captured = state.samples
-                    is RecordingState.Error -> _uiState.update { it.copy(
-                        appState = AppState.Error(state.message),
-                        errorMessage = state.message
+        // CancellationException is intentionally NOT caught here — it has to bubble
+        // up so the launched recordingJob terminates. Earlier code swallowed it
+        // and returned null, which let the outer loop spin against `continue` on
+        // every cancellation and never exit (race with the next session start).
+        audioRecorder.startRecording().collect { state ->
+            when (state) {
+                is RecordingState.Started -> Unit
+                is RecordingState.Progress -> {
+                    val remaining = (durationSeconds * (1f - state.progress)).toInt()
+                    _uiState.update { it.copy(
+                        appState = AppState.Recording(remaining),
+                        recordingProgress = state.progress
                     ) }
                 }
+                is RecordingState.Completed -> captured = state.samples
+                is RecordingState.Error -> _uiState.update { it.copy(
+                    appState = AppState.Error(state.message),
+                    errorMessage = state.message
+                ) }
             }
-        } catch (_: CancellationException) {
-            return null
         }
         return captured
     }
@@ -891,9 +954,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         audioRecorder.stopRecording()
     }
 
-    /** Called from the Results Summary screen when the user navigates away. */
+    /**
+     * Releases the native PyTorch modules of the parked session and resets UI
+     * state. Safe to call multiple times. Called from the Results Summary
+     * (when the user navigates away) and from the Live Recording screen
+     * (when the user backs out without ever starting).
+     */
     fun clearSessionResults() {
         activeConfig = null
+        for (inf in inferencesByName.values) {
+            inf.release()
+        }
         inferencesByName = LinkedHashMap()
         _uiState.update { UiState() }
     }
@@ -1059,6 +1130,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         stopSession()
+        // Don't release ModelInference modules here — viewModelScope is cancelled
+        // but a native Module.forward() that's already running won't observe
+        // cancellation, and destroy() during forward() can crash. Process death
+        // (or GC) reclaims the native handles. Explicit user-driven exits
+        // (back-from-Live, exit-from-Results) call clearSessionResults() while
+        // we know no inference is in flight.
         mlDispatcher.close()
     }
 
