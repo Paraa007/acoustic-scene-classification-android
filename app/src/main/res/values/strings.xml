@@ -241,8 +241,6 @@
 
     <!-- Model Management -->
     <string name="settings_models">Models</string>
-    <string name="settings_user_model">User Model</string>
-    <string name="settings_dev_models">Dev Models</string>
     <string name="rename_model">Rename Model</string>
     <string name="model_display_name_hint">Display name</string>
     <string name="model_name_saved">Model name saved</string>
