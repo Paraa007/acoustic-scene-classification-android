@@ -69,6 +69,16 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private var lastBuiltModelKey: String = ""
     private var liveDataExpanded: MutableMap<String, Boolean> = mutableMapOf()
 
+    // One-shot auto-start guard. Without this, render() would re-trigger
+    // startSession() the moment onSessionLoopExit() flips appState back to Ready
+    // (right before the user-tapped Stop pops this fragment), spawning a second
+    // recording loop and leaving the previous session orphaned but still spinning.
+    private var hasAutoStarted = false
+    // True while the user-initiated Stop is in flight. Suppresses any further
+    // render() side-effects on this fragment so a tail uiState update can't
+    // re-launch the session.
+    private var stopInFlight = false
+
     private data class ModelCardViews(
         val container: LinearLayout,
         val methodSections: MutableMap<LongSubMode, MethodSectionViews> = mutableMapOf()
@@ -127,6 +137,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             }
         }
         stopButton.setOnClickListener {
+            stopInFlight = true
             viewModel.stopSession()
             findNavController().navigate(R.id.action_live_to_results)
         }
@@ -150,19 +161,30 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     }
 
     private fun handleBack() {
-        // While running, Stop is the only way out — otherwise pop back to wizard.
+        // While running, Stop is the only way out — otherwise pop back to wizard
+        // and release the parked models so they don't pile up in memory across
+        // wizard restarts.
         if (viewModel.isClassifying()) return
+        viewModel.clearSessionResults()
         findNavController().popBackStack()
     }
 
     private fun render(state: UiState) {
+        if (stopInFlight) return
         val config = state.sessionConfig ?: run {
             // Not configured — bounce back to welcome.
             findNavController().popBackStack(R.id.welcomeFragment, false)
             return
         }
-        // Auto-start once the model is loaded.
-        if (state.isModelLoaded && !viewModel.isClassifying() && state.appState !is AppState.Error) {
+        // Auto-start exactly once per fragment lifetime. After the user stops
+        // and the loop's finally restores appState=Ready, this would otherwise
+        // re-fire and launch a second concurrent session.
+        if (!hasAutoStarted &&
+            state.isModelLoaded &&
+            !viewModel.isClassifying() &&
+            state.appState !is AppState.Error
+        ) {
+            hasAutoStarted = true
             viewModel.startSession()
         }
 
