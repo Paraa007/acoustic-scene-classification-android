@@ -10,12 +10,14 @@ import android.view.ViewGroup
 import android.view.Window
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.app.Dialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.ModelInfo
@@ -42,6 +44,9 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        view.findViewById<ImageButton>(R.id.settingsBack).setOnClickListener {
+            findNavController().popBackStack()
+        }
         setupThemeToggle(view)
         setupModelList(view)
         setupSceneLegend(view)
@@ -71,31 +76,15 @@ class SettingsFragment : Fragment() {
     }
 
     private fun setupModelList(view: View) {
-        val userModelContainer: LinearLayout = view.findViewById(R.id.userModelContainer)
         val devModelsContainer: LinearLayout = view.findViewById(R.id.devModelsContainer)
-
         val bestModel = ModelInfoRegistry.bestTestAccuracyModel()
 
-        // User models
-        val userModels = listModelsInDir(ModelConfig.USER_MODEL_DIR)
-        userModelContainer.removeAllViews()
-        if (userModels.isEmpty()) {
-            userModelContainer.addView(createEmptyLabel())
-        } else {
-            userModels.forEach { fileName ->
-                userModelContainer.addView(
-                    createModelRow(fileName, ModelConfig.USER_MODEL_DIR, userModelContainer, fileName == bestModel)
-                )
-            }
-        }
-
-        // Dev models
-        val devModels = listModelsInDir(ModelConfig.DEV_MODELS_DIR)
+        val models = listModelsInDir(ModelConfig.DEV_MODELS_DIR)
         devModelsContainer.removeAllViews()
-        if (devModels.isEmpty()) {
+        if (models.isEmpty()) {
             devModelsContainer.addView(createEmptyLabel())
         } else {
-            devModels.forEach { fileName ->
+            models.forEach { fileName ->
                 devModelsContainer.addView(
                     createModelRow(fileName, ModelConfig.DEV_MODELS_DIR, devModelsContainer, fileName == bestModel)
                 )

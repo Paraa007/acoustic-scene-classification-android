@@ -266,9 +266,24 @@ class ModelInference(
      * Returns the current model path
      */
     fun getModelPath(): String = modelAssetPath
-    
+
     /**
      * Gibt die erwartete Audio-Input-Größe zurück (in Samples)
      */
     fun getInputSize(): Int = INPUT_AUDIO_SIZE
+
+    /**
+     * Gibt die native PyTorch-Module-Referenz frei. Nach release() ist die Instanz
+     * unbrauchbar — entweder wegwerfen oder loadModel() erneut rufen.
+     */
+    fun release() {
+        try {
+            module?.destroy()
+        } catch (e: Throwable) {
+            Log.w(TAG, "Module.destroy() failed: ${e.message}")
+        }
+        module = null
+        isLoaded = false
+        currentModelPath = null
+    }
 }
