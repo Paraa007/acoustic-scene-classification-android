@@ -2,35 +2,49 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/nav_user_mode">
+    app:startDestination="@id/welcomeFragment">
 
     <fragment
-        android:id="@+id/nav_user_mode"
-        android:name="com.fzi.acousticscene.ui.RecordingFragment"
-        android:label="@string/user_mode">
-        <argument
-            android:name="is_dev_mode"
-            app:argType="boolean"
-            android:defaultValue="false" />
+        android:id="@+id/welcomeFragment"
+        android:name="com.fzi.acousticscene.ui.WelcomeFragment"
+        android:label="Welcome">
+        <action
+            android:id="@+id/action_welcome_to_wizard"
+            app:destination="@id/wizardFragment" />
+        <action
+            android:id="@+id/action_welcome_to_settings"
+            app:destination="@id/settingsFragment" />
     </fragment>
 
     <fragment
-        android:id="@+id/nav_dev_mode"
-        android:name="com.fzi.acousticscene.ui.RecordingFragment"
-        android:label="@string/dev_mode">
-        <argument
-            android:name="is_dev_mode"
-            app:argType="boolean"
-            android:defaultValue="true" />
+        android:id="@+id/wizardFragment"
+        android:name="com.fzi.acousticscene.ui.WizardFragment"
+        android:label="Wizard">
+        <action
+            android:id="@+id/action_wizard_to_live"
+            app:destination="@id/liveRecordingFragment"
+            app:popUpTo="@id/welcomeFragment"
+            app:popUpToInclusive="false" />
     </fragment>
 
     <fragment
-        android:id="@+id/nav_history"
-        android:name="com.fzi.acousticscene.ui.HistoryFragment"
-        android:label="@string/history" />
+        android:id="@+id/liveRecordingFragment"
+        android:name="com.fzi.acousticscene.ui.LiveRecordingFragment"
+        android:label="Live">
+        <action
+            android:id="@+id/action_live_to_results"
+            app:destination="@id/resultsSummaryFragment"
+            app:popUpTo="@id/welcomeFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
 
     <fragment
-        android:id="@+id/nav_settings"
+        android:id="@+id/resultsSummaryFragment"
+        android:name="com.fzi.acousticscene.ui.ResultsSummaryFragment"
+        android:label="Results" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
         android:name="com.fzi.acousticscene.ui.SettingsFragment"
         android:label="@string/settings" />
 

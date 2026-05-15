@@ -13,14 +13,14 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.fzi.acousticscene.R
 import androidx.lifecycle.viewModelScope
+import com.fzi.acousticscene.R
 import com.fzi.acousticscene.audio.AudioRecorder
 import com.fzi.acousticscene.audio.RecordingState
 import com.fzi.acousticscene.data.ActiveSessionRegistry
+import com.fzi.acousticscene.data.LastConfigStore
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
-import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.ml.ModelInference
 import com.fzi.acousticscene.model.AllInOneResult
 import com.fzi.acousticscene.model.ClassificationResult
@@ -31,201 +31,202 @@ import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.ModelTrainingDuration
 import com.fzi.acousticscene.model.PerSecondClip
 import com.fzi.acousticscene.model.PredictionRecord
+import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.model.SessionConfig
+import com.fzi.acousticscene.model.SessionDuration
+import com.fzi.acousticscene.model.WizardStep
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.isActive
 import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * ViewModel für MainActivity
- * 
- * Verwaltet:
- * - Model Loading
- * - Audio Recording
- * - Model Inference
- * - State Management
- * - History
- * 
- * @param application Android Application Context
+ * Main view model behind the wizard, the live recording flow, and the
+ * results-summary screen. The session is configured up-front via
+ * [applySessionConfig] (built by the wizard) and started by [startSession].
+ *
+ * Only one session can run at a time. While one is active the only legal
+ * controls are pause/resume and stop — reconfiguration is intentionally
+ * disallowed (see UI_REDESIGN_WIZARD.md).
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "MainViewModel"
-        private const val HISTORY_SIZE = 5
         private const val EVALUATION_CHANNEL_ID = "evaluation_channel"
         private const val EVALUATION_NOTIFICATION_ID = 2
     }
 
-    private var modelInference = ModelInference(application.applicationContext)
-
-    // Model configuration
-    private var _modelPath: String = "user_model/model1.pt"
-    private var _modelName: String = "model1.pt"
-    private var _numClasses: Int = 8
-    private var _isDevMode: Boolean = false
-
-    // ALL-IN-ONE: additional ModelInference instances, one per selected dev model.
-    // The first entry mirrors `modelInference` (primary). When this list has ≥ 2
-    // entries, ALL-IN-ONE mode is active and every inference loops over all of them.
-    private var _allInOneModelNames: List<String> = emptyList()
-    private var allInOneInferences: List<ModelInference> = emptyList()
-
-    val modelName: String get() = _modelName
-    val numClasses: Int get() = _numClasses
-    val isDevMode: Boolean get() = _isDevMode
-    val isAllInOne: Boolean get() = _allInOneModelNames.size >= 2
-    val allInOneModelNames: List<String> get() = _allInOneModelNames
-
-    // Repository for all predictions (singleton - shared with HistoryFragment)
     private val predictionRepository = PredictionRepository.getInstance(application)
-
-    // Session start time (set on app start)
-    private var sessionStartTime: Long = System.currentTimeMillis()
-
-    /**
-     * Sets the model configuration from Intent extras.
-     *
-     * For single-model sessions [allInOneModels] is null/empty. For ALL-IN-ONE
-     * sessions it carries every selected `.pt` filename (primary first); each
-     * model gets its own cached [ModelInference] instance for parallel inference.
-     */
-    fun setModelConfig(
-        modelPath: String,
-        modelName: String,
-        numClasses: Int,
-        isDevMode: Boolean,
-        allInOneModels: List<String>? = null
-    ) {
-        val pathChanged = _modelPath != modelPath
-        val allInOneChanged = _allInOneModelNames != (allInOneModels ?: emptyList<String>())
-        _modelPath = modelPath
-        _modelName = modelName
-        _numClasses = numClasses
-        _isDevMode = isDevMode
-
-        // Update the primary ModelInference with the new path
-        modelInference.setModelPath(modelPath)
-
-        // Rebuild all-in-one inference pool when the selection changes
-        if (allInOneChanged) {
-            _allInOneModelNames = allInOneModels?.toList() ?: emptyList()
-            allInOneInferences = if (_allInOneModelNames.size >= 2) {
-                _allInOneModelNames.map { name ->
-                    val fullPath = "${ModelConfig.DEV_MODELS_DIR}/$name"
-                    // The primary model shares its instance with `modelInference`
-                    // to avoid loading the same model twice. Others get fresh inferences.
-                    if (fullPath == modelPath) {
-                        modelInference
-                    } else {
-                        ModelInference(getApplication<Application>().applicationContext, fullPath)
-                    }
-                }
-            } else emptyList()
-            _uiState.update {
-                it.copy(
-                    allInOneModelNames = _allInOneModelNames,
-                    allInOneResults = emptyMap()
-                )
-            }
-        }
-
-        Log.d(TAG, "Model config set: $modelName ($numClasses classes, devMode=$isDevMode, allInOne=${_allInOneModelNames.size})")
-
-        // (Re)load model if path changed or model not yet loaded
-        if (pathChanged || allInOneChanged || !_uiState.value.isModelLoaded) {
-            loadModel()
-        }
-    }
-
-    /**
-     * Sets the session start time (should be called on app start)
-     */
-    fun initializeSession() {
-        sessionStartTime = System.currentTimeMillis()
-        Log.d(TAG, "Session initialized: $sessionStartTime")
-    }
-
-    /**
-     * Ermittelt den aktuellen Akkustand in Prozent (0-100).
-     * Wird bei jeder Vorhersage aufgerufen, um den Verbrauch zu protokollieren.
-     *
-     * @return Akkustand in % oder -1 wenn nicht verfügbar
-     */
-    private fun getBatteryLevel(): Int {
-        return try {
-            val batteryManager = getApplication<Application>()
-                .getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-            batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        } catch (e: Exception) {
-            Log.e(TAG, "Could not get battery level", e)
-            -1
-        }
-    }
-    
-    // Dedizierter Thread-Pool für ML-Operationen
     private val mlDispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
-    
+
+    // ========================================================================
+    // Wizard state — collected on the wizard pages, resolved into a SessionConfig
+    // when the user confirms on the summary page.
+    // ========================================================================
+
+    private val _wizard = MutableStateFlow(WizardViewState())
+    val wizard: StateFlow<WizardViewState> = _wizard.asStateFlow()
+
+    fun resetWizard(availableModels: List<String>, prefill: SessionConfig? = null) {
+        _wizard.value = if (prefill != null) {
+            WizardViewState(
+                step = WizardStep.Models,
+                availableModels = availableModels,
+                selectedModels = prefill.modelNames.filter { it in availableModels },
+                category = prefill.category,
+                continuousSubMode = prefill.continuousSubMode,
+                intervalPause = prefill.intervalPause,
+                intervalMethodsByModel = prefill.intervalMethodsByModel,
+                sessionDuration = prefill.sessionDuration
+            )
+        } else {
+            WizardViewState(availableModels = availableModels)
+        }
+    }
+
+    fun wizardGoToStep(step: WizardStep) {
+        _wizard.update { it.copy(step = step) }
+    }
+
+    fun wizardAdvance() {
+        val current = _wizard.value
+        if (!current.canAdvance()) return
+        val order = current.stepOrder()
+        val idx = order.indexOf(current.step)
+        if (idx in 0 until order.lastIndex) {
+            _wizard.update { it.copy(step = order[idx + 1]) }
+        }
+    }
+
+    /** @return true if a previous step exists — false means we're already on the first step. */
+    fun wizardBack(): Boolean {
+        val current = _wizard.value
+        val order = current.stepOrder()
+        val idx = order.indexOf(current.step)
+        return if (idx > 0) {
+            _wizard.update { it.copy(step = order[idx - 1]) }
+            true
+        } else false
+    }
+
+    fun wizardSetModels(models: List<String>) {
+        // Drop method selections for models that are no longer in the set, seed
+        // the locked default for any newly added model, and drop methods that
+        // don't match the model's training duration (e.g. STANDARD on a 1s
+        // model). Without the seed, IntervalMethods couldn't advance —
+        // canAdvance() needs every model to have at least one method ticked.
+        _wizard.update { state ->
+            val kept = state.intervalMethodsByModel.filterKeys { it in models }
+            val seeded = models.associateWith { name ->
+                val duration = ModelTrainingDuration.secondsForFilename(name)
+                val locked = ModelTrainingDuration.defaultSubMode(name)
+                val previous = kept[name].orEmpty()
+                val compatible = previous.filter { it.isCompatibleWith(duration) }.toSet()
+                compatible + locked
+            }
+            state.copy(selectedModels = models, intervalMethodsByModel = seeded)
+        }
+    }
+
+    fun wizardSetCategory(cat: RecordingCategory) {
+        _wizard.update { it.copy(category = cat) }
+    }
+
+    fun wizardSetContinuousSubMode(sub: LongSubMode) {
+        _wizard.update { it.copy(continuousSubMode = sub) }
+    }
+
+    fun wizardSetIntervalPause(pause: LongInterval) {
+        _wizard.update { it.copy(intervalPause = pause) }
+    }
+
+    /**
+     * Toggle a method on/off for a specific model. The locked default cannot be
+     * toggled off, and methods that don't match the model's training duration
+     * (e.g. Standard on a 1s-model) are silently rejected — the wizard already
+     * disables their checkboxes.
+     */
+    fun wizardToggleIntervalMethod(modelName: String, sub: LongSubMode) {
+        val locked = ModelTrainingDuration.defaultSubMode(modelName)
+        if (sub == locked) return
+        val duration = ModelTrainingDuration.secondsForFilename(modelName)
+        if (!sub.isCompatibleWith(duration)) return
+        _wizard.update { state ->
+            val current = state.intervalMethodsByModel[modelName]
+                ?: setOf(locked)
+            val next = if (sub in current) current - sub else current + sub
+            state.copy(
+                intervalMethodsByModel = state.intervalMethodsByModel + (modelName to (next + locked))
+            )
+        }
+    }
+
+    /** Ensures every selected model has at least its locked default in the methods map. */
+    fun wizardEnsureMethodDefaults() {
+        _wizard.update { state ->
+            val merged = state.selectedModels.associateWith { name ->
+                val current = state.intervalMethodsByModel[name].orEmpty()
+                current + ModelTrainingDuration.defaultSubMode(name)
+            }
+            state.copy(intervalMethodsByModel = merged)
+        }
+    }
+
+    fun wizardSetSessionDuration(duration: SessionDuration) {
+        _wizard.update { it.copy(sessionDuration = duration) }
+    }
+
+    // ========================================================================
+    // Session lifecycle. `applySessionConfig` is the bridge from wizard → live.
+    // ========================================================================
+
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
-    
-    // Statistiken als StateFlow
+
     private val _statistics = MutableStateFlow(PredictionStatistics())
     val statistics: StateFlow<PredictionStatistics> = _statistics.asStateFlow()
-    
-    // Alle Vorhersagen Anzahl
+
     private val _totalPredictionsCount = MutableStateFlow(0)
     val totalPredictionsCount: StateFlow<Int> = _totalPredictionsCount.asStateFlow()
-    
+
+    // Inference pool — one entry per model in the session. For single-model
+    // sessions this is a list of size 1.
+    private var inferencesByName: LinkedHashMap<String, ModelInference> = LinkedHashMap()
+    private var modelClassCount: Int = 9
+
+    // Currently active session config. null while idle. Cleared on stop only
+    // after the Results Summary has been acknowledged so that screen can read it.
+    @Volatile private var activeConfig: SessionConfig? = null
+    private var sessionStartTime: Long = 0L
+    private var sessionElapsedAtPauseMs: Long = 0L
+    private var sessionResumeWallClockMs: Long = 0L
+
     private var recordingJob: Job? = null
-    private var volumeJob: Job? = null
-    @Volatile private var isRecording = false
+    private var sessionTimerJob: Job? = null
+    private var audioRecorder: AudioRecorder = AudioRecorder(durationSeconds = 10)
+
+    @Volatile private var isRunning = false
     @Volatile private var isPaused = false
-    // If set, the user-triggered pause auto-resumes at this SystemClock.elapsedRealtime()
-    // deadline. null = indefinite user pause (resume only via Resume button).
-    @Volatile private var userPauseDeadlineElapsedMs: Long? = null
-    private var currentMode: RecordingMode = RecordingMode.STANDARD
-    private var audioRecorder: AudioRecorder = AudioRecorder(durationSeconds = currentMode.durationSeconds)
-
-    // Time Analysis: Tracks whether the analysis view was opened BEFORE recording started
-    // This flag is set when recording starts and checked to gate time analysis calculations
-    private val _isAnalysisViewEnabledAtRecordingStart = MutableStateFlow(false)
-    val isAnalysisViewEnabledAtRecordingStart: StateFlow<Boolean> = _isAnalysisViewEnabledAtRecordingStart.asStateFlow()
-
-    /**
-     * Called by MainActivity to record whether the analysis view was enabled when recording starts.
-     * This gates whether time analysis calculations should run.
-     */
-    fun setAnalysisViewStateAtRecordingStart(isEnabled: Boolean) {
-        _isAnalysisViewEnabledAtRecordingStart.value = isEnabled
-        Log.d(TAG, "Analysis view state at recording start: $isEnabled")
-    }
-
-    /**
-     * Resets the analysis view state when recording stops.
-     */
-    private fun resetAnalysisViewState() {
-        _isAnalysisViewEnabledAtRecordingStart.value = false
-    }
+    @Volatile private var stopReasonAuto = false  // true if soft-stop triggered
 
     init {
         updateStatistics()
-        // Starte Volume-Beobachtung
-        startVolumeObservation()
-        // Observe dismissals of the in-app evaluation prompt (from EvaluationActivity)
+        // Surface dismissals of the in-app evaluation prompt so the card disappears
+        // once the user has rated (or skipped) on EvaluationActivity.
         viewModelScope.launch {
             EvaluationPromptBus.dismissals.collect { dismissedId ->
                 _uiState.update { state ->
@@ -235,12 +236,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
-        // Note: loadModel() is called from setModelConfig() when fragments configure the model
+        startVolumeObservation()
     }
 
-    /**
-     * Beobachtet den Volume-Flow vom AudioRecorder und aktualisiert den UI-State
-     */
+    private var volumeJob: Job? = null
     private fun startVolumeObservation() {
         volumeJob?.cancel()
         volumeJob = viewModelScope.launch {
@@ -249,579 +248,851 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    
+
     private fun updateStatistics() {
         _statistics.value = predictionRepository.getStatistics()
         _totalPredictionsCount.value = predictionRepository.getCount()
     }
-    
+
     /**
-     * Lädt das PyTorch Model asynchron
+     * Loads the picked models into memory and parks the resolved config until
+     * [startSession] is called. Called from the wizard summary page on Start.
      */
-    private fun loadModel() {
+    fun applySessionConfig(config: SessionConfig) {
+        if (isRunning) {
+            Log.w(TAG, "applySessionConfig called while running — ignored")
+            return
+        }
+        activeConfig = config
+        inferencesByName = LinkedHashMap()
+        for (name in config.modelNames) {
+            val path = "${ModelConfig.DEV_MODELS_DIR}/$name"
+            inferencesByName[name] = ModelInference(getApplication<Application>().applicationContext, path)
+        }
+        modelClassCount = ModelConfig.getClassCountForModel(config.modelNames.first())
+        _uiState.update {
+            it.copy(
+                sessionConfig = config,
+                appState = AppState.Loading,
+                isModelLoaded = false,
+                liveResultsByModel = emptyMap(),
+                aggregateResultsByModel = emptyMap(),
+                cycleCountByModelMethod = emptyMap(),
+                sessionElapsedMs = 0L,
+                sessionVolumeMean = 0f,
+                sessionVolumeMeanSampleCount = 0,
+                allInOneModelNames = config.modelNames,
+                allInOneResults = emptyMap()
+            )
+        }
         viewModelScope.launch {
-            _uiState.update { it.copy(appState = AppState.Loading, isModelLoaded = false) }
-            
-            try {
-                // Model Loading kann blockierend sein, daher auf IO Dispatcher
-                val success = withContext(Dispatchers.IO) {
-                    val primaryLoaded = modelInference.loadModel()
-                    // ALL-IN-ONE: also load every extra inference (primary is the same instance
-                    // as modelInference when paths match, so loadModel() is idempotent there).
-                    val extrasLoaded = allInOneInferences.all { it.loadModel() }
-                    primaryLoaded && extrasLoaded
-                }
-
-                if (success) {
-                    _uiState.update {
-                        it.copy(
-                            appState = AppState.Ready,
-                            isModelLoaded = true,
-                            errorMessage = null
-                        )
-                    }
-                    Log.d(TAG, "Model loaded successfully")
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            appState = AppState.Error("Failed to load model"),
-                            isModelLoaded = false,
-                            errorMessage = "Failed to load model"
-                        )
-                    }
-                    Log.e(TAG, "Failed to load model")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading model", e)
-                _uiState.update {
-                    it.copy(
-                        appState = AppState.Error("Error loading model: ${e.message}"),
-                        isModelLoaded = false,
-                        errorMessage = "Error loading model: ${e.message}"
-                    )
-                }
+            val ok = withContext(Dispatchers.IO) {
+                inferencesByName.values.all { it.loadModel() }
             }
-        }
-    }
-    
-    /**
-     * Startet kontinuierliche Klassifikation
-     */
-    fun startClassification() {
-        if (isRecording) {
-            Log.w(TAG, "Classification already running")
-            return
-        }
-        
-        if (!modelInference.isModelLoaded()) {
-            Log.e(TAG, "Model not loaded")
             _uiState.update {
-                it.copy(
-                    appState = AppState.Error("Model not loaded"),
-                    errorMessage = "Model not loaded"
-                )
+                if (ok) it.copy(appState = AppState.Ready, isModelLoaded = true, errorMessage = null)
+                else it.copy(appState = AppState.Error("Failed to load model"), isModelLoaded = false)
             }
+        }
+        LastConfigStore.save(getApplication(), config)
+    }
+
+    /**
+     * Returns the currently parked or active session config. The new flow uses
+     * this from RecordingFragment to know how to render the live UI.
+     */
+    fun currentSessionConfig(): SessionConfig? = activeConfig
+
+    fun startSession() {
+        val config = activeConfig ?: run {
+            Log.e(TAG, "startSession with no config — ignored")
             return
         }
-        
-        isRecording = true
-        isPaused = false
-        // Every Start begins a fresh History session
-        sessionStartTime = System.currentTimeMillis()
-        _uiState.update { it.copy(isPaused = false) }
-        Log.d(TAG, "New session started: $sessionStartTime")
+        if (isRunning) return
+        if (inferencesByName.values.any { !it.isModelLoaded() }) {
+            Log.e(TAG, "Models not loaded yet — ignored")
+            return
+        }
 
-        // Track active session globally so other screens (Welcome, History) can detect it
+        isRunning = true
+        isPaused = false
+        stopReasonAuto = false
+        sessionStartTime = System.currentTimeMillis()
+        sessionResumeWallClockMs = SystemClock.elapsedRealtime()
+        sessionElapsedAtPauseMs = 0L
+
         ActiveSessionRegistry.register(
             ActiveSessionRegistry.Entry(
-                isDevMode = _isDevMode,
-                modelPath = _modelPath,
-                modelName = _modelName,
-                numClasses = _numClasses,
+                modelPath = "${ModelConfig.DEV_MODELS_DIR}/${config.modelNames.first()}",
+                modelName = config.modelNames.first(),
+                numClasses = modelClassCount,
                 sessionStartTime = sessionStartTime,
-                allInOneModels = _allInOneModelNames.takeIf { it.size >= 2 }
+                allInOneModels = config.modelNames.takeIf { it.size >= 2 }
             )
         )
 
-        // AVERAGE mode uses a completely different flow: record 1s, infer, repeat 10x
-        if (currentMode == RecordingMode.AVERAGE) {
-            recordingJob = viewModelScope.launch {
-                startAverageClassification()
+        _uiState.update { it.copy(
+            isPaused = false,
+            sessionElapsedMs = 0L,
+            liveResultsByModel = emptyMap(),
+            aggregateResultsByModel = emptyMap(),
+            cycleCountByModelMethod = emptyMap(),
+            sessionVolumeMean = 0f,
+            sessionVolumeMeanSampleCount = 0,
+            allInOneResults = emptyMap()
+        ) }
+
+        // Session timer — ticks every 500 ms so the stopwatch stays smooth, fires
+        // soft-stop when the chosen window elapses.
+        sessionTimerJob?.cancel()
+        sessionTimerJob = viewModelScope.launch {
+            val total = config.sessionDuration.totalMs
+            while (isActive && isRunning) {
+                if (!isPaused) {
+                    val elapsed = sessionElapsedAtPauseMs +
+                            (SystemClock.elapsedRealtime() - sessionResumeWallClockMs)
+                    _uiState.update { it.copy(sessionElapsedMs = elapsed) }
+                    if (total != null && elapsed >= total) {
+                        stopReasonAuto = true
+                        // Soft stop — flag the recording loop to exit at the next
+                        // safe boundary (recording finishes, no new cycle starts).
+                        isRunning = false
+                        Log.d(TAG, "Session window elapsed — soft stop scheduled")
+                        break
+                    }
+                }
+                delay(500L)
             }
-            return
         }
 
+        // Audio + inference loop
         recordingJob = viewModelScope.launch {
-            while (isActive && isRecording) {
-                try {
-                    // Block here if user paused — holds before starting the next recording
-                    while (isPaused && isRecording && isActive) {
-                        _uiState.update { it.copy(appState = AppState.UserPaused(0)) }
-                        delay(500)
-                    }
-                    if (!isRecording) break
+            try {
+                runSessionLoop(config)
+            } catch (_: CancellationException) {
+                Log.d(TAG, "Recording loop cancelled")
+            } catch (e: Exception) {
+                Log.e(TAG, "Session loop error", e)
+                _uiState.update { it.copy(
+                    appState = AppState.Error(e.message ?: "Unknown error"),
+                    errorMessage = e.message ?: "Unknown error"
+                ) }
+            } finally {
+                onSessionLoopExit()
+            }
+        }
+    }
 
-                    val durationSeconds = currentMode.durationSeconds
+    private suspend fun runSessionLoop(config: SessionConfig) {
+        while (isRunning) {
+            // Bail immediately if the coroutine has been cancelled — covers the
+            // race where stopSession() flips isRunning AND cancels the job, but
+            // a fresh startSession() flips isRunning back to true before the old
+            // loop observes cancellation at a suspension point. Without this
+            // every old loop would keep spinning against the new session's mic.
+            currentCoroutineContext().ensureActive()
+            // Hold here while paused (clip-accurate: we never enter mid-cycle).
+            while (isPaused && isRunning) {
+                delay(300L)
+            }
+            if (!isRunning) break
 
-                    // Starte Aufnahme
-                    _uiState.update { 
-                        it.copy(
-                            appState = AppState.Recording(durationSeconds),
-                            recordingProgress = 0f
-                        ) 
-                    }
-                    
-                    // Audio aufnehmen - Flow läuft auf IO Thread!
-                    var audioSamples: FloatArray? = null
-                    var recordingError: String? = null
-                    
-                    try {
-                        audioRecorder.startRecording()
-                            .catch { e: Throwable ->
-                                if (e is CancellationException) {
-                                    // Expected when user stops - rethrow to be handled by outer catch
-                                    throw e
-                                }
-                                Log.e(TAG, "Recording error", e)
-                                recordingError = e.message ?: "Unknown error"
-                                _uiState.update {
-                                    it.copy(
-                                        appState = AppState.Error("Recording failed: ${recordingError}"),
-                                        errorMessage = "Recording failed: ${recordingError}"
-                                    )
-                                }
-                            }
-                            .collect { state ->
-                                when (state) {
-                                    is RecordingState.Started -> {
-                                        Log.d(TAG, "Recording started")
-                                    }
-                                    is RecordingState.Progress -> {
-                                        // Progress Update auf Main Thread (UI Update)
-                                        val secondsRemaining = (durationSeconds * (1f - state.progress)).toInt()
-                                        _uiState.update { 
-                                            it.copy(
-                                                appState = AppState.Recording(secondsRemaining),
-                                                recordingProgress = state.progress
-                                            ) 
-                                        }
-                                    }
-                                    is RecordingState.Completed -> {
-                                        Log.d(TAG, "Recording completed: ${state.samples.size} samples")
-                                        audioSamples = state.samples
-                                    }
-                                    is RecordingState.Error -> {
-                                        Log.e(TAG, "Recording error: ${state.message}")
-                                        recordingError = state.message
-                                        _uiState.update { 
-                                            it.copy(
-                                                appState = AppState.Error(state.message),
-                                                errorMessage = state.message
-                                            ) 
-                                        }
-                                    }
-                                }
-                            }
-                    } catch (e: CancellationException) {
-                        // Expected when user clicks Stop - NOT an error
-                        Log.d(TAG, "Recording collection cancelled by user")
-                        // Don't set error - this is normal stop behavior
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error during recording collection", e)
-                        recordingError = e.message ?: "Unknown error"
-                        _uiState.update {
-                            it.copy(
-                                appState = AppState.Error("Recording failed: ${recordingError}"),
-                                errorMessage = "Recording failed: ${recordingError}"
-                            )
-                        }
-                    }
+            val cycleStartedAt = System.currentTimeMillis()
+            val mode = effectiveModeFor(config)
+            // Release the previous AudioRecord native resource before swapping in
+            // a new instance — Android limits concurrent open AudioRecords and
+            // leaked references make the next session unable to acquire the mic.
+            audioRecorder.stopRecording()
+            audioRecorder = AudioRecorder(durationSeconds = mode.durationSeconds)
+            startVolumeObservation()
 
-                    if (!isRecording) {
-                        Log.d(TAG, "Recording stopped, skipping inference")
-                        delay(1000) // Kurze Pause vor nächster Iteration
-                        continue
-                    }
-                    
-                    // Wenn Fehler oder keine Samples, überspringe Inferenz
-                    if (recordingError != null) {
-                        Log.e(TAG, "Recording error occurred: $recordingError")
-                        delay(1000)
-                        continue
-                    }
-                    
-                    if (audioSamples == null || audioSamples!!.isEmpty()) {
-                        Log.e(TAG, "No audio samples received")
-                        _uiState.update { 
-                            it.copy(
-                                appState = AppState.Error("No audio samples received"),
-                                errorMessage = "No audio samples received"
-                            ) 
-                        }
-                        delay(1000)
-                        continue
-                    }
-                    
-                    // Verarbeite Audio - Processing State
-                    _uiState.update { it.copy(appState = AppState.Processing, recordingProgress = 0f) }
+            // For AVERAGE in continuous: the AVG flow does its own per-second loop.
+            // For STANDARD/FAST or any Interval method: record once, then infer.
+            val cycleResult: CycleOutcome = (when {
+                config.category == RecordingCategory.CONTINUOUS &&
+                        config.continuousSubMode == LongSubMode.AVERAGE -> runAverageCycle(config)
+                config.category == RecordingCategory.CONTINUOUS -> runSingleClipCycle(config, mode)
+                else /* INTERVAL */ -> runIntervalCycle(config)
+            }) ?: continue
 
-                    // Für LONG: mehrere Sub-Modi auf dasselbe 10s-Sample anwenden.
-                    // Für STANDARD/FAST: single inference (bisheriges Verhalten).
-                    val subResults: List<LongSubResult>
-                    val result: ClassificationResult?
-                    val allInOneForRecord: List<AllInOneResult>
-                    if (currentMode == RecordingMode.LONG) {
-                        // Multi-Model Evaluation: every active model runs every checked
-                        // sub-mode on the same 10 s buffer. The Multi-Model card below the
-                        // big circle is fed from the `longSubResultsByModel` map, so the
-                        // separate `runAllInOne` pass is unnecessary in LONG mode.
-                        ensureLongSubsInitialized()
-                        val (pri, subs) = runLongSubModes(audioSamples!!, _uiState.value.selectedLongSubsByModel)
-                        result = pri
-                        subResults = subs
-                        allInOneForRecord = emptyList()
-                    } else {
-                        subResults = emptyList()
-                        if (isAllInOne) {
-                            val allResults = runAllInOne(audioSamples!!, currentMode)
-                            allInOneForRecord = allResults
-                            // Primary display follows the first model in the selection
-                            result = allResults.firstOrNull()?.let {
-                                ClassificationResult(
-                                    sceneClass = it.sceneClass,
-                                    confidence = it.confidence,
-                                    allProbabilities = it.allProbabilities,
-                                    inferenceTimeMs = it.inferenceTimeMs
-                                )
-                            }
-                        } else {
-                            allInOneForRecord = emptyList()
-                            result = withContext(mlDispatcher) {
-                                modelInference.infer(audioSamples!!, currentMode)
-                            }
-                        }
-                    }
+            // Persist this cycle as a single PredictionRecord (or one per model row, as designed).
+            persistCycle(config, cycleResult, cycleStartedAt)
 
-                    // Prüfe, ob Recording noch aktiv ist (falls Benutzer gestoppt hat)
-                    if (result != null) {
-                        // Speichere in Repository (ALLE Vorhersagen)
-                        // Top 3 Predictions aus ClassificationResult extrahieren
-                        val top3 = result.getTopPredictions(3)
-
-                        // Akkustand zum Zeitpunkt der Vorhersage erfassen
-                        val currentBatteryLevel = getBatteryLevel()
-
-                        // The persistent perSecondClips field reflects the primary model's
-                        // AVERAGE clips only; additional Multi-Model rows store theirs inside
-                        // their own LongSubResult.perSecondClips inside `longSubResults`.
-                        val perSecondFromAvg = subResults
-                            .firstOrNull { it.subMode == LongSubMode.AVERAGE && it.modelName == _modelName }
-                            ?.perSecondClips
-                            ?: subResults.firstOrNull { it.subMode == LongSubMode.AVERAGE }?.perSecondClips
-
-                        val record = PredictionRecord(
-                            sceneClass = result.sceneClass,
-                            confidence = result.confidence,
-                            allProbabilities = result.allProbabilities,
-                            topPredictions = top3,  // Top 3 Predictions for CSV
-                            inferenceTimeMs = result.inferenceTimeMs,
-                            recordingMode = currentMode,
-                            sessionStartTime = sessionStartTime,  // Session start time
-                            batteryLevel = currentBatteryLevel,  // Battery level
-                            modelName = _modelName,  // Model file name
-                            isDevMode = _isDevMode,  // Whether Dev Mode is active
-                            perSecondClips = perSecondFromAvg,
-                            longSubResults = subResults.takeIf { it.isNotEmpty() },
-                            longIntervalMinutes = if (currentMode == RecordingMode.LONG)
-                                _uiState.value.selectedLongInterval?.pauseMinutes else null,
-                            allInOneResults = allInOneForRecord.takeIf { it.isNotEmpty() }
-                        )
-                        predictionRepository.addPrediction(record)
-                        updateStatistics()
-
-                        // Normal: Aktualisiere UI State mit Ergebnis
-                        updateStateWithResult(result)
-
-                        // LONG-Modus: Pause nach Aufnahme (z.B. 30 Minuten warten)
-                        if (currentMode.hasPauseAfterRecording() && isRecording) {
-                            // Send evaluation notification
-                            sendEvaluationNotification(record)
-
-                            // Dev Mode: user-chosen interval (set via picker before LONG could start);
-                            // User Mode: fixed 30 min from enum. Falls back to enum value if null.
-                            val pauseMs = if (_isDevMode) {
-                                _uiState.value.selectedLongInterval?.pauseMs ?: currentMode.pauseAfterRecordingMs
-                            } else {
-                                currentMode.pauseAfterRecordingMs
-                            }
-                            val pauseMinutes = (pauseMs / 60_000L).toInt()
-                            Log.d(TAG, "LONG mode: Starting ${pauseMinutes} minute pause")
-
-                            // Zeige Pause-Status in der UI (Sekundengenau)
-                            var remainingSeconds = (pauseMs / 1000L).toInt()
-                            while (remainingSeconds > 0 && isActive && isRecording) {
-                                if (isPaused) {
-                                    // Auto-resume when the user-set pause timer elapses.
-                                    val deadline = userPauseDeadlineElapsedMs
-                                    if (deadline != null && SystemClock.elapsedRealtime() >= deadline) {
-                                        isPaused = false
-                                        userPauseDeadlineElapsedMs = null
-                                        _uiState.update {
-                                            it.copy(isPaused = false, userPauseDeadlineElapsedMs = null)
-                                        }
-                                        Log.d(TAG, "Classification auto-resumed (user-pause timer elapsed)")
-                                        continue
-                                    }
-                                    _uiState.update {
-                                        it.copy(appState = AppState.UserPaused(remainingSeconds))
-                                    }
-                                    delay(500)
-                                    continue
-                                }
-                                _uiState.update {
-                                    it.copy(appState = AppState.Paused(remainingSeconds))
-                                }
-                                delay(1000L)
-                                if (!isPaused) remainingSeconds--
-                            }
-
-                            if (isRecording) {
-                                Log.d(TAG, "LONG mode: Pause completed, starting next recording")
-                            }
-                        }
-                    } else {
-                        // Fehler
-                        if (isRecording) {
-                            _uiState.update {
-                                it.copy(
-                                    appState = AppState.Error("Inference failed"),
-                                    errorMessage = "Inference failed"
-                                )
-                            }
-                            delay(1000) // Kurze Pause bei Fehler
-                        }
-                    }
-                } catch (e: CancellationException) {
-                    // Expected when user clicks Stop - NOT an error
-                    Log.d(TAG, "Recording stopped by user (CancellationException)")
-                    // Don't update UI state here - stopClassification() handles it
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error during classification", e)
-                    _uiState.update {
-                        it.copy(
-                            appState = AppState.Error(e.message ?: "Unknown error"),
-                            errorMessage = e.message ?: "Unknown error"
-                        )
-                    }
-                    delay(1000) // Kurze Pause bei Fehler
+            // Interval: pause between recordings, then evaluation prompt.
+            if (config.category == RecordingCategory.INTERVAL && isRunning) {
+                val pauseMs = config.intervalPause?.pauseMs ?: 0L
+                if (pauseMs > 0L) {
+                    sendIntervalEvaluationNotification(cycleResult)
+                    runIntervalPause(pauseMs)
                 }
             }
         }
     }
 
     /**
-     * Stoppt kontinuierliche Klassifikation
+     * Handles the auto/manual stop teardown. Always runs from the recording job's
+     * finally block.
      */
-    fun stopClassification() {
-        isRecording = false
-        isPaused = false
-        userPauseDeadlineElapsedMs = null
-        recordingJob?.cancel()
+    private fun onSessionLoopExit() {
+        val auto = stopReasonAuto
+        Log.d(TAG, "Session loop exited (auto=$auto)")
+        if (isRunning) isRunning = false
+        sessionTimerJob?.cancel()
         audioRecorder.stopRecording()
-        resetAnalysisViewState()
-        ActiveSessionRegistry.unregister(_isDevMode)
+        ActiveSessionRegistry.unregister()
         _uiState.update { it.copy(
             appState = AppState.Ready,
-            errorMessage = null,
-            currentResult = null,
-            history = emptyList(),
-            totalClassifications = 0,
-            averageInferenceTime = 0L,
+            isPaused = false,
             recordingProgress = 0f,
             currentVolume = 0f,
             perSecondResults = List(10) { null },
-            runningAverageResult = null,
-            isPaused = false,
-            userPauseDeadlineElapsedMs = null,
-            longSubResultsByModel = emptyMap(),
-            allInOneResults = emptyMap(),
-            pendingEvaluation = null
+            runningAverageResult = null
         ) }
-        Log.d(TAG, "Classification stopped")
     }
 
     /**
-     * User presses Pause in LONG mode: halts both the active recording loop
-     * (at the next iteration boundary) and the 30-min countdown. The session
-     * stays alive; Resume continues from where Pause was hit.
+     * Picks the [RecordingMode] that drives the AudioRecorder / inference call
+     * for the active config. Continuous: derived from continuousSubMode; Interval
+     * always records 10 s (LONG) and then dispatches per-method on that buffer.
+     */
+    private fun effectiveModeFor(config: SessionConfig): RecordingMode = when (config.category) {
+        RecordingCategory.CONTINUOUS -> when (config.continuousSubMode) {
+            LongSubMode.FAST -> RecordingMode.FAST
+            LongSubMode.AVERAGE -> RecordingMode.AVERAGE
+            LongSubMode.STANDARD -> RecordingMode.STANDARD
+        }
+        RecordingCategory.INTERVAL -> RecordingMode.LONG
+    }
+
+    /**
+     * One Continuous cycle for the FAST/STANDARD path. Records, then runs every
+     * model on the buffer.
+     */
+    private suspend fun runSingleClipCycle(config: SessionConfig, mode: RecordingMode): CycleOutcome? {
+        val samples = recordCycleAudio(mode) ?: return null
+        val sub = config.continuousSubMode
+        val perModel = mutableMapOf<String, MutableMap<LongSubMode, ClassificationResult>>()
+        _uiState.update { it.copy(appState = AppState.Processing, liveResultsByModel = emptyMap()) }
+        for ((name, inf) in inferencesByName) {
+            if (!isRunning) break
+            val r = withContext(mlDispatcher) { inf.infer(samples, mode) } ?: continue
+            perModel.getOrPut(name) { mutableMapOf() }[sub] = r
+            // Stream into UI as each model finishes
+            _uiState.update { state ->
+                state.copy(liveResultsByModel = state.liveResultsByModel + (name to mapOf(sub to r)))
+            }
+        }
+        val volume = audioRecorder.snapshotVolumeStats()
+        accumulateAggregate(perModel)
+        accumulateSessionVolume(volume.mean)
+        return CycleOutcome(perModel = perModel, volume = volume, perSecondClips = null)
+    }
+
+    /**
+     * One Continuous AVERAGE cycle: ten 1 s recordings.
      *
-     * @param durationMs Optional auto-resume timer in milliseconds. When the
-     *   deadline elapses, the pause loop automatically resumes. null means the
-     *   pause stays active until the user presses Resume.
+     * Per model, the inference path depends on the model's training duration:
+     *  - 1 s-models infer per slice and we average the ten results
+     *  - 10 s-models receive the concatenated 10 s buffer for one inference
+     *
+     * Per-second circles update for the primary model only and only when it is
+     * 1 s-trained (otherwise no per-slice predictions exist mid-cycle).
      */
-    fun pauseClassification(durationMs: Long? = null) {
-        if (!isRecording || isPaused) return
-        isPaused = true
-        val deadline = durationMs?.let { SystemClock.elapsedRealtime() + it }
-        userPauseDeadlineElapsedMs = deadline
-        _uiState.update { it.copy(isPaused = true, userPauseDeadlineElapsedMs = deadline) }
-        Log.d(TAG, "Classification paused by user (durationMs=${durationMs ?: -1})")
-    }
+    private suspend fun runAverageCycle(config: SessionConfig): CycleOutcome? {
+        val totalClips = 10
+        val sampleRate = 32000
+        _uiState.update { it.copy(
+            perSecondResults = List(totalClips) { null },
+            runningAverageResult = null,
+            liveResultsByModel = emptyMap()
+        ) }
 
-    fun resumeClassification() {
-        if (!isRecording || !isPaused) return
-        isPaused = false
-        userPauseDeadlineElapsedMs = null
-        _uiState.update { it.copy(isPaused = false, userPauseDeadlineElapsedMs = null) }
-        Log.d(TAG, "Classification resumed by user")
-    }
-
-    fun isUserPaused(): Boolean = isPaused
-
-    /**
-     * Multi-Model Evaluation: list of model filenames currently active in this
-     * session. Single-model = [primary], multi-model = primary + extras.
-     */
-    fun activeModelNames(): List<String> =
-        if (_allInOneModelNames.isNotEmpty()) _allInOneModelNames
-        else listOf(_modelName)
-
-    /** Locked-default sub-mode for a given model, derived from its filename. */
-    fun defaultSubFor(modelName: String): LongSubMode =
-        ModelTrainingDuration.defaultSubMode(modelName)
-
-    /**
-     * Replaces the per-model sub-mode selection wholesale. The locked default for
-     * each model is always merged back in, so callers can pass only the optional
-     * extras and not worry about accidentally unchecking the default.
-     */
-    fun setLongSubsForModel(modelName: String, subs: Set<LongSubMode>) {
-        val locked = defaultSubFor(modelName)
-        val normalized = (subs + locked).toSet()
-        val current = _uiState.value.selectedLongSubsByModel
-        if (current[modelName] == normalized) return
-        _uiState.update {
-            it.copy(selectedLongSubsByModel = current + (modelName to normalized))
+        val oneSecModels = inferencesByName.filter {
+            ModelTrainingDuration.secondsForFilename(it.key) == 1
         }
-    }
+        val tenSecModels = inferencesByName.filter {
+            ModelTrainingDuration.secondsForFilename(it.key) == 10
+        }
+        val primaryName = config.modelNames.first()
+        val primaryIs1s = ModelTrainingDuration.secondsForFilename(primaryName) == 1
 
-    fun toggleLongSubForModel(modelName: String, sub: LongSubMode) {
-        if (sub == defaultSubFor(modelName)) return  // locked on
-        val current = _uiState.value.selectedLongSubsByModel[modelName] ?: setOf(defaultSubFor(modelName))
-        val next = if (sub in current) current - sub else current + sub
-        setLongSubsForModel(modelName, next)
-    }
+        val perModelClips: MutableMap<String, MutableList<ClassificationResult>> = mutableMapOf()
+        val collectedSlices = mutableListOf<FloatArray>()
+        val volMeans = mutableListOf<Float>()
+        var volPeak = 0f
+        val cycleStart = System.currentTimeMillis()
 
-    /** Ensures every active model has at least its locked-default sub-mode in the map. */
-    fun ensureLongSubsInitialized(extras: Map<String, Set<LongSubMode>> = emptyMap()) {
-        val models = activeModelNames()
-        val current = _uiState.value.selectedLongSubsByModel
-        val merged = models.associateWith { name ->
-            val fromExtras = extras[name] ?: emptySet()
-            val locked = defaultSubFor(name)
-            (current[name] ?: emptySet()) + fromExtras + locked
-        }
-        // Drop entries for models that are no longer active so the map doesn't grow forever.
-        if (merged != current.filterKeys { it in models }) {
-            _uiState.update { it.copy(selectedLongSubsByModel = merged) }
-        }
-    }
-
-    /**
-     * LONG-mode pause interval (Dev Mode only). User Mode keeps the static 30 min pause.
-     */
-    fun setLongInterval(interval: LongInterval) {
-        if (_uiState.value.selectedLongInterval != interval) {
-            _uiState.update { it.copy(selectedLongInterval = interval) }
-        }
-    }
-    
-    /**
-     * Aktualisiert den UI State mit einem neuen Klassifikations-Ergebnis
-     */
-    private fun updateStateWithResult(result: ClassificationResult) {
-        _uiState.update { currentState ->
-            val newHistory = (listOf(result) + currentState.history).take(HISTORY_SIZE)
-            val totalCount = currentState.totalClassifications + 1
-            val totalTime = currentState.averageInferenceTime * (totalCount - 1) + result.inferenceTimeMs
-            val avgTime = totalTime / totalCount
-            
-            currentState.copy(
-                appState = AppState.Ready,
-                currentResult = result,
-                history = newHistory,
-                totalClassifications = totalCount,
-                averageInferenceTime = avgTime,
-                errorMessage = null
-            )
-        }
-    }
-    
-    /**
-     * Resets the session UI state (history, results, statistics) while keeping the model loaded.
-     * Called when the user navigates away from a recording tab without an active recording.
-     */
-    fun resetSession() {
-        _uiState.update {
-            it.copy(
-                appState = if (it.isModelLoaded) AppState.Ready else AppState.Idle,
-                currentResult = null,
-                history = emptyList(),
-                totalClassifications = 0,
-                averageInferenceTime = 0L,
-                errorMessage = null,
-                recordingProgress = 0f,
-                currentVolume = 0f
-            )
-        }
-        Log.d(TAG, "Session reset")
-    }
-
-    /**
-     * Löscht die History
-     */
-    fun clearHistory() {
-        _uiState.update {
-            it.copy(history = emptyList(), totalClassifications = 0, averageInferenceTime = 0L)
-        }
-    }
-    
-    /**
-     * Löscht die Fehlermeldung
-     */
-    fun clearError() {
-        _uiState.update {
-            it.copy(errorMessage = null, appState = AppState.Ready)
-        }
-    }
-    
-    /**
-     * Prüft, ob aktuell klassifiziert wird
-     */
-    fun isClassifying(): Boolean = isRecording
-    
-    /**
-     * Setzt den Aufnahme-Modus (Standard 10s oder Fast 1s)
-     */
-    fun setRecordingMode(mode: RecordingMode) {
-        if (currentMode != mode && !isRecording) {
-            currentMode = mode
-            audioRecorder = AudioRecorder(durationSeconds = mode.durationSeconds)
-            // Starte Volume-Beobachtung für neuen AudioRecorder neu
+        for (i in 0 until totalClips) {
+            if (!isRunning || isPaused) break
+            // Release the previous 1-second recorder before allocating the next one.
+            audioRecorder.stopRecording()
+            val recorder = AudioRecorder(durationSeconds = 1)
+            audioRecorder = recorder
             startVolumeObservation()
-            _uiState.update { it.copy(recordingMode = mode) }
-            Log.d(TAG, "Recording mode changed to: ${mode.label}")
+            var clipSamples: FloatArray? = null
+            // No CancellationException catch — propagate up so the recording job
+            // can actually terminate. See comment in recordCycleAudio() for why.
+            recorder.startRecording().collect { state ->
+                when (state) {
+                    is RecordingState.Completed -> clipSamples = state.samples
+                    is RecordingState.Progress -> {
+                        val overall = (i + state.progress) / totalClips
+                        _uiState.update {
+                            it.copy(
+                                appState = AppState.Recording(totalClips - i),
+                                recordingProgress = overall
+                            )
+                        }
+                    }
+                    else -> Unit
+                }
+            }
+            val samples = clipSamples ?: break
+            collectedSlices += samples
+            val volStats = recorder.snapshotVolumeStats()
+            volMeans += volStats.mean
+            if (volStats.peak > volPeak) volPeak = volStats.peak
+
+            // 1 s-models: infer per slice immediately, accumulate, stream live UI.
+            for ((name, inf) in oneSecModels) {
+                if (!isRunning) break
+                val r = withContext(mlDispatcher) { inf.infer(samples, RecordingMode.FAST) } ?: continue
+                perModelClips.getOrPut(name) { mutableListOf() } += r
+                val running = computeRunningAverage(perModelClips[name]!!, cycleStart)
+                if (name == primaryName) {
+                    _uiState.update { state ->
+                        val per = state.perSecondResults.toMutableList()
+                        if (i < per.size) per[i] = r
+                        state.copy(
+                            perSecondResults = per,
+                            runningAverageResult = running,
+                            liveResultsByModel = state.liveResultsByModel + (name to mapOf(LongSubMode.AVERAGE to running))
+                        )
+                    }
+                } else {
+                    _uiState.update { state ->
+                        state.copy(liveResultsByModel = state.liveResultsByModel + (name to mapOf(LongSubMode.AVERAGE to running)))
+                    }
+                }
+            }
+        }
+
+        if (collectedSlices.isEmpty()) return null
+
+        // 10 s-models: assemble the concatenated 10 s buffer and infer once each.
+        if (tenSecModels.isNotEmpty() && collectedSlices.size == totalClips) {
+            val concatBuffer = FloatArray(sampleRate * totalClips)
+            var offset = 0
+            for (slice in collectedSlices) {
+                val take = minOf(slice.size, sampleRate)
+                slice.copyInto(concatBuffer, offset, 0, take)
+                offset += sampleRate
+            }
+            for ((name, inf) in tenSecModels) {
+                if (!isRunning) break
+                val r = withContext(mlDispatcher) { inf.infer(concatBuffer, RecordingMode.STANDARD) } ?: continue
+                perModelClips.getOrPut(name) { mutableListOf() } += r
+                _uiState.update { state ->
+                    state.copy(liveResultsByModel = state.liveResultsByModel + (name to mapOf(LongSubMode.AVERAGE to r)))
+                }
+            }
+        }
+
+        if (perModelClips.isEmpty()) return null
+
+        val perModel = mutableMapOf<String, MutableMap<LongSubMode, ClassificationResult>>()
+        for ((name, clips) in perModelClips) {
+            val finalResult = if (clips.size == 1) clips.first() else computeRunningAverage(clips, cycleStart)
+            perModel.getOrPut(name) { mutableMapOf() }[LongSubMode.AVERAGE] = finalResult
+        }
+        accumulateAggregate(perModel)
+        val cycleVolMean = if (volMeans.isNotEmpty()) volMeans.average().toFloat() else 0f
+        accumulateSessionVolume(cycleVolMean)
+
+        // Per-second clips (History detail view) only carry meaning when the
+        // primary model is 1 s-trained — that's where the per-slice predictions
+        // come from. For a 10 s primary we leave the field null.
+        val perSecondClips: List<PerSecondClip>? = if (primaryIs1s) {
+            val primaryClips = perModelClips[primaryName].orEmpty()
+            primaryClips.mapIndexed { idx, cr ->
+                PerSecondClip(
+                    clipIndex = idx,
+                    sceneClass = cr.sceneClass,
+                    confidence = cr.confidence,
+                    allProbabilities = cr.allProbabilities,
+                    volumeMean = volMeans.getOrNull(idx),
+                    volumePeak = null
+                )
+            }
+        } else null
+        return CycleOutcome(
+            perModel = perModel,
+            volume = AudioRecorder.VolumeStats(mean = cycleVolMean, peak = volPeak),
+            perSecondClips = perSecondClips
+        )
+    }
+
+    /**
+     * One Interval cycle — record 10 s once, then for every model run every
+     * checked method on the same buffer.
+     */
+    private suspend fun runIntervalCycle(config: SessionConfig): CycleOutcome? {
+        val samples = recordCycleAudio(RecordingMode.LONG) ?: return null
+        val volume = audioRecorder.snapshotVolumeStats()
+        val sampleRate = 32000
+        val perModel = mutableMapOf<String, MutableMap<LongSubMode, ClassificationResult>>()
+        val perSecondClipsByPrimary = mutableListOf<PerSecondClip>()
+        _uiState.update { it.copy(appState = AppState.Processing, liveResultsByModel = emptyMap()) }
+
+        for ((modelName, inf) in inferencesByName) {
+            if (!isRunning) break
+            val methods = config.intervalMethodsByModel[modelName].orEmpty()
+            for (sub in methods) {
+                if (!isRunning) break
+                val r: ClassificationResult? = when (sub) {
+                    LongSubMode.STANDARD -> withContext(mlDispatcher) { inf.infer(samples, RecordingMode.STANDARD) }
+                    LongSubMode.FAST -> {
+                        if (samples.size < sampleRate * 10) null
+                        else {
+                            val from = (sampleRate * 4.5f).toInt()
+                            val to = (sampleRate * 5.5f).toInt()
+                            withContext(mlDispatcher) { inf.infer(samples.copyOfRange(from, to), RecordingMode.FAST) }
+                        }
+                    }
+                    LongSubMode.AVERAGE -> {
+                        if (samples.size < sampleRate * 10) null
+                        else if (ModelTrainingDuration.secondsForFilename(modelName) == 10) {
+                            // 10 s-model in AVG: feed the full 10 s buffer once.
+                            // The per-second-circles UI stays untouched because
+                            // per-slice predictions don't exist for this path.
+                            withContext(mlDispatcher) { inf.infer(samples, RecordingMode.STANDARD) }
+                        } else {
+                            val clipResults = mutableListOf<ClassificationResult>()
+                            val startTime = System.currentTimeMillis()
+                            for (i in 0 until 10) {
+                                if (!isRunning) break
+                                val slice = samples.copyOfRange(i * sampleRate, (i + 1) * sampleRate)
+                                val cr = withContext(mlDispatcher) { inf.infer(slice, RecordingMode.FAST) } ?: continue
+                                clipResults += cr
+                                if (modelName == config.modelNames.first()) {
+                                    perSecondClipsByPrimary += PerSecondClip(
+                                        clipIndex = i,
+                                        sceneClass = cr.sceneClass,
+                                        confidence = cr.confidence,
+                                        allProbabilities = cr.allProbabilities,
+                                        volumeMean = null,
+                                        volumePeak = null
+                                    )
+                                    val running = computeRunningAverage(clipResults, startTime)
+                                    _uiState.update { state ->
+                                        val per = state.perSecondResults.toMutableList()
+                                        if (i < per.size) per[i] = cr
+                                        state.copy(
+                                            perSecondResults = per,
+                                            runningAverageResult = running
+                                        )
+                                    }
+                                    delay(150L)
+                                }
+                            }
+                            if (clipResults.isEmpty()) null else computeRunningAverage(clipResults, startTime)
+                        }
+                    }
+                }
+                if (r != null) {
+                    perModel.getOrPut(modelName) { mutableMapOf() }[sub] = r
+                    _uiState.update { state ->
+                        val prev = state.liveResultsByModel[modelName].orEmpty()
+                        state.copy(
+                            liveResultsByModel = state.liveResultsByModel + (modelName to (prev + (sub to r)))
+                        )
+                    }
+                }
+            }
+        }
+        if (perModel.isEmpty()) return null
+        accumulateAggregate(perModel)
+        accumulateSessionVolume(volume.mean)
+        return CycleOutcome(
+            perModel = perModel,
+            volume = volume,
+            perSecondClips = perSecondClipsByPrimary.takeIf { it.isNotEmpty() }
+        )
+    }
+
+    /**
+     * Drives the AudioRecorder for one full cycle (Continuous single-clip / Interval).
+     * Returns the captured samples, or null if recording was cancelled or errored.
+     */
+    private suspend fun recordCycleAudio(mode: RecordingMode): FloatArray? {
+        val durationSeconds = mode.durationSeconds
+        _uiState.update { it.copy(
+            appState = AppState.Recording(durationSeconds),
+            recordingProgress = 0f
+        ) }
+        var captured: FloatArray? = null
+        // CancellationException is intentionally NOT caught here — it has to bubble
+        // up so the launched recordingJob terminates. Earlier code swallowed it
+        // and returned null, which let the outer loop spin against `continue` on
+        // every cancellation and never exit (race with the next session start).
+        audioRecorder.startRecording().collect { state ->
+            when (state) {
+                is RecordingState.Started -> Unit
+                is RecordingState.Progress -> {
+                    val remaining = (durationSeconds * (1f - state.progress)).toInt()
+                    _uiState.update { it.copy(
+                        appState = AppState.Recording(remaining),
+                        recordingProgress = state.progress
+                    ) }
+                }
+                is RecordingState.Completed -> captured = state.samples
+                is RecordingState.Error -> _uiState.update { it.copy(
+                    appState = AppState.Error(state.message),
+                    errorMessage = state.message
+                ) }
+            }
+        }
+        return captured
+    }
+
+    /**
+     * Interval pause loop — clip-accurate, watches isPaused / isRunning and the
+     * session-timer's external soft-stop signal.
+     */
+    private suspend fun runIntervalPause(pauseMs: Long) {
+        var remaining = pauseMs
+        while (remaining > 0 && isRunning) {
+            if (isPaused) {
+                _uiState.update { it.copy(appState = AppState.UserPaused((remaining / 1000L).toInt())) }
+                delay(500L)
+                continue
+            }
+            _uiState.update { it.copy(appState = AppState.Paused((remaining / 1000L).toInt())) }
+            delay(1000L)
+            if (!isPaused) remaining -= 1000L
         }
     }
-    
+
     /**
-     * Gibt den aktuellen Aufnahme-Modus zurück
+     * Writes one PredictionRecord per cycle into the repository. Multi-Model
+     * sessions still write a single row — per-model results live inside
+     * `allInOneResults` (Continuous) or `longSubResults` (Interval).
      */
-    fun getRecordingMode(): RecordingMode = currentMode
-    
+    private fun persistCycle(
+        config: SessionConfig,
+        outcome: CycleOutcome,
+        cycleStartedAt: Long
+    ) {
+        val primaryName = config.modelNames.first()
+        val primaryRow = outcome.perModel[primaryName] ?: return
+        val primarySub = if (config.category == RecordingCategory.CONTINUOUS) {
+            config.continuousSubMode
+        } else {
+            ModelTrainingDuration.defaultSubMode(primaryName)
+        }
+        val primaryResult = primaryRow[primarySub] ?: primaryRow.values.firstOrNull() ?: return
+
+        val mode = effectiveModeFor(config)
+        val battery = getBatteryLevel()
+        val top3 = primaryResult.getTopPredictions(3)
+
+        // Build LongSubResults (Interval-only or AVERAGE-with-clips).
+        val longSubs: List<LongSubResult>? = when {
+            config.category == RecordingCategory.INTERVAL -> {
+                val list = mutableListOf<LongSubResult>()
+                for ((modelName, methods) in outcome.perModel) {
+                    for ((sub, res) in methods) {
+                        list += LongSubResult(
+                            subMode = sub,
+                            sceneClass = res.sceneClass,
+                            confidence = res.confidence,
+                            allProbabilities = res.allProbabilities,
+                            inferenceTimeMs = res.inferenceTimeMs,
+                            perSecondClips = if (sub == LongSubMode.AVERAGE && modelName == primaryName)
+                                outcome.perSecondClips else null,
+                            modelName = modelName
+                        )
+                    }
+                }
+                list.takeIf { it.isNotEmpty() }
+            }
+            else -> null
+        }
+
+        // Multi-Model continuous: persist as AllInOneResults so the existing CSV
+        // dynamic columns and History dialog rendering keep working.
+        val allInOne: List<AllInOneResult>? = if (
+            config.category == RecordingCategory.CONTINUOUS && config.modelNames.size >= 2
+        ) {
+            outcome.perModel.entries.mapNotNull { (name, methods) ->
+                val res = methods[config.continuousSubMode] ?: methods.values.firstOrNull() ?: return@mapNotNull null
+                AllInOneResult(
+                    modelName = name,
+                    sceneClass = res.sceneClass,
+                    confidence = res.confidence,
+                    allProbabilities = res.allProbabilities,
+                    inferenceTimeMs = res.inferenceTimeMs
+                )
+            }.takeIf { it.isNotEmpty() }
+        } else null
+
+        val record = PredictionRecord(
+            timestamp = cycleStartedAt,
+            sessionStartTime = sessionStartTime,
+            sceneClass = primaryResult.sceneClass,
+            confidence = primaryResult.confidence,
+            allProbabilities = primaryResult.allProbabilities,
+            topPredictions = top3,
+            inferenceTimeMs = primaryResult.inferenceTimeMs,
+            recordingMode = mode,
+            batteryLevel = battery,
+            modelName = primaryName,
+            perSecondClips = outcome.perSecondClips,
+            longSubResults = longSubs,
+            longIntervalMinutes = config.intervalPause?.pauseMinutes,
+            allInOneResults = allInOne,
+            volumeMean = outcome.volume.mean,
+            volumePeak = outcome.volume.peak
+        )
+        predictionRepository.addPrediction(record)
+        updateStatistics()
+
+        // Mirror primary result onto currentResult so legacy widgets that read
+        // it (volume graph, etc.) keep working.
+        _uiState.update { it.copy(currentResult = primaryResult, errorMessage = null) }
+
+        // Send Interval evaluation prompt — only for Interval, only Foreground.
+        if (config.category == RecordingCategory.INTERVAL) {
+            // Interval evaluation prompt is sent right after the cycle completes
+            // (during the pause) — so this is a no-op here. See sendIntervalEvaluationNotification.
+        }
+    }
+
+    private fun accumulateAggregate(
+        perModel: Map<String, Map<LongSubMode, ClassificationResult>>
+    ) {
+        _uiState.update { state ->
+            val nextAgg = state.aggregateResultsByModel.toMutableMap()
+            val nextCounts = state.cycleCountByModelMethod.toMutableMap()
+            for ((model, methods) in perModel) {
+                val perMethodAgg = nextAgg[model]?.toMutableMap() ?: mutableMapOf()
+                for ((sub, result) in methods) {
+                    val key = model to sub
+                    val priorCount = nextCounts[key] ?: 0
+                    val merged = mergeClassificationResults(perMethodAgg[sub], result, priorCount)
+                    perMethodAgg[sub] = merged
+                    nextCounts[key] = priorCount + 1
+                }
+                nextAgg[model] = perMethodAgg
+            }
+            state.copy(
+                aggregateResultsByModel = nextAgg,
+                cycleCountByModelMethod = nextCounts
+            )
+        }
+    }
+
+    private fun mergeClassificationResults(
+        prior: ClassificationResult?,
+        next: ClassificationResult,
+        priorCount: Int
+    ): ClassificationResult {
+        if (prior == null || priorCount == 0) return next
+        val n = next.allProbabilities.size
+        val mixed = FloatArray(n)
+        for (i in 0 until n) {
+            mixed[i] = (prior.allProbabilities[i] * priorCount + next.allProbabilities[i]) / (priorCount + 1)
+        }
+        val bestIdx = mixed.indices.maxByOrNull { mixed[it] } ?: 0
+        return ClassificationResult(
+            sceneClass = SceneClass.fromIndex(bestIdx) ?: prior.sceneClass,
+            confidence = mixed[bestIdx],
+            allProbabilities = mixed,
+            inferenceTimeMs = next.inferenceTimeMs
+        )
+    }
+
+    private fun accumulateSessionVolume(cycleMean: Float) {
+        _uiState.update {
+            val n = it.sessionVolumeMeanSampleCount
+            val newMean = if (n == 0) cycleMean else (it.sessionVolumeMean * n + cycleMean) / (n + 1)
+            it.copy(sessionVolumeMean = newMean, sessionVolumeMeanSampleCount = n + 1)
+        }
+    }
+
+    private fun computeRunningAverage(
+        results: List<ClassificationResult>,
+        startTime: Long
+    ): ClassificationResult {
+        val n = results.first().allProbabilities.size
+        val avg = FloatArray(n)
+        for (r in results) for (j in r.allProbabilities.indices) avg[j] += r.allProbabilities[j]
+        for (j in avg.indices) avg[j] /= results.size
+        val bestIdx = avg.indices.maxByOrNull { avg[it] } ?: 0
+        val bestClass = SceneClass.fromIndex(bestIdx) ?: SceneClass.TRANSIT_VEHICLES
+        return ClassificationResult(
+            sceneClass = bestClass,
+            confidence = avg[bestIdx],
+            allProbabilities = avg,
+            inferenceTimeMs = System.currentTimeMillis() - startTime
+        )
+    }
+
     /**
-     * Exportiert alle Vorhersagen als CSV
+     * User stops the session manually (or auto-stop bubbled up). Cleans up the
+     * audio + ML pipeline. The session config + aggregate results stay on the
+     * UiState so the results-summary screen can render them; clear them with
+     * [clearSessionResults] once the user navigates away.
      */
+    fun stopSession() {
+        if (!isRunning && recordingJob == null) return
+        Log.d(TAG, "stopSession()")
+        isRunning = false
+        isPaused = false
+        recordingJob?.cancel()
+        sessionTimerJob?.cancel()
+        audioRecorder.stopRecording()
+    }
+
+    /**
+     * Releases the native PyTorch modules of the parked session and resets UI
+     * state. Safe to call multiple times. Called from the Results Summary
+     * (when the user navigates away) and from the Live Recording screen
+     * (when the user backs out without ever starting).
+     */
+    fun clearSessionResults() {
+        activeConfig = null
+        for (inf in inferencesByName.values) {
+            inf.release()
+        }
+        inferencesByName = LinkedHashMap()
+        _uiState.update { UiState() }
+    }
+
+    /**
+     * Pauses the session. If [autoResumeAfterMs] is non-null, schedules an
+     * automatic resume after that many milliseconds (the user can still resume
+     * earlier manually). Null = indefinite pause.
+     */
+    fun pauseSession(autoResumeAfterMs: Long? = null) {
+        if (!isRunning || isPaused) return
+        isPaused = true
+        sessionElapsedAtPauseMs += SystemClock.elapsedRealtime() - sessionResumeWallClockMs
+        pauseStartedWallClockMs = SystemClock.elapsedRealtime()
+        val deadline = autoResumeAfterMs?.let { SystemClock.elapsedRealtime() + it }
+        _uiState.update { it.copy(isPaused = true, userPauseDeadlineElapsedMs = deadline) }
+        autoResumeJob?.cancel()
+        autoResumeJob = if (autoResumeAfterMs != null) {
+            viewModelScope.launch {
+                delay(autoResumeAfterMs)
+                if (isPaused && isRunning) resumeSession()
+            }
+        } else null
+        // Synthetic PAUSE record is written when the user resumes (so we know the
+        // duration). Deferred persistence avoids zero-length pauses if the user
+        // pauses then immediately stops.
+    }
+
+    private var pauseStartedWallClockMs: Long = 0L
+    private var autoResumeJob: Job? = null
+
+    fun resumeSession() {
+        if (!isRunning || !isPaused) return
+        autoResumeJob?.cancel()
+        autoResumeJob = null
+        val pauseDurationMs = SystemClock.elapsedRealtime() - pauseStartedWallClockMs
+        if (pauseDurationMs >= 1000L) {
+            persistPauseRecord(pauseDurationMs)
+        }
+        isPaused = false
+        sessionResumeWallClockMs = SystemClock.elapsedRealtime()
+        _uiState.update { it.copy(isPaused = false, userPauseDeadlineElapsedMs = null) }
+    }
+
+    private fun persistPauseRecord(durationMs: Long) {
+        val record = PredictionRecord(
+            timestamp = System.currentTimeMillis(),
+            sessionStartTime = sessionStartTime,
+            sceneClass = SceneClass.TRANSIT_VEHICLES,  // placeholder, ignored when isPause
+            confidence = 0f,
+            allProbabilities = FloatArray(modelClassCount),
+            topPredictions = emptyList(),
+            inferenceTimeMs = 0L,
+            recordingMode = RecordingMode.STANDARD,
+            batteryLevel = -1,
+            modelName = activeConfig?.modelNames?.firstOrNull().orEmpty(),
+            isPause = true,
+            pauseDurationSec = durationMs / 1000L
+        )
+        predictionRepository.addPrediction(record)
+    }
+
+    /**
+     * Ships an Interval-mode evaluation prompt — system notification when the app
+     * is backgrounded, in-app card when foregrounded. Skipped for Continuous
+     * (would fire every 10 s, unusable).
+     */
+    private fun sendIntervalEvaluationNotification(outcome: CycleOutcome) {
+        val record = predictionRepository.getAllPredictions().lastOrNull() ?: return
+        val context = getApplication<Application>()
+        val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState
+            .isAtLeast(Lifecycle.State.STARTED)
+        if (isForeground) {
+            val deadline = SystemClock.elapsedRealtime() + EvaluationActivity.EVALUATION_TIMEOUT_MS
+            _uiState.update { it.copy(
+                pendingEvaluation = PendingEvaluation(
+                    predictionId = record.id,
+                    modelClass = record.sceneClass,
+                    deadlineElapsedMs = deadline
+                )
+            ) }
+            viewModelScope.launch {
+                delay(EvaluationActivity.EVALUATION_TIMEOUT_MS)
+                _uiState.update { state ->
+                    if (state.pendingEvaluation?.predictionId == record.id) {
+                        state.copy(pendingEvaluation = null)
+                    } else state
+                }
+            }
+            return
+        }
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            EVALUATION_CHANNEL_ID,
+            context.getString(R.string.evaluation_channel_name),
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = context.getString(R.string.evaluation_channel_description)
+        }
+        notificationManager.createNotificationChannel(channel)
+        val intent = Intent(context, EvaluationActivity::class.java).apply {
+            putExtra(EvaluationActivity.EXTRA_PREDICTION_ID, record.id)
+            putExtra(EvaluationActivity.EXTRA_MODEL_PREDICTED_CLASS, record.sceneClass.name)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, record.id.toInt(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(context, EVALUATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.evaluation_title))
+            .setContentText("${record.sceneClass.emoji} ${record.sceneClass.labelShort} — ${context.getString(R.string.evaluation_tap_to_rate)}")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setTimeoutAfter(EvaluationActivity.EVALUATION_TIMEOUT_MS)
+            .build()
+        notificationManager.notify(EVALUATION_NOTIFICATION_ID, notification)
+    }
+
+    private fun getBatteryLevel(): Int = try {
+        val bm = getApplication<Application>().getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    } catch (_: Exception) { -1 }
+
+    fun isClassifying(): Boolean = isRunning
+
     fun exportPredictions(onComplete: (File?) -> Unit) {
         viewModelScope.launch {
             try {
@@ -833,515 +1104,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    
-    /**
-     * Gibt alle Vorhersagen zurück
-     */
-    fun getAllPredictions(): List<PredictionRecord> {
-        return predictionRepository.getAllPredictions()
-    }
-    
-    /**
-     * Löscht alle Vorhersagen
-     */
+
+    fun getAllPredictions(): List<PredictionRecord> = predictionRepository.getAllPredictions()
     fun clearAllPredictions() {
         predictionRepository.clearAll()
         updateStatistics()
     }
-    
-    /**
-     * Löscht alte Vorhersagen
-     */
     fun clearOldPredictions(days: Int) {
         predictionRepository.clearOlderThan(days)
         updateStatistics()
     }
-    
-    /**
-     * AVERAGE mode: Records 1 second at a time, infers immediately, updates UI live,
-     * repeats 10 times, then computes final averaged result.
-     * Each second is recorded and processed individually so the user sees results in real-time.
-     */
-    private suspend fun startAverageClassification() {
-        val totalClips = 10
 
-        // Loop continuously until user presses Stop
-        while (isRecording) {
-            // Clear per-second state for this round. `allInOneResults` intentionally
-            // keeps last round's final averages so the All-Models card doesn't blink
-            // to "..." during the 10 s; it's overwritten in one go at round end.
-            _uiState.update { it.copy(
-                perSecondResults = List(totalClips) { null },
-                runningAverageResult = null
-            )}
-
-            val results = mutableListOf<ClassificationResult>()
-            // ALL-IN-ONE + AVERAGE: per-model accumulator of the 10 × 1s clip results.
-            // Keyed by model filename; drives both live per-model running averages
-            // and the final AllInOneResult list written to the PredictionRecord.
-            val allInOnePerModelClips: MutableMap<String, MutableList<ClassificationResult>> = mutableMapOf()
-            val startTime = System.currentTimeMillis()
-
-            for (clipIndex in 0 until totalClips) {
-                if (!isRecording) break
-
-                // Update UI: Recording second (clipIndex+1) of 10
-                val secondsRemaining = totalClips - clipIndex
-                _uiState.update { it.copy(
-                    appState = AppState.Recording(secondsRemaining),
-                    recordingProgress = clipIndex.toFloat() / totalClips
-                )}
-
-                // Record 1 second using a fresh AudioRecorder
-                val clipRecorder = AudioRecorder(durationSeconds = 1)
-                var clipSamples: FloatArray? = null
-
-                try {
-                    clipRecorder.startRecording()
-                        .catch { e: Throwable ->
-                            if (e is CancellationException) throw e
-                            Log.e(TAG, "AVERAGE clip $clipIndex recording error", e)
-                        }
-                        .collect { state ->
-                            when (state) {
-                                is RecordingState.Completed -> {
-                                    clipSamples = state.samples
-                                }
-                                is RecordingState.Progress -> {
-                                    // Update progress within this second
-                                    val overallProgress = (clipIndex + state.progress) / totalClips
-                                    _uiState.update { it.copy(
-                                        recordingProgress = overallProgress
-                                    )}
-                                }
-                                else -> { /* Started, Error handled above */ }
-                            }
-                        }
-                } catch (e: CancellationException) {
-                    Log.d(TAG, "AVERAGE mode: Recording cancelled at clip $clipIndex")
-                    return
-                }
-
-                if (!isRecording || clipSamples == null) break
-
-                // Infer this 1-second clip immediately (stay in Recording state to avoid UI jumping)
-                val clipResult = withContext(mlDispatcher) {
-                    modelInference.infer(clipSamples!!, RecordingMode.FAST)
-                }
-
-                // ALL-IN-ONE + AVERAGE: silently accumulate each model's per-clip result.
-                // Unlike the primary AVERAGE path (which ticks per-second circles live),
-                // the All-Models card stays empty during the 10 × 1 s round — user only
-                // sees the final 10-clip average at the end of each round to avoid the
-                // numbers jumping every second.
-                if (isAllInOne) {
-                    for ((idx, inf) in allInOneInferences.withIndex()) {
-                        if (!isRecording) break
-                        if (inf === modelInference) continue  // already computed as `clipResult`
-                        val name = _allInOneModelNames.getOrNull(idx) ?: continue
-                        val r = withContext(mlDispatcher) { inf.infer(clipSamples!!, RecordingMode.FAST) } ?: continue
-                        allInOnePerModelClips.getOrPut(name) { mutableListOf() } += r
-                    }
-                    // Also accumulate primary model's clip (shared instance, already inferred above)
-                    if (clipResult != null) {
-                        val primaryName = _allInOneModelNames.firstOrNull()
-                        if (primaryName != null) {
-                            allInOnePerModelClips.getOrPut(primaryName) { mutableListOf() } += clipResult
-                        }
-                    }
-                }
-
-                if (clipResult != null) {
-                    results.add(clipResult)
-
-                    // Update per-second circle and running average
-                    val runningAvg = computeRunningAverage(results, startTime)
-                    _uiState.update { current ->
-                        val updatedPerSecond = current.perSecondResults.toMutableList()
-                        updatedPerSecond[clipIndex] = clipResult
-                        current.copy(
-                            perSecondResults = updatedPerSecond,
-                            runningAverageResult = runningAvg
-                        )
-                    }
-                }
-
-                Log.d(TAG, "AVERAGE mode: Clip ${clipIndex + 1}/$totalClips done" +
-                        (clipResult?.let { " -> ${it.sceneClass.labelShort} (${(it.confidence * 100).toInt()}%)" } ?: " -> failed"))
-            }
-
-            if (!isRecording) return
-
-            // Compute final averaged result for this round
-            if (results.isNotEmpty()) {
-                val finalResult = computeRunningAverage(results, startTime)
-
-                // Build per-second clip data
-                val clips = results.mapIndexed { index, clipResult ->
-                    PerSecondClip(
-                        clipIndex = index,
-                        sceneClass = clipResult.sceneClass,
-                        confidence = clipResult.confidence,
-                        allProbabilities = clipResult.allProbabilities
-                    )
-                }
-
-                // Save to repository
-                val top3 = finalResult.getTopPredictions(3)
-                val currentBatteryLevel = getBatteryLevel()
-                // ALL-IN-ONE + AVERAGE: per-model averaged result from this round's clips.
-                // Built from the silently-accumulated per-clip results, then pushed to the
-                // UiState in one go so the All-Models card updates once per round.
-                val allInOneForRound: List<AllInOneResult> = if (isAllInOne) {
-                    _allInOneModelNames.mapNotNull { name ->
-                        val clipsForModel = allInOnePerModelClips[name]
-                        if (clipsForModel.isNullOrEmpty()) null else {
-                            val avg = computeRunningAverage(clipsForModel, startTime)
-                            AllInOneResult(
-                                modelName = name,
-                                sceneClass = avg.sceneClass,
-                                confidence = avg.confidence,
-                                allProbabilities = avg.allProbabilities,
-                                inferenceTimeMs = avg.inferenceTimeMs
-                            )
-                        }
-                    }
-                } else emptyList()
-
-                if (allInOneForRound.isNotEmpty()) {
-                    val finalMap = allInOneForRound.associate { entry ->
-                        entry.modelName to ClassificationResult(
-                            sceneClass = entry.sceneClass,
-                            confidence = entry.confidence,
-                            allProbabilities = entry.allProbabilities,
-                            inferenceTimeMs = entry.inferenceTimeMs
-                        )
-                    }
-                    _uiState.update { it.copy(allInOneResults = finalMap) }
-                }
-
-                val record = PredictionRecord(
-                    sceneClass = finalResult.sceneClass,
-                    confidence = finalResult.confidence,
-                    allProbabilities = finalResult.allProbabilities,
-                    topPredictions = top3,
-                    inferenceTimeMs = finalResult.inferenceTimeMs,
-                    recordingMode = currentMode,
-                    sessionStartTime = sessionStartTime,
-                    batteryLevel = currentBatteryLevel,
-                    modelName = _modelName,
-                    isDevMode = _isDevMode,
-                    perSecondClips = clips,
-                    allInOneResults = allInOneForRound.takeIf { it.isNotEmpty() }
-                )
-                predictionRepository.addPrediction(record)
-                updateStatistics()
-                updateStateWithResult(finalResult)
-
-                Log.d(TAG, "AVERAGE mode round complete: ${results.size}/$totalClips clips, best=${finalResult.sceneClass.labelShort} (${(finalResult.confidence * 100).toInt()}%)")
-            }
-
-            // Continue to next round (circles will be cleared at the top of the loop)
-        }
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null, appState = AppState.Ready) }
     }
 
     /**
-     * LONG-mode Multi-Model fan-out: every active model evaluates the same 10 s
-     * buffer with each of its selected sub-modes. The primary model's locked-
-     * default-method result drives the existing single-circle UI; the full
-     * (model × method) matrix lands in `longSubResultsByModel` for History.
-     *
-     * Returns (primaryResult, subResults) — primaryResult is the primary model's
-     * locked-default outcome (Standard for 10s-trained, Fast for 1s-trained), with
-     * fallback to any other ran combo so the record always carries something.
+     * Skip-button on the in-app evaluation card. Same effect as letting the
+     * 5-minute timer expire — the prompt is cleared without writing a user rating.
      */
-    private suspend fun runLongSubModes(
-        audioSamples: FloatArray,
-        subsByModel: Map<String, Set<LongSubMode>>
-    ): Pair<ClassificationResult?, List<LongSubResult>> {
-        val sampleRate = 32000
-        val out = mutableListOf<LongSubResult>()
-        var primaryResult: ClassificationResult? = null
-        var anyResult: ClassificationResult? = null
-        val primaryName = _modelName
-        val primarySub = ModelTrainingDuration.defaultSubMode(primaryName)
-
-        // Reset live state for this iteration
-        _uiState.update { it.copy(
-            longSubResultsByModel = emptyMap(),
-            perSecondResults = List(10) { null },
-            runningAverageResult = null
-        )}
-
-        // Build (modelName -> ModelInference) lookup. In single-model sessions we have
-        // only modelInference; in Multi-Model sessions allInOneInferences carries one
-        // entry per selected model in selection order.
-        val inferenceByName: Map<String, ModelInference> = if (allInOneInferences.isNotEmpty()) {
-            _allInOneModelNames.zip(allInOneInferences).toMap()
-        } else {
-            mapOf(primaryName to modelInference)
-        }
-
-        for ((modelName, subs) in subsByModel) {
-            val inference = inferenceByName[modelName] ?: continue
-            if (!isRecording) break
-
-            // Standard — full 10s
-            if (LongSubMode.STANDARD in subs) {
-                val r = withContext(mlDispatcher) {
-                    inference.infer(audioSamples, RecordingMode.STANDARD)
-                }
-                if (r != null) {
-                    if (modelName == primaryName && primarySub == LongSubMode.STANDARD) {
-                        primaryResult = r
-                    }
-                    anyResult = anyResult ?: r
-                    pushLongSubUi(modelName, LongSubMode.STANDARD, r)
-                    out += LongSubResult(
-                        subMode = LongSubMode.STANDARD,
-                        sceneClass = r.sceneClass,
-                        confidence = r.confidence,
-                        allProbabilities = r.allProbabilities,
-                        inferenceTimeMs = r.inferenceTimeMs,
-                        modelName = modelName
-                    )
-                }
-            }
-
-            // Fast — middle 1s
-            if (LongSubMode.FAST in subs && audioSamples.size >= sampleRate * 10) {
-                val from = (sampleRate * 4.5f).toInt()
-                val to = (sampleRate * 5.5f).toInt()
-                val slice = audioSamples.copyOfRange(from, to)
-                val r = withContext(mlDispatcher) {
-                    inference.infer(slice, RecordingMode.FAST)
-                }
-                if (r != null) {
-                    if (modelName == primaryName && primarySub == LongSubMode.FAST) {
-                        primaryResult = r
-                    }
-                    anyResult = anyResult ?: r
-                    pushLongSubUi(modelName, LongSubMode.FAST, r)
-                    out += LongSubResult(
-                        subMode = LongSubMode.FAST,
-                        sceneClass = r.sceneClass,
-                        confidence = r.confidence,
-                        allProbabilities = r.allProbabilities,
-                        inferenceTimeMs = r.inferenceTimeMs,
-                        modelName = modelName
-                    )
-                }
-            }
-
-            // Average — 10 × 1s slices, averaged. Live per-second circles only render
-            // for the primary model; for additional models the clips are still collected
-            // but not streamed into UiState (would race with the primary's animation).
-            if (LongSubMode.AVERAGE in subs && audioSamples.size >= sampleRate * 10) {
-                val startTime = System.currentTimeMillis()
-                val clipResults = mutableListOf<ClassificationResult>()
-                val streamLive = (modelName == primaryName)
-                for (i in 0 until 10) {
-                    if (!isRecording) break
-                    val slice = audioSamples.copyOfRange(i * sampleRate, (i + 1) * sampleRate)
-                    val clipResult = withContext(mlDispatcher) {
-                        inference.infer(slice, RecordingMode.FAST)
-                    } ?: continue
-                    clipResults += clipResult
-                    if (streamLive) {
-                        val runningAvg = computeRunningAverage(clipResults, startTime)
-                        _uiState.update { current ->
-                            val per = current.perSecondResults.toMutableList()
-                            if (i < per.size) per[i] = clipResult
-                            current.copy(
-                                perSecondResults = per,
-                                runningAverageResult = runningAvg
-                            )
-                        }
-                        delay(350L)
-                    }
-                }
-                if (clipResults.isNotEmpty()) {
-                    val avg = computeRunningAverage(clipResults, startTime)
-                    if (modelName == primaryName && primarySub == LongSubMode.AVERAGE) {
-                        primaryResult = avg
-                    }
-                    anyResult = anyResult ?: avg
-                    pushLongSubUi(modelName, LongSubMode.AVERAGE, avg)
-                    val clips = clipResults.mapIndexed { idx, cr ->
-                        PerSecondClip(
-                            clipIndex = idx,
-                            sceneClass = cr.sceneClass,
-                            confidence = cr.confidence,
-                            allProbabilities = cr.allProbabilities
-                        )
-                    }
-                    out += LongSubResult(
-                        subMode = LongSubMode.AVERAGE,
-                        sceneClass = avg.sceneClass,
-                        confidence = avg.confidence,
-                        allProbabilities = avg.allProbabilities,
-                        inferenceTimeMs = avg.inferenceTimeMs,
-                        perSecondClips = clips,
-                        modelName = modelName
-                    )
-                }
-            }
-        }
-
-        return (primaryResult ?: anyResult) to out
-    }
-
-    private fun pushLongSubUi(modelName: String, sub: LongSubMode, result: ClassificationResult) {
-        _uiState.update { state ->
-            val prev = state.longSubResultsByModel[modelName].orEmpty()
-            state.copy(
-                longSubResultsByModel = state.longSubResultsByModel + (modelName to (prev + (sub to result)))
-            )
-        }
-    }
-
-    /**
-     * ALL-IN-ONE fan-out: runs every selected dev model on the same audio buffer,
-     * streaming each result into [UiState.allInOneResults] as soon as it finishes
-     * so the UI can tick the rows live. Returns the full list of [AllInOneResult]
-     * entries (preserving selection order).
-     *
-     * Runs sequentially on [mlDispatcher] — parallel inference would contend for
-     * the same 2-thread ML pool and actually slow things down at this scale.
-     */
-    private suspend fun runAllInOne(
-        audioSamples: FloatArray,
-        mode: RecordingMode
-    ): List<AllInOneResult> {
-        val out = mutableListOf<AllInOneResult>()
-        // Clear previous round
-        _uiState.update { it.copy(allInOneResults = emptyMap()) }
-
-        for ((index, inference) in allInOneInferences.withIndex()) {
-            if (!isRecording) break
-            val name = _allInOneModelNames.getOrNull(index) ?: continue
-            val r = withContext(mlDispatcher) { inference.infer(audioSamples, mode) } ?: continue
-            out += AllInOneResult(
-                modelName = name,
-                sceneClass = r.sceneClass,
-                confidence = r.confidence,
-                allProbabilities = r.allProbabilities,
-                inferenceTimeMs = r.inferenceTimeMs
-            )
-            // Stream live
-            _uiState.update { state ->
-                state.copy(allInOneResults = state.allInOneResults + (name to r))
-            }
-        }
-        return out
-    }
-
-    /**
-     * Computes an averaged ClassificationResult from a list of per-clip results.
-     */
-    private fun computeRunningAverage(
-        results: List<ClassificationResult>,
-        startTime: Long
-    ): ClassificationResult {
-        val numClasses = results.first().allProbabilities.size
-        val avgProbabilities = FloatArray(numClasses)
-        for (result in results) {
-            for (j in result.allProbabilities.indices) {
-                avgProbabilities[j] += result.allProbabilities[j]
-            }
-        }
-        for (j in avgProbabilities.indices) {
-            avgProbabilities[j] /= results.size
-        }
-
-        val bestIndex = avgProbabilities.indices.maxByOrNull { avgProbabilities[it] } ?: 0
-        val bestClass = SceneClass.fromIndex(bestIndex) ?: SceneClass.TRANSIT_VEHICLES
-        val totalInferenceTime = System.currentTimeMillis() - startTime
-
-        Log.d(TAG, "AVERAGE mode: ${results.size} clips averaged, best=${bestClass.labelShort} (${(avgProbabilities[bestIndex] * 100).toInt()}%)")
-
-        return ClassificationResult(
-            sceneClass = bestClass,
-            confidence = avgProbabilities[bestIndex],
-            allProbabilities = avgProbabilities,
-            inferenceTimeMs = totalInferenceTime
-        )
-    }
-
-    /**
-     * Sends an evaluation notification for LONG mode recordings.
-     * User has 5 minutes to respond with their own scene classification.
-     */
-    private fun sendEvaluationNotification(record: PredictionRecord) {
-        val context = getApplication<Application>()
-
-        // If the app is in the foreground, surface a persistent in-app prompt
-        // (card in RecordingFragment with a 5-minute countdown) instead of a system notification.
-        val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
-        if (isForeground) {
-            val deadline = android.os.SystemClock.elapsedRealtime() + EvaluationActivity.EVALUATION_TIMEOUT_MS
-            _uiState.update {
-                it.copy(
-                    pendingEvaluation = PendingEvaluation(
-                        predictionId = record.id,
-                        modelClass = record.sceneClass,
-                        deadlineElapsedMs = deadline
-                    )
-                )
-            }
-            // Auto-clear when deadline passes (only if still the same pending entry)
-            viewModelScope.launch {
-                delay(EvaluationActivity.EVALUATION_TIMEOUT_MS)
-                _uiState.update { state ->
-                    if (state.pendingEvaluation?.predictionId == record.id) {
-                        state.copy(pendingEvaluation = null)
-                    } else state
-                }
-            }
-            Log.d(TAG, "In-app evaluation prompt set for prediction ${record.id}")
-            return
-        }
-
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        // Create evaluation notification channel (idempotent)
-        val channel = NotificationChannel(
-            EVALUATION_CHANNEL_ID,
-            context.getString(R.string.evaluation_channel_name),
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = context.getString(R.string.evaluation_channel_description)
-        }
-        notificationManager.createNotificationChannel(channel)
-
-        // PendingIntent to open EvaluationActivity
-        val intent = Intent(context, EvaluationActivity::class.java).apply {
-            putExtra(EvaluationActivity.EXTRA_PREDICTION_ID, record.id)
-            putExtra(EvaluationActivity.EXTRA_MODEL_PREDICTED_CLASS, record.sceneClass.name)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context, record.id.toInt(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, EVALUATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(context.getString(R.string.evaluation_title))
-            .setContentText("${record.sceneClass.emoji} ${record.sceneClass.labelShort} — ${context.getString(R.string.evaluation_tap_to_rate)}")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setTimeoutAfter(EvaluationActivity.EVALUATION_TIMEOUT_MS) // Auto-dismiss after 5 minutes
-            .build()
-
-        notificationManager.notify(EVALUATION_NOTIFICATION_ID, notification)
-        Log.d(TAG, "Evaluation notification sent for prediction ${record.id}")
+    fun dismissPendingEvaluation() {
+        _uiState.update { it.copy(pendingEvaluation = null) }
     }
 
     override fun onCleared() {
         super.onCleared()
-        stopClassification()
-        mlDispatcher.close()  // Thread-Pool aufräumen
+        stopSession()
+        // Don't release ModelInference modules here — viewModelScope is cancelled
+        // but a native Module.forward() that's already running won't observe
+        // cancellation, and destroy() during forward() can crash. Process death
+        // (or GC) reclaims the native handles. Explicit user-driven exits
+        // (back-from-Live, exit-from-Results) call clearSessionResults() while
+        // we know no inference is in flight.
+        mlDispatcher.close()
     }
+
+    /**
+     * Internal: result of one full recording cycle, ready to be persisted and
+     * accumulated into the session aggregates.
+     */
+    private data class CycleOutcome(
+        val perModel: Map<String, Map<LongSubMode, ClassificationResult>>,
+        val volume: AudioRecorder.VolumeStats,
+        val perSecondClips: List<PerSecondClip>?
+    )
 }

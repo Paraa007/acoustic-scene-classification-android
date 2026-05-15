@@ -5,6 +5,7 @@ import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.model.SessionConfig
 
 /**
  * Pending evaluation that sits in the UI as a persistent "Rate" card/button
@@ -108,5 +109,22 @@ data class UiState(
     // Empty map = single-model session (regular dev / user mode).
     val allInOneResults: Map<String, ClassificationResult> = emptyMap(),
     // Fixed list of model filenames currently selected in ALL IN ONE mode (drives UI order).
-    val allInOneModelNames: List<String> = emptyList()
+    val allInOneModelNames: List<String> = emptyList(),
+    // The active session's config (set when applySessionConfig is called, cleared on stop).
+    // Drives the live UI: model order, methods per model, expected cycle/session length.
+    val sessionConfig: SessionConfig? = null,
+    // Live result of every (model, method) combination for the current cycle. Keyed by model
+    // name, value is a per-method snapshot. Replaces longSubResultsByModel for the new flow.
+    val liveResultsByModel: Map<String, Map<LongSubMode, ClassificationResult>> = emptyMap(),
+    // Per-(model, method) running aggregate over the entire session. Drives the Results
+    // Summary screen and the Live UI's bar charts (mean over all cycles, not last cycle).
+    val aggregateResultsByModel: Map<String, Map<LongSubMode, ClassificationResult>> = emptyMap(),
+    // Per-(model, method) cycle counter — how many cycles each combination has produced
+    // a result for. Shown on the Results Summary card.
+    val cycleCountByModelMethod: Map<Pair<String, LongSubMode>, Int> = emptyMap(),
+    // Wall-clock elapsed time of the active session in ms (excluding pauses).
+    val sessionElapsedMs: Long = 0L,
+    // Average volume (mean) accumulated across every cycle's mean — shown on Results Summary.
+    val sessionVolumeMean: Float = 0f,
+    val sessionVolumeMeanSampleCount: Int = 0
 )
