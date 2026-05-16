@@ -4,6 +4,13 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
+ * Drops the PyTorch file extension when a model name is rendered to the user.
+ * The actual file on disk keeps `.pt` (loaders still need the full name); only
+ * UI strings should run through this.
+ */
+fun String.stripModelSuffix(): String = removeSuffix(".pt")
+
+/**
  * Helper for managing user-defined display names for models.
  * Display names are stored in SharedPreferences and fall back to the file name.
  */
