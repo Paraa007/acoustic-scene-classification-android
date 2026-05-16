@@ -328,7 +328,7 @@
 
     <!-- Welcome / Home -->
     <string name="welcome_new_session">Start new session</string>
-    <string name="welcome_last_config">Use last config</string>
+    <string name="welcome_quick_start">Quick Start</string>
     <string name="welcome_no_models">No models found — drop a .pt file into dev_models/.</string>
 
     <!-- Wizard -->
