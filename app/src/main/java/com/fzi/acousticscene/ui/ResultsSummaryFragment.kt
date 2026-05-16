@@ -19,13 +19,10 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
 /**
- * Renders the per-(model, method) aggregates that built up over the session.
- * The user lands here after Stop or auto-stop and chooses one of:
- * - Zurück zur Home Page → Welcome
- * - Zur History → opens HistoryActivity (existing screen)
- *
- * Reads `aggregateResultsByModel` + `cycleCountByModelMethod` straight off the
- * UiState that the live screen left behind.
+ * Renders a tight at-a-glance summary after a session stops: how long it ran,
+ * how much of that was paused, how many 10 s recordings happened, and the top
+ * predicted class for every (model, method) combo. Distributions and bar charts
+ * live in History — this page is the headline view.
  */
 class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
 
@@ -48,7 +45,6 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
             startActivity(Intent(requireContext(), HistoryActivity::class.java))
         }
 
-        // Back navigates to the welcome page (skip the live + wizard layers).
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
             object : OnBackPressedCallback(true) {
@@ -62,6 +58,33 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
 
     private fun buildResults(container: LinearLayout, config: SessionConfig, state: UiState) {
         val ctx = requireContext()
+
+        // Header strip: duration · paused · recordings · avg volume.
+        val recordedFor = formatDurationMs(state.sessionElapsedMs)
+        val planned = config.sessionDuration.totalMs?.let { formatDurationMs(it) }
+        val recordings = state.cycleCountByModelMethod.values.maxOrNull() ?: 0
+        val durationLine = if (planned != null) "Recorded for $recordedFor / $planned"
+        else "Recorded for $recordedFor"
+        container.addView(TextView(ctx).apply {
+            text = durationLine
+            textSize = 14f
+            setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+        })
+        if (state.sessionPausedMs > 0L) {
+            container.addView(TextView(ctx).apply {
+                text = "Paused for ${formatDurationMs(state.sessionPausedMs)}"
+                textSize = 13f
+                setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                setPadding(0, dp(2f), 0, 0)
+            })
+        }
+        container.addView(TextView(ctx).apply {
+            text = if (recordings == 1) "1 recording" else "$recordings recordings"
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            setPadding(0, dp(2f), 0, dp(14f))
+        })
+
         for (model in config.modelNames) {
             val card = MaterialCardView(ctx).apply {
                 radius = dp(12f).toFloat()
@@ -73,56 +96,41 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                lp.bottomMargin = dp(12f).toInt()
+                lp.bottomMargin = dp(10f)
                 layoutParams = lp
             }
             val inner = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(14f).toInt(), dp(12f).toInt(), dp(14f).toInt(), dp(12f).toInt())
+                setPadding(dp(14f), dp(10f), dp(14f), dp(10f))
             }
             inner.addView(TextView(ctx).apply {
                 text = "🧠 ${model.stripModelSuffix()}"
-                textSize = 15f
+                textSize = 14f
                 setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                setPadding(0, 0, 0, dp(8f).toInt())
+                setPadding(0, 0, 0, dp(4f))
             })
 
-            val methods = methodsForModel(config, model)
-            for (sub in methods) {
+            for (sub in methodsForModel(config, model)) {
                 val agg = state.aggregateResultsByModel[model]?.get(sub) ?: continue
-                val cycles = state.cycleCountByModelMethod[model to sub] ?: 0
+                val klass = "${agg.sceneClass.emoji} ${agg.sceneClass.labelShort}"
                 inner.addView(TextView(ctx).apply {
-                    text = "${sub.label} · ${getString(R.string.results_cycles, cycles)}"
-                    textSize = 13f
-                    setTextColor(ContextCompat.getColor(context, R.color.accent_blue))
-                    setPadding(0, dp(6f).toInt(), 0, dp(4f).toInt())
-                })
-                val bars = BarDistributionView(ctx).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    setProbabilities(agg.allProbabilities)
-                }
-                inner.addView(bars)
-                inner.addView(TextView(ctx).apply {
-                    text = getString(R.string.results_top_class, "${agg.sceneClass.emoji} ${agg.sceneClass.labelShort}")
-                    textSize = 12f
-                    setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-                    setPadding(0, dp(4f).toInt(), 0, 0)
+                    text = "${sub.label} → $klass"
+                    textSize = 14f
+                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                    setPadding(0, dp(3f), 0, dp(1f))
                 })
             }
-
-            inner.addView(TextView(ctx).apply {
-                text = getString(R.string.results_avg_volume, state.sessionVolumeMean)
-                textSize = 12f
-                setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-                setPadding(0, dp(8f).toInt(), 0, 0)
-            })
 
             card.addView(inner)
             container.addView(card)
         }
+
+        container.addView(TextView(ctx).apply {
+            text = getString(R.string.results_avg_volume, state.sessionVolumeMean)
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            setPadding(0, dp(6f), 0, 0)
+        })
     }
 
     private fun methodsForModel(config: SessionConfig, modelName: String): List<LongSubMode> {
@@ -131,6 +139,13 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
             RecordingCategory.INTERVAL -> config.intervalMethodsByModel[modelName].orEmpty()
         }
         return listOf(LongSubMode.STANDARD, LongSubMode.FAST, LongSubMode.AVERAGE).filter { it in active }
+    }
+
+    private fun formatDurationMs(ms: Long): String {
+        val totalSec = (ms / 1000L).coerceAtLeast(0L)
+        val minutes = totalSec / 60
+        val seconds = totalSec % 60
+        return "%d:%02d".format(minutes, seconds)
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()

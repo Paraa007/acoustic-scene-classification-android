@@ -129,33 +129,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun wizardSetModels(models: List<String>) {
-        // Drop method selections for models that are no longer in the set, seed
-        // the locked default for any newly added model, and drop methods that
-        // don't match the model's training duration (e.g. STANDARD on a 1s
-        // model). Without the seed neither IntervalMethods nor ClipDuration
-        // could advance — canAdvance() needs every model to have at least one
-        // method ticked.
+        // Methods aren't user-pickable any more — derive them straight from
+        // each model's training duration (1 s → FAST+AVG, 10 s → STANDARD).
+        // Stored on both maps so Continuous and Interval can read uniformly.
         _wizard.update { state ->
-            val keptInterval = state.intervalMethodsByModel.filterKeys { it in models }
-            val seededInterval = models.associateWith { name ->
-                val duration = ModelTrainingDuration.secondsForFilename(name)
-                val locked = ModelTrainingDuration.defaultSubMode(name)
-                val previous = keptInterval[name].orEmpty()
-                val compatible = previous.filter { it.isCompatibleWith(duration) }.toSet()
-                compatible + locked
-            }
-            val keptContinuous = state.continuousMethodsByModel.filterKeys { it in models }
-            val seededContinuous = models.associateWith { name ->
-                val duration = ModelTrainingDuration.secondsForFilename(name)
-                val locked = ModelTrainingDuration.defaultSubMode(name)
-                val previous = keptContinuous[name].orEmpty()
-                val compatible = previous.filter { it.isCompatibleWith(duration) }.toSet()
-                compatible + locked
-            }
+            val methods = models.associateWith { ModelTrainingDuration.requiredMethodsForModel(it) }
             state.copy(
                 selectedModels = models,
-                intervalMethodsByModel = seededInterval,
-                continuousMethodsByModel = seededContinuous
+                intervalMethodsByModel = methods,
+                continuousMethodsByModel = methods
             )
         }
     }
@@ -166,65 +148,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun wizardSetIntervalPause(pause: LongInterval) {
         _wizard.update { it.copy(intervalPause = pause) }
-    }
-
-    /**
-     * Toggle a method on/off for a specific model. The locked default cannot be
-     * toggled off, and methods that don't match the model's training duration
-     * (e.g. Standard on a 1s-model) are silently rejected — the wizard already
-     * disables their checkboxes.
-     */
-    fun wizardToggleIntervalMethod(modelName: String, sub: LongSubMode) {
-        toggleMethodIn(
-            modelName = modelName,
-            sub = sub,
-            get = { it.intervalMethodsByModel },
-            set = { state, map -> state.copy(intervalMethodsByModel = map) }
-        )
-    }
-
-    /** Same shape as [wizardToggleIntervalMethod], but for the Continuous step. */
-    fun wizardToggleContinuousMethod(modelName: String, sub: LongSubMode) {
-        toggleMethodIn(
-            modelName = modelName,
-            sub = sub,
-            get = { it.continuousMethodsByModel },
-            set = { state, map -> state.copy(continuousMethodsByModel = map) }
-        )
-    }
-
-    private inline fun toggleMethodIn(
-        modelName: String,
-        sub: LongSubMode,
-        crossinline get: (WizardViewState) -> Map<String, Set<LongSubMode>>,
-        crossinline set: (WizardViewState, Map<String, Set<LongSubMode>>) -> WizardViewState
-    ) {
-        val locked = ModelTrainingDuration.defaultSubMode(modelName)
-        if (sub == locked) return
-        val duration = ModelTrainingDuration.secondsForFilename(modelName)
-        if (!sub.isCompatibleWith(duration)) return
-        _wizard.update { state ->
-            val source = get(state)
-            val current = source[modelName] ?: setOf(locked)
-            val next = if (sub in current) current - sub else current + sub
-            set(state, source + (modelName to (next + locked)))
-        }
-    }
-
-    /** Ensures every selected model has at least its locked default in both methods maps. */
-    fun wizardEnsureMethodDefaults() {
-        _wizard.update { state ->
-            val interval = state.selectedModels.associateWith { name ->
-                state.intervalMethodsByModel[name].orEmpty() + ModelTrainingDuration.defaultSubMode(name)
-            }
-            val continuous = state.selectedModels.associateWith { name ->
-                state.continuousMethodsByModel[name].orEmpty() + ModelTrainingDuration.defaultSubMode(name)
-            }
-            state.copy(
-                intervalMethodsByModel = interval,
-                continuousMethodsByModel = continuous
-            )
-        }
     }
 
     fun wizardSetSessionDuration(duration: SessionDuration) {
@@ -382,6 +305,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             pauseTotalMs = null,
             userPauseDeadlineElapsedMs = null,
             sessionElapsedMs = 0L,
+            sessionPausedMs = 0L,
             frameElapsedMs = 0L,
             frameSegments = frameSegmentsFor(config),
             liveResultsByModel = emptyMap(),
@@ -458,24 +382,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 recordingProgress = 0f
             ) }
 
-            // Cycle shape depends on which methods are active:
-            //  - Continuous with only FAST across all models: 10 × 1 s clips
-            //    bundled into one 10 s frame (low-latency live ring).
-            //  - Continuous with any STANDARD or AVERAGE in play: record one
-            //    10 s clip and dispatch per model / per method on that buffer
-            //    (same shape as Interval, just without the planned pause).
-            //  - Interval: one 10 s clip + a planned interval-pause.
-            val continuousFastOnly = config.category == RecordingCategory.CONTINUOUS &&
-                    config.continuousMethodsByModel.values.flatten().toSet() == setOf(LongSubMode.FAST)
-            val cycleResult: CycleOutcome? = when {
-                continuousFastOnly -> runFastFrame(config, cycleStartedAt)
-                config.category == RecordingCategory.CONTINUOUS -> runContinuousLongCycle(config)
-                else /* INTERVAL */ -> runIntervalCycle(config)
+            // Every cycle records one 10 s buffer and dispatches per model:
+            //  - 1 s-trained models receive the buffer in 10 × 1 s slices,
+            //    each slice fed individually (drives the per-second rings and
+            //    the running AVG). FAST takes the latest 1 s value live.
+            //  - 10 s-trained models receive the full 10 s buffer in one shot
+            //    for STANDARD.
+            // Interval and Continuous share that loop; only the outer
+            // bookkeeping differs (Interval pauses, Continuous loops back in).
+            val cycleResult: CycleOutcome? = when (config.category) {
+                RecordingCategory.CONTINUOUS -> runContinuousLongCycle(config)
+                RecordingCategory.INTERVAL -> runIntervalCycle(config)
             }
 
-            // FAST persists each 1 s cycle inside runFastFrame; the other paths
-            // persist once per frame here.
-            if (cycleResult != null && !continuousFastOnly) {
+            if (cycleResult != null) {
                 persistCycle(config, cycleResult, cycleStartedAt)
             }
             if (cycleResult == null) continue
@@ -492,45 +412,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun frameSegmentsFor(config: SessionConfig): Int {
-        // The inner ring slices into 10 segments whenever a Continuous cycle
-        // ticks per-second (Fast-only or 10 × 1 s slices for any model with
-        // AVERAGE picked). Otherwise it stays a single 10 s tick.
-        if (config.category != RecordingCategory.CONTINUOUS) return 1
-        val allMethods = config.continuousMethodsByModel.values.flatten().toSet()
-        val ticksPerSecond = LongSubMode.FAST in allMethods ||
-                config.continuousMethodsByModel.any { (model, methods) ->
-                    LongSubMode.AVERAGE in methods &&
-                            ModelTrainingDuration.secondsForFilename(model) == 1
-                }
-        return if (ticksPerSecond) 10 else 1
-    }
-
-    /**
-     * Bundles ten 1 s FAST cycles into one 10 s frame. Each cycle still
-     * persists its own PredictionRecord (matches pre-frame behavior), but the
-     * inner ring + volume chart see one continuous 10 s frame instead of
-     * resetting every second.
-     *
-     * Returns the last cycle's outcome so the outer loop can carry it for
-     * any frame-level side-effects; null if no clip produced a result.
-     */
-    private suspend fun runFastFrame(config: SessionConfig, frameStartedAt: Long): CycleOutcome? {
-        val slotCount = 10
-        var last: CycleOutcome? = null
-        for (i in 0 until slotCount) {
-            if (!isRunning) break
-            currentCoroutineContext().ensureActive()
-            val cycleStartedAt = System.currentTimeMillis()
-            val outcome = runSingleClipCycle(
-                config = config,
-                mode = RecordingMode.FAST,
-                slotIndex = i,
-                slotCount = slotCount
-            ) ?: continue
-            persistCycle(config, outcome, cycleStartedAt)
-            last = outcome
+        // The inner ring slices into 10 segments whenever any 1 s-trained
+        // model is active — that's when per-second updates land. Otherwise
+        // (only 10 s-models, or Interval pause) it stays a single 10 s tick.
+        val hasOneSecModel = config.modelNames.any {
+            ModelTrainingDuration.secondsForFilename(it) == 1
         }
-        return last
+        return if (hasOneSecModel) 10 else 1
     }
 
     /**
@@ -556,60 +444,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             currentVolume = 0f,
             frameElapsedMs = 0L,
             perSecondResults = List(10) { null },
-            runningAverageResult = null
+            runningAverageResult = null,
+            perSecondResultsByModel = emptyMap()
         ) }
     }
 
     /**
-     * Picks the [RecordingMode] that drives the AudioRecorder for the active
-     * config. Continuous collapses to FAST (1 s frames) when every model picked
-     * only FAST, otherwise STANDARD (10 s frame, dispatched per-method on the
-     * buffer). Interval always records 10 s (LONG) and then dispatches
-     * per-method on that buffer.
+     * Picks the [RecordingMode] that drives the AudioRecorder for one cycle.
+     * Every cycle now records a 10 s buffer and dispatches per model on that
+     * buffer — 1 s-models get the 10 × 1 s slices, 10 s-models get the full
+     * window. Continuous uses STANDARD framing (no planned pause after),
+     * Interval uses LONG (interval pause kicks in via the outer loop).
      */
     private fun effectiveModeFor(config: SessionConfig): RecordingMode = when (config.category) {
-        RecordingCategory.CONTINUOUS -> {
-            val allMethods = config.continuousMethodsByModel.values.flatten().toSet()
-            if (allMethods == setOf(LongSubMode.FAST)) RecordingMode.FAST
-            else RecordingMode.STANDARD
-        }
+        RecordingCategory.CONTINUOUS -> RecordingMode.STANDARD
         RecordingCategory.INTERVAL -> RecordingMode.LONG
-    }
-
-    /**
-     * One Continuous cycle for the FAST-only path. Records 1 s, runs every
-     * model on the buffer and tags the result under [LongSubMode.FAST]. Called
-     * once per 1 s slot inside [runFastFrame] — when STANDARD or AVERAGE are
-     * also picked the cycle goes through [runContinuousLongCycle] instead.
-     */
-    private suspend fun runSingleClipCycle(
-        config: SessionConfig,
-        mode: RecordingMode,
-        slotIndex: Int = 0,
-        slotCount: Int = 1
-    ): CycleOutcome? {
-        val samples = recordCycleAudio(mode, slotIndex, slotCount) ?: return null
-        val sub = LongSubMode.FAST
-        val perModel = mutableMapOf<String, MutableMap<LongSubMode, ClassificationResult>>()
-        _uiState.update { it.copy(appState = AppState.Processing, liveResultsByModel = emptyMap()) }
-        for ((name, inf) in inferencesByName) {
-            if (!isRunning) break
-            val r = withContext(mlDispatcher) { inf.infer(samples, mode) } ?: continue
-            perModel.getOrPut(name) { mutableMapOf() }[sub] = r
-            // Stream into UI as each model finishes
-            _uiState.update { state ->
-                state.copy(liveResultsByModel = state.liveResultsByModel + (name to mapOf(sub to r)))
-            }
-        }
-        val volume = audioRecorder.snapshotVolumeStats()
-        accumulateAggregate(perModel)
-        accumulateSessionVolume(volume.mean)
-        return CycleOutcome(
-            perModel = perModel,
-            volume = volume,
-            perSecondClips = null,
-            perSecondVolumes = padToTen(volume.perSecondMeans)
-        )
     }
 
     /**
@@ -641,9 +490,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         runLongMultiMethodCycle(config, config.continuousMethodsByModel)
 
     /**
-     * Records a 10 s buffer and dispatches every checked method per model on
-     * it. Used by both Interval (with planned pause after) and Continuous
-     * Multi-Method (loops straight back in).
+     * Records a 10 s buffer, slices it into 10 × 1 s pieces, and runs every
+     * 1 s-trained model on every slice (live-streamed to the per-model
+     * per-second rings + Fast/Avg bars). Every 10 s-trained model gets a
+     * single inference on the full 10 s buffer for its STANDARD method.
+     *
+     * Used by both Interval (with planned pause after) and Continuous
+     * Multi-Method (loops straight back in). The shape is the same; only
+     * the outer loop differs.
      */
     private suspend fun runLongMultiMethodCycle(
         config: SessionConfig,
@@ -652,83 +506,123 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val samples = recordCycleAudio(RecordingMode.LONG) ?: return null
         val volume = audioRecorder.snapshotVolumeStats()
         val sampleRate = 32000
+        val totalClips = 10
         val perModel = mutableMapOf<String, MutableMap<LongSubMode, ClassificationResult>>()
-        val perSecondClipsByPrimary = mutableListOf<PerSecondClip>()
-        _uiState.update { it.copy(appState = AppState.Processing, liveResultsByModel = emptyMap()) }
+        val perSecondByModel = mutableMapOf<String, MutableList<ClassificationResult>>()
 
-        for ((modelName, inf) in inferencesByName) {
-            if (!isRunning) break
-            val methods = methodsByModel[modelName].orEmpty()
-            for (sub in methods) {
+        val active = inferencesByName.filterKeys { (methodsByModel[it].orEmpty().isNotEmpty()) }
+        val oneSecModels = active.filterKeys { ModelTrainingDuration.secondsForFilename(it) == 1 }
+        val tenSecModels = active.filterKeys { ModelTrainingDuration.secondsForFilename(it) == 10 }
+        val primaryName = config.modelNames.first()
+        val primaryIs1s = ModelTrainingDuration.secondsForFilename(primaryName) == 1
+
+        _uiState.update { state ->
+            val reset = state.perSecondResultsByModel.toMutableMap()
+            for (name in oneSecModels.keys) reset[name] = List(totalClips) { null }
+            state.copy(
+                appState = AppState.Processing,
+                liveResultsByModel = emptyMap(),
+                perSecondResults = List(totalClips) { null },
+                runningAverageResult = null,
+                perSecondResultsByModel = reset
+            )
+        }
+
+        val cycleStart = System.currentTimeMillis()
+        // Per 1 s slice: stream FAST (live current value) and AVG (running
+        // mean) for every 1 s-trained model. The per-model perSecondResults
+        // map feeds each model's "Show Live Data" row independently.
+        if (oneSecModels.isNotEmpty()) {
+            for (i in 0 until totalClips) {
                 if (!isRunning) break
-                val r: ClassificationResult? = when (sub) {
-                    LongSubMode.STANDARD -> withContext(mlDispatcher) { inf.infer(samples, RecordingMode.STANDARD) }
-                    LongSubMode.FAST -> {
-                        if (samples.size < sampleRate * 10) null
-                        else {
-                            val from = (sampleRate * 4.5f).toInt()
-                            val to = (sampleRate * 5.5f).toInt()
-                            withContext(mlDispatcher) { inf.infer(samples.copyOfRange(from, to), RecordingMode.FAST) }
-                        }
-                    }
-                    LongSubMode.AVERAGE -> {
-                        if (samples.size < sampleRate * 10) null
-                        else if (ModelTrainingDuration.secondsForFilename(modelName) == 10) {
-                            // 10 s-model in AVG: feed the full 10 s buffer once.
-                            // The per-second-circles UI stays untouched because
-                            // per-slice predictions don't exist for this path.
-                            withContext(mlDispatcher) { inf.infer(samples, RecordingMode.STANDARD) }
-                        } else {
-                            val clipResults = mutableListOf<ClassificationResult>()
-                            val startTime = System.currentTimeMillis()
-                            for (i in 0 until 10) {
-                                if (!isRunning) break
-                                val slice = samples.copyOfRange(i * sampleRate, (i + 1) * sampleRate)
-                                val cr = withContext(mlDispatcher) { inf.infer(slice, RecordingMode.FAST) } ?: continue
-                                clipResults += cr
-                                if (modelName == config.modelNames.first()) {
-                                    perSecondClipsByPrimary += PerSecondClip(
-                                        clipIndex = i,
-                                        sceneClass = cr.sceneClass,
-                                        confidence = cr.confidence,
-                                        allProbabilities = cr.allProbabilities,
-                                        volumeMean = null,
-                                        volumePeak = null
-                                    )
-                                    val running = computeRunningAverage(clipResults, startTime)
-                                    _uiState.update { state ->
-                                        val per = state.perSecondResults.toMutableList()
-                                        if (i < per.size) per[i] = cr
-                                        state.copy(
-                                            perSecondResults = per,
-                                            runningAverageResult = running
-                                        )
-                                    }
-                                    delay(150L)
-                                }
-                            }
-                            if (clipResults.isEmpty()) null else computeRunningAverage(clipResults, startTime)
-                        }
-                    }
-                }
-                if (r != null) {
-                    perModel.getOrPut(modelName) { mutableMapOf() }[sub] = r
+                if (samples.size < sampleRate * (i + 1)) break
+                val slice = samples.copyOfRange(i * sampleRate, (i + 1) * sampleRate)
+                for ((modelName, inf) in oneSecModels) {
+                    if (!isRunning) break
+                    val cr = withContext(mlDispatcher) { inf.infer(slice, RecordingMode.FAST) } ?: continue
+                    perSecondByModel.getOrPut(modelName) { mutableListOf() } += cr
+                    val running = computeRunningAverage(perSecondByModel[modelName]!!, cycleStart)
+                    val methods = methodsByModel[modelName].orEmpty()
                     _uiState.update { state ->
-                        val prev = state.liveResultsByModel[modelName].orEmpty()
+                        val perModelSlices = state.perSecondResultsByModel.toMutableMap()
+                        val list: MutableList<ClassificationResult?> =
+                            perModelSlices[modelName]?.toMutableList()
+                                ?: MutableList(totalClips) { null }
+                        if (i < list.size) list[i] = cr
+                        perModelSlices[modelName] = list
+                        val live = state.liveResultsByModel[modelName].orEmpty().toMutableMap()
+                        if (LongSubMode.FAST in methods) live[LongSubMode.FAST] = cr
+                        if (LongSubMode.AVERAGE in methods) live[LongSubMode.AVERAGE] = running
+                        // Keep the legacy perSecondResults / runningAverageResult
+                        // wired to the primary 1 s-model so any code still reading
+                        // them keeps working.
+                        val primarySlices = if (modelName == primaryName && primaryIs1s) {
+                            val p = state.perSecondResults.toMutableList()
+                            if (i < p.size) p[i] = cr
+                            p
+                        } else state.perSecondResults
+                        val primaryRunning = if (modelName == primaryName && primaryIs1s) running
+                        else state.runningAverageResult
                         state.copy(
-                            liveResultsByModel = state.liveResultsByModel + (modelName to (prev + (sub to r)))
+                            perSecondResultsByModel = perModelSlices,
+                            liveResultsByModel = state.liveResultsByModel + (modelName to live),
+                            perSecondResults = primarySlices,
+                            runningAverageResult = primaryRunning
                         )
                     }
+                    delay(60L)
                 }
             }
         }
+
+        // Lock in the final values for every 1 s-model: FAST = last 1 s
+        // inference (live tip), AVERAGE = mean over all 10 1 s inferences.
+        for ((modelName, clips) in perSecondByModel) {
+            if (clips.isEmpty()) continue
+            val methods = methodsByModel[modelName].orEmpty()
+            val avg = computeRunningAverage(clips, cycleStart)
+            if (LongSubMode.FAST in methods) {
+                perModel.getOrPut(modelName) { mutableMapOf() }[LongSubMode.FAST] = clips.last()
+            }
+            if (LongSubMode.AVERAGE in methods) {
+                perModel.getOrPut(modelName) { mutableMapOf() }[LongSubMode.AVERAGE] = avg
+            }
+        }
+
+        // 10 s-models: one inference on the full 10 s buffer, tagged STANDARD.
+        for ((modelName, inf) in tenSecModels) {
+            if (!isRunning) break
+            val r = withContext(mlDispatcher) { inf.infer(samples, RecordingMode.STANDARD) } ?: continue
+            perModel.getOrPut(modelName) { mutableMapOf() }[LongSubMode.STANDARD] = r
+            _uiState.update { state ->
+                val live = state.liveResultsByModel[modelName].orEmpty() + (LongSubMode.STANDARD to r)
+                state.copy(liveResultsByModel = state.liveResultsByModel + (modelName to live))
+            }
+        }
+
         if (perModel.isEmpty()) return null
         accumulateAggregate(perModel)
         accumulateSessionVolume(volume.mean)
+
+        // History/CSV per-second clips come from the primary 1 s-model only
+        // (matches the previous behaviour). For a 10 s primary the field is
+        // null because per-slice predictions don't exist for that model.
+        val perSecondClips: List<PerSecondClip>? = if (primaryIs1s) {
+            perSecondByModel[primaryName]?.mapIndexed { idx, cr ->
+                PerSecondClip(
+                    clipIndex = idx,
+                    sceneClass = cr.sceneClass,
+                    confidence = cr.confidence,
+                    allProbabilities = cr.allProbabilities,
+                    volumeMean = null,
+                    volumePeak = null
+                )
+            }
+        } else null
         return CycleOutcome(
             perModel = perModel,
             volume = volume,
-            perSecondClips = perSecondClipsByPrimary.takeIf { it.isNotEmpty() },
+            perSecondClips = perSecondClips,
             perSecondVolumes = padToTen(volume.perSecondMeans)
         )
     }
@@ -828,21 +722,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         val primaryName = config.modelNames.first()
         val primaryRow = outcome.perModel[primaryName] ?: return
-        // The locked default is always present in the picked set (Standard for
-        // 10 s-trained, Fast for 1 s-trained), so it's a safe pick for the
-        // record's headline result. Any extra methods land in [longSubs].
-        val primarySub = ModelTrainingDuration.defaultSubMode(primaryName)
+        // Headline method for the record: FAST for 1 s-models, STANDARD for
+        // 10 s-models. Any other methods land in [longSubs].
+        val primarySub = ModelTrainingDuration.primaryMethodFor(primaryName)
         val primaryResult = primaryRow[primarySub] ?: primaryRow.values.firstOrNull() ?: return
 
         val mode = effectiveModeFor(config)
         val battery = getBatteryLevel()
         val top3 = primaryResult.getTopPredictions(3)
 
-        // Persist every (model × method) result whenever the cycle ran the
-        // multi-method long path — that covers Interval and any Continuous run
-        // beyond the FAST-only shortcut. The FAST-only Continuous path
-        // produces one method per model and persists separately.
-        val longSubs: List<LongSubResult>? = if (mode != RecordingMode.FAST) {
+        // Every cycle ran the multi-method long path now, so persist every
+        // (model × method) result. The per-second clips ride on the primary
+        // model's AVG entry, matching the History detail view's contract.
+        val longSubs: List<LongSubResult>? = run {
             val list = mutableListOf<LongSubResult>()
             for ((modelName, methods) in outcome.perModel) {
                 for ((sub, res) in methods) {
@@ -859,7 +751,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             list.takeIf { it.isNotEmpty() }
-        } else null
+        }
 
         // Multi-Model continuous: persist as AllInOneResults so the existing CSV
         // dynamic columns and History dialog rendering keep working.
@@ -867,8 +759,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             config.category == RecordingCategory.CONTINUOUS && config.modelNames.size >= 2
         ) {
             outcome.perModel.entries.mapNotNull { (name, methods) ->
-                val locked = ModelTrainingDuration.defaultSubMode(name)
-                val res = methods[locked] ?: methods.values.firstOrNull() ?: return@mapNotNull null
+                val primary = ModelTrainingDuration.primaryMethodFor(name)
+                val res = methods[primary] ?: methods.values.firstOrNull() ?: return@mapNotNull null
                 AllInOneResult(
                     modelName = name,
                     sceneClass = res.sceneClass,
@@ -1115,11 +1007,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         isPaused = false
         sessionResumeWallClockMs = SystemClock.elapsedRealtime()
-        _uiState.update { it.copy(
-            isPaused = false,
-            userPauseDeadlineElapsedMs = null,
-            pauseTotalMs = null
-        ) }
+        _uiState.update { state ->
+            state.copy(
+                isPaused = false,
+                userPauseDeadlineElapsedMs = null,
+                pauseTotalMs = null,
+                sessionPausedMs = state.sessionPausedMs + pauseDurationMs.coerceAtLeast(0L)
+            )
+        }
     }
 
     private fun persistPauseRecord(durationMs: Long) {
