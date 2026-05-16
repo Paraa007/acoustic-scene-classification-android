@@ -248,11 +248,12 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     }
 
     private fun ensureCards(config: SessionConfig) {
+        fun methodsFingerprint(map: Map<String, Set<LongSubMode>>) = map.entries
+            .sortedBy { it.key }
+            .joinToString("|") { (k, v) -> "$k=" + v.joinToString(",") { it.name } }
         val key = config.modelNames.joinToString("|") + "::" + config.category.name +
-                "::" + config.continuousSubMode.name +
-                "::" + config.intervalMethodsByModel.entries
-                    .sortedBy { it.key }
-                    .joinToString("|") { (k, v) -> "$k=" + v.joinToString(",") { it.name } }
+                "::C:" + methodsFingerprint(config.continuousMethodsByModel) +
+                "::I:" + methodsFingerprint(config.intervalMethodsByModel)
         if (key == lastBuiltModelKey && cardsByModel.size == config.modelNames.size) return
         lastBuiltModelKey = key
         modelCardsContainer.removeAllViews()
@@ -352,13 +353,11 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     }
 
     private fun methodsForModel(config: SessionConfig, modelName: String): List<LongSubMode> {
-        return when (config.category) {
-            RecordingCategory.CONTINUOUS -> listOf(config.continuousSubMode)
-            RecordingCategory.INTERVAL -> {
-                val active = config.intervalMethodsByModel[modelName].orEmpty()
-                listOf(LongSubMode.STANDARD, LongSubMode.FAST, LongSubMode.AVERAGE).filter { it in active }
-            }
+        val active = when (config.category) {
+            RecordingCategory.CONTINUOUS -> config.continuousMethodsByModel[modelName].orEmpty()
+            RecordingCategory.INTERVAL -> config.intervalMethodsByModel[modelName].orEmpty()
         }
+        return listOf(LongSubMode.STANDARD, LongSubMode.FAST, LongSubMode.AVERAGE).filter { it in active }
     }
 
     private fun labelForState(state: UiState): String {
