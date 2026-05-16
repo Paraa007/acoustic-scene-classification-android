@@ -50,3 +50,58 @@ hs_err_pid*
 
 # Kotlin compiled
 *.kotlin_module
+
+# Maestro screenshots & local UI-test artifacts — don't push to GitHub
+.maestro_screenshots/
+maestro_screenshots/
+**/screenshots/
+
+# Images — keep them out of the repo by default.
+# Launcher icons under app/src/main/res/ are whitelisted below.
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.tif
+*.webp
+*.heic
+*.heif
+*.psd
+*.ai
+*.svg
+
+# Whitelist: app resources (launcher icons, drawables shipped with the APK)
+!app/src/main/res/**/*.png
+!app/src/main/res/**/*.jpg
+!app/src/main/res/**/*.jpeg
+!app/src/main/res/**/*.webp
+!app/src/main/res/**/*.gif
+!app/src/main/res/**/*.svg
+!app/src/main/res/**/*.xml
+
+# Audio recordings / samples — large, never commit
+*.wav
+*.mp3
+*.flac
+*.aac
+*.ogg
+*.m4a
+*.opus
+
+# Video
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.tgz
+*.bz2
+*.7z
+*.rar

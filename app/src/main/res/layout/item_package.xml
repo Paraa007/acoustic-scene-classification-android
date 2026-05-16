@@ -26,20 +26,19 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- Session Name + Mode Badge Row -->
+            <!-- Session Name + Active Badge Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="4dp">
+                android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/sessionNameText"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textSize="16sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
 
@@ -58,34 +57,67 @@
                     android:background="@color/status_recording"
                     android:visibility="gone" />
 
+                <!-- legacy: replaced by modelListLayout, kept hidden -->
                 <TextView
                     android:id="@+id/modeBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true" />
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Aufnahmen + Dauer -->
+            <!-- Modell-Liste (dynamisch befüllt) -->
+            <LinearLayout
+                android:id="@+id/modelListLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="12dp" />
+
+            <!-- Recordings -->
             <TextView
-                android:id="@+id/countAndDurationText"
+                android:id="@+id/recordingsText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <!-- Duration -->
+            <TextView
+                android:id="@+id/durationText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <!-- Konfiguration (kompakt) -->
+            <TextView
+                android:id="@+id/configText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textSize="13sp"
                 android:textColor="@color/text_secondary" />
 
-            <!-- Batterie-Verbrauch -->
+            <!-- Battery-Verbrauch -->
             <TextView
                 android:id="@+id/batteryConsumptionText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="12dp"
                 android:textSize="14sp"
+                android:textStyle="bold"
                 android:textColor="@color/text_secondary" />
+
+            <!-- legacy id kept so existing findViewById calls don't crash -->
+            <TextView
+                android:id="@+id/countAndDurationText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
 
         </LinearLayout>
 
