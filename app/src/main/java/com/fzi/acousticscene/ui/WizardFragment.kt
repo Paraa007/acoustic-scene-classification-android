@@ -129,9 +129,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         when (state.step) {
             WizardStep.Models -> renderModels(state)
             WizardStep.Category -> renderCategory(state)
-            WizardStep.ClipDuration -> renderClipDuration(state)
             WizardStep.IntervalPause -> renderIntervalPause(state)
-            WizardStep.IntervalMethods -> renderIntervalMethods(state)
             WizardStep.SessionDuration -> renderSessionDuration(state)
             WizardStep.Summary -> renderSummary(state)
         }
@@ -197,20 +195,6 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         )
     }
 
-    private fun renderClipDuration(state: WizardViewState) {
-        // Same shape as renderIntervalMethods: one card per model, the locked
-        // default for that model's training duration is always ticked and
-        // disabled, Average can be added on top, and the cross-duration method
-        // (Standard for 1 s-models, Fast for 10 s-models) shows up disabled with
-        // an explanation. The renderer is split across both branches because
-        // the toggle target differs (continuous vs. interval methods map).
-        renderMethodsPerModel(
-            state = state,
-            current = { viewModel.wizard.value.continuousMethodsByModel },
-            onToggle = { model, sub -> viewModel.wizardToggleContinuousMethod(model, sub) }
-        )
-    }
-
     private fun renderIntervalPause(state: WizardViewState) {
         for (interval in LongInterval.entries) {
             addPickRow(
@@ -219,70 +203,6 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
                 selected = state.intervalPause == interval,
                 onClick = { viewModel.wizardSetIntervalPause(interval) }
             )
-        }
-    }
-
-    private fun renderIntervalMethods(state: WizardViewState) {
-        renderMethodsPerModel(
-            state = state,
-            current = { viewModel.wizard.value.intervalMethodsByModel },
-            onToggle = { model, sub -> viewModel.wizardToggleIntervalMethod(model, sub) }
-        )
-    }
-
-    private fun renderMethodsPerModel(
-        state: WizardViewState,
-        current: () -> Map<String, Set<LongSubMode>>,
-        onToggle: (String, LongSubMode) -> Unit
-    ) {
-        viewModel.wizardEnsureMethodDefaults()
-        val checkedByModel = current()
-        for (model in state.selectedModels) {
-            val card = MaterialCardView(requireContext()).apply {
-                radius = dp(12f).toFloat()
-                cardElevation = 0f
-                strokeWidth = dp(1f)
-                strokeColor = ContextCompat.getColor(context, R.color.text_secondary)
-                setCardBackgroundColor(ContextCompat.getColor(context, R.color.surface_dark))
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                lp.bottomMargin = dp(12f)
-                layoutParams = lp
-            }
-            val inner = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
-            }
-            val title = TextView(requireContext()).apply {
-                text = getString(R.string.wizard_methods_per_model, model)
-                textSize = 15f
-                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-            }
-            inner.addView(title)
-            val locked = ModelTrainingDuration.defaultSubMode(model)
-            val modelDuration = ModelTrainingDuration.secondsForFilename(model)
-            val checked = checkedByModel[model].orEmpty()
-            for (sub in LongSubMode.entries) {
-                val compatible = sub.isCompatibleWith(modelDuration)
-                val row = MaterialCheckBox(requireContext()).apply {
-                    text = when {
-                        sub == locked -> "${sub.label}  · ${getString(R.string.wizard_method_locked)}"
-                        !compatible -> "${sub.label}  · ${getString(R.string.wizard_method_incompatible, modelDuration)}"
-                        else -> sub.label
-                    }
-                    isChecked = sub in checked && compatible
-                    // Locked default cannot be unchecked; incompatible methods are
-                    // disabled so the user can't pick a Standard for a 1s-model
-                    // (or vice versa).
-                    isEnabled = sub != locked && compatible
-                    setOnCheckedChangeListener { _, _ -> onToggle(model, sub) }
-                }
-                inner.addView(row)
-            }
-            card.addView(inner)
-            contentRoot.addView(card)
         }
     }
 
@@ -299,28 +219,18 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
 
     private fun renderSummary(state: WizardViewState) {
         val tappable = !state.quickStartMode
-        addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n"), WizardStep.Models, tappable)
+        // Models row now also lists the methods that will run for each model
+        // (derived automatically from the model's training duration), so the
+        // user sees exactly what each pick produces.
+        val modelsLine = state.selectedModels.joinToString("\n") { name ->
+            val methods = ModelTrainingDuration.requiredMethodsForModel(name)
+                .joinToString(" + ") { it.label }
+            "$name\n  Runs: $methods"
+        }
+        addSummaryRow(getString(R.string.wizard_summary_models), modelsLine, WizardStep.Models, tappable)
         addSummaryRow(getString(R.string.wizard_summary_category), state.category?.label.orEmpty(), WizardStep.Category, tappable)
-        when (state.category) {
-            RecordingCategory.CONTINUOUS -> {
-                val methodLines = state.selectedModels.joinToString("\n") { name ->
-                    "$name: " + state.continuousMethodsByModel[name].orEmpty().joinToString(", ") { it.label }
-                }
-                addSummaryRow(
-                    getString(R.string.wizard_summary_clip),
-                    methodLines,
-                    WizardStep.ClipDuration,
-                    tappable
-                )
-            }
-            RecordingCategory.INTERVAL -> {
-                addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause, tappable)
-                val methodLines = state.selectedModels.joinToString("\n") { name ->
-                    "$name: " + state.intervalMethodsByModel[name].orEmpty().joinToString(", ") { it.label }
-                }
-                addSummaryRow(getString(R.string.wizard_summary_methods), methodLines, WizardStep.IntervalMethods, tappable)
-            }
-            null -> Unit
+        if (state.category == RecordingCategory.INTERVAL) {
+            addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause, tappable)
         }
         addSummaryRow(getString(R.string.wizard_summary_session), state.sessionDuration.label, WizardStep.SessionDuration, tappable)
     }

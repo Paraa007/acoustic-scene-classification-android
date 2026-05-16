@@ -337,15 +337,10 @@
     <string name="wizard_models_hint">Pick at least one model.</string>
     <string name="wizard_category_continuous_hint">Recordings run back-to-back.</string>
     <string name="wizard_category_interval_hint">One recording, then a pause, then again.</string>
-    <string name="wizard_methods_per_model">Methods for %1$s</string>
-    <string name="wizard_method_locked">default method (locked)</string>
-    <string name="wizard_method_incompatible">not available (model trained on %1$d s clips)</string>
     <string name="wizard_summary_title">Summary</string>
     <string name="wizard_summary_models">Models</string>
     <string name="wizard_summary_category">Mode</string>
-    <string name="wizard_summary_clip">Recording</string>
     <string name="wizard_summary_pause">Interval</string>
-    <string name="wizard_summary_methods">Methods</string>
     <string name="wizard_summary_session">Session duration</string>
 
     <!-- Session Duration -->
@@ -373,7 +368,5 @@
     <string name="results_summary_title">Session ended</string>
     <string name="results_back_home">Back to home</string>
     <string name="results_open_history">Open history</string>
-    <string name="results_cycles">Cycles: %1$d</string>
-    <string name="results_top_class">Top class: %1$s</string>
     <string name="results_avg_volume">Avg volume: %1$.2f</string>
 </resources>

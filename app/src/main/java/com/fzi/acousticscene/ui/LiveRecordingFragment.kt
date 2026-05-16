@@ -228,16 +228,18 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
                 if (result != null) {
                     section.bars.setProbabilities(result.allProbabilities)
                 }
-                // Live-data circles for AVG sections — only ticks for the primary model
-                // (matches LiveResults engine in the ViewModel).
+                // Live-data circles for AVG sections — every 1 s-trained model
+                // streams its own per-second predictions, read independently
+                // from perSecondResultsByModel.
                 if (sub == LongSubMode.AVERAGE && section.perSecondCircles != null) {
                     val expanded = liveDataExpanded[cardKey(model, sub)] == true
                     section.perSecondCircles.visibility = if (expanded) View.VISIBLE else View.GONE
-                    if (expanded && model == config.modelNames.first()) {
+                    if (expanded) {
+                        val slices = state.perSecondResultsByModel[model].orEmpty()
                         for (i in 0 until 10) {
                             val cell = section.perSecondCircles.getChildAt(i) as? LinearLayout ?: continue
                             val circle = cell.getChildAt(1) as? ConfidenceCircleView ?: continue
-                            val r = state.perSecondResults.getOrNull(i)
+                            val r = slices.getOrNull(i)
                             circle.setConfidence(r?.confidence ?: 0f, animate = false)
                             section.perSecondLabels.getOrNull(i)?.text = r?.sceneClass?.emoji ?: "·"
                         }
@@ -301,7 +303,10 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
                 }
                 container.addView(bars)
                 val perSecondLabelList = mutableListOf<TextView>()
-                val (toggle, circles) = if (sub == LongSubMode.AVERAGE && model == config.modelNames.first()) {
+                // Show Live Data row attaches to every AVG section — that's
+                // every 1 s-trained model in the session, each streaming its
+                // own per-second predictions.
+                val (toggle, circles) = if (sub == LongSubMode.AVERAGE) {
                     val tog = MaterialButton(ctx, null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
                         text = getString(R.string.live_show_live_data)
                         textSize = 12f
