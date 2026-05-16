@@ -119,13 +119,13 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
                 val topCount = hist[topClass] ?: 0
                 val klass = "${topClass.emoji} ${topClass.labelShort}"
                 inner.addView(TextView(ctx).apply {
-                    text = "Modus ist ${sub.label}"
+                    text = "Method: ${sub.label}"
                     textSize = 14f
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))
                     setPadding(0, dp(6f), 0, dp(1f))
                 })
                 inner.addView(TextView(ctx).apply {
-                    text = "Die meist erwähnte Klasse ist: $klass ($topCount / $total)"
+                    text = "Most frequent class: $klass ($topCount / $total)"
                     textSize = 13f
                     setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
                     setPadding(0, 0, 0, dp(2f))
