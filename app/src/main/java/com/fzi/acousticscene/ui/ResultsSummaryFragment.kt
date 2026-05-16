@@ -111,26 +111,46 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
             })
 
             for (sub in methodsForModel(config, model)) {
-                val agg = state.aggregateResultsByModel[model]?.get(sub) ?: continue
-                val klass = "${agg.sceneClass.emoji} ${agg.sceneClass.labelShort}"
+                val key = model to sub
+                val hist = state.topClassCountByModelMethod[key].orEmpty()
+                val total = state.cycleCountByModelMethod[key] ?: 0
+                if (hist.isEmpty() || total == 0) continue
+                val topClass = pickTopClass(hist, state.aggregateResultsByModel[model]?.get(sub))
+                val topCount = hist[topClass] ?: 0
+                val klass = "${topClass.emoji} ${topClass.labelShort}"
                 inner.addView(TextView(ctx).apply {
-                    text = "${sub.label} → $klass"
+                    text = "Modus ist ${sub.label}"
                     textSize = 14f
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                    setPadding(0, dp(3f), 0, dp(1f))
+                    setPadding(0, dp(6f), 0, dp(1f))
+                })
+                inner.addView(TextView(ctx).apply {
+                    text = "Die meist erwähnte Klasse ist: $klass ($topCount / $total)"
+                    textSize = 13f
+                    setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                    setPadding(0, 0, 0, dp(2f))
                 })
             }
 
             card.addView(inner)
             container.addView(card)
         }
+    }
 
-        container.addView(TextView(ctx).apply {
-            text = getString(R.string.results_avg_volume, state.sessionVolumeMean)
-            textSize = 12f
-            setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-            setPadding(0, dp(6f), 0, 0)
-        })
+    /**
+     * Most-mentioned class for a (model, method): highest cycle count wins,
+     * ties broken by the higher mean confidence from [aggregateResultsByModel].
+     * Falls back to the histogram's first key if no aggregate exists yet.
+     */
+    private fun pickTopClass(
+        hist: Map<com.fzi.acousticscene.model.SceneClass, Int>,
+        agg: com.fzi.acousticscene.model.ClassificationResult?
+    ): com.fzi.acousticscene.model.SceneClass {
+        val maxCount = hist.values.max()
+        val tied = hist.filterValues { it == maxCount }.keys
+        if (tied.size == 1) return tied.first()
+        val probs = agg?.allProbabilities
+        return tied.maxByOrNull { probs?.getOrNull(it.index) ?: 0f } ?: tied.first()
     }
 
     private fun methodsForModel(config: SessionConfig, modelName: String): List<LongSubMode> {

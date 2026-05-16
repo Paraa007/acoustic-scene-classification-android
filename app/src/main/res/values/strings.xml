@@ -369,5 +369,4 @@
     <string name="results_summary_title">Session ended</string>
     <string name="results_back_home">Back to home</string>
     <string name="results_open_history">Open history</string>
-    <string name="results_avg_volume">Avg volume: %1$.2f</string>
 </resources>
