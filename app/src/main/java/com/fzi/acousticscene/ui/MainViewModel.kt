@@ -244,6 +244,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 liveResultsByModel = emptyMap(),
                 aggregateResultsByModel = emptyMap(),
                 cycleCountByModelMethod = emptyMap(),
+                topClassCountByModelMethod = emptyMap(),
                 sessionElapsedMs = 0L,
                 sessionVolumeMean = 0f,
                 sessionVolumeMeanSampleCount = 0,
@@ -311,6 +312,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             liveResultsByModel = emptyMap(),
             aggregateResultsByModel = emptyMap(),
             cycleCountByModelMethod = emptyMap(),
+            topClassCountByModelMethod = emptyMap(),
             sessionVolumeMean = 0f,
             sessionVolumeMeanSampleCount = 0,
             allInOneResults = emptyMap()
@@ -821,6 +823,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { state ->
             val nextAgg = state.aggregateResultsByModel.toMutableMap()
             val nextCounts = state.cycleCountByModelMethod.toMutableMap()
+            val nextTopHist = state.topClassCountByModelMethod.toMutableMap()
             for ((model, methods) in perModel) {
                 val perMethodAgg = nextAgg[model]?.toMutableMap() ?: mutableMapOf()
                 for ((sub, result) in methods) {
@@ -829,12 +832,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val merged = mergeClassificationResults(perMethodAgg[sub], result, priorCount)
                     perMethodAgg[sub] = merged
                     nextCounts[key] = priorCount + 1
+                    // Count this cycle's top-1 prediction for the count-based
+                    // "most-mentioned class" line on the Results Summary.
+                    val hist = nextTopHist[key]?.toMutableMap() ?: mutableMapOf()
+                    hist[result.sceneClass] = (hist[result.sceneClass] ?: 0) + 1
+                    nextTopHist[key] = hist
                 }
                 nextAgg[model] = perMethodAgg
             }
             state.copy(
                 aggregateResultsByModel = nextAgg,
-                cycleCountByModelMethod = nextCounts
+                cycleCountByModelMethod = nextCounts,
+                topClassCountByModelMethod = nextTopHist
             )
         }
     }
