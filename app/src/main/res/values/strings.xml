@@ -178,6 +178,7 @@
     <string name="battery_drain">Battery Drain</string>
     <string name="recordings">Recordings</string>
     <string name="duration">Duration</string>
+    <string name="pause">Pause</string>
     <string name="start">Start</string>
     <string name="end">End</string>
     <string name="avg_confidence">Avg Confidence</string>
@@ -327,7 +328,7 @@
     <!-- Welcome / Home -->
     <string name="welcome_new_session">Start new session</string>
     <string name="welcome_quick_start">Quick Start</string>
-    <string name="welcome_no_models">No models found — drop a .pt file into dev_models/.</string>
+    <string name="welcome_no_models">No models found — drop a model file into dev_models/.</string>
 
     <!-- Wizard -->
     <string name="wizard_back">Back</string>

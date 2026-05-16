@@ -25,6 +25,7 @@ import com.fzi.acousticscene.model.ModelInfoRegistry
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
 import com.fzi.acousticscene.util.ThemeHelper
+import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -168,8 +169,8 @@ class SettingsFragment : Fragment() {
         }
 
         val detailText = TextView(ctx).apply {
-            text = if (displayName != fileName) {
-                "$fileName · $numClasses Classes · $sizeStr"
+            text = if (ModelDisplayNameHelper.hasCustomDisplayName(ctx, fileName)) {
+                "${fileName.stripModelSuffix()} · $numClasses Classes · $sizeStr"
             } else {
                 "$numClasses Classes · $sizeStr"
             }
@@ -298,7 +299,7 @@ class SettingsFragment : Fragment() {
         }
 
         val fileLabel = TextView(ctx).apply {
-            text = fileName
+            text = fileName.stripModelSuffix()
             textSize = 12f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
             setPadding(0, (2 * dp).toInt(), 0, (12 * dp).toInt())
@@ -545,7 +546,7 @@ class SettingsFragment : Fragment() {
         }
 
         val fileLabel = TextView(ctx).apply {
-            text = fileName
+            text = fileName.stripModelSuffix()
             textSize = 13f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
             setPadding(0, (4 * resources.displayMetrics.density).toInt(), 0, (16 * resources.displayMetrics.density).toInt())
@@ -553,7 +554,7 @@ class SettingsFragment : Fragment() {
 
         val editText = EditText(ctx).apply {
             hint = getString(R.string.model_display_name_hint)
-            setText(if (currentDisplayName != fileName) currentDisplayName else "")
+            setText(if (ModelDisplayNameHelper.hasCustomDisplayName(ctx, fileName)) currentDisplayName else "")
             textSize = 16f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
             setHintTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
@@ -593,7 +594,7 @@ class SettingsFragment : Fragment() {
                 val updatedDisplayName = ModelDisplayNameHelper.getDisplayName(ctx, fileName)
                 nameText.text = updatedDisplayName
                 val numClasses = ModelConfig.getClassCountForModel(fileName)
-                detailText.text = if (updatedDisplayName != fileName) "$fileName · $numClasses Classes" else "$numClasses Classes"
+                detailText.text = if (ModelDisplayNameHelper.hasCustomDisplayName(ctx, fileName)) "${fileName.stripModelSuffix()} · $numClasses Classes" else "$numClasses Classes"
                 Toast.makeText(ctx, R.string.model_name_saved, Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }
