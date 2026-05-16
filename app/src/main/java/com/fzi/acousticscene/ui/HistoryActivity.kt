@@ -27,6 +27,7 @@ import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.util.ThemeHelper
+import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.CoroutineScope
@@ -474,57 +475,66 @@ class HistoryActivity : AppCompatActivity() {
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val packageCard: MaterialCardView = itemView.findViewById(R.id.packageCard)
             private val sessionNameText: TextView = itemView.findViewById(R.id.sessionNameText)
-            private val countAndDurationText: TextView = itemView.findViewById(R.id.countAndDurationText)
+            private val modelListLayout: LinearLayout = itemView.findViewById(R.id.modelListLayout)
+            private val recordingsText: TextView = itemView.findViewById(R.id.recordingsText)
+            private val durationText: TextView = itemView.findViewById(R.id.durationText)
+            private val configText: TextView = itemView.findViewById(R.id.configText)
             private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
             private val selectionCheckbox: CheckBox = itemView.findViewById(R.id.selectionCheckbox)
-            private val modeBadge: TextView = itemView.findViewById(R.id.modeBadge)
 
             fun bind(packageRecords: List<PredictionRecord>) {
+                val ctx = itemView.context
                 val sessionStartTime = packageRecords.first().sessionStartTime
                 val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
                 sessionNameText.text = displayName
-
-                // Old "Dev" / "User" badge is gone — replaced by a compact config label
-                // derived from the records ("🧠 model · Continuous · Standard 10s" etc.).
-                modeBadge.visibility = View.GONE
 
                 // Pause synthetic records inflate counts and don't represent actual
                 // recordings, so they're filtered out of the headline numbers and the
                 // config-label derivation.
                 val recordingRecords = packageRecords.filterNot { it.isPause }
-                val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
-                val durationStr = formatDuration(durationMs)
-                val configLabel = configLabel(recordingRecords.ifEmpty { packageRecords })
-                countAndDurationText.text =
-                    "$configLabel\n${recordingRecords.size} ${itemView.context.getString(R.string.recordings)} • $durationStr"
+                val sourceRecords = recordingRecords.ifEmpty { packageRecords }
 
-                // Batterie-Verbrauch berechnen und anzeigen
+                // Modell-Liste dynamisch befüllen (eine Zeile pro Modell, ohne .pt-Endung)
+                modelListLayout.removeAllViews()
+                val modelNames = extractModelNames(sourceRecords)
+                modelNames.forEach { name ->
+                    val tv = TextView(ctx).apply {
+                        text = "🧠 ${name.stripModelSuffix()}"
+                        textSize = 14f
+                        setTextColor(ctx.getColor(R.color.text_primary))
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    }
+                    modelListLayout.addView(tv)
+                }
+
+                // Stats: Recordings + Duration in eigenen Zeilen, fett
+                val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
+                recordingsText.text = "${ctx.getString(R.string.recordings)}: ${recordingRecords.size}"
+                durationText.text = "${ctx.getString(R.string.duration)}: ${formatDuration(durationMs)}"
+
+                // Konfiguration kompakt (nur Pfad-Teil, ohne Modell-Doppelung)
+                configText.text = pathLabel(sourceRecords)
+
+                // Battery: ± Differenz, rot bei Drain, grün bei Gain, grau bei N/A
                 val firstRecord = recordingRecords.firstOrNull() ?: packageRecords.first()
                 val lastRecord = recordingRecords.lastOrNull() ?: packageRecords.last()
                 val startBattery = firstRecord.batteryLevel
                 val endBattery = lastRecord.batteryLevel
 
+                val drainLabel = ctx.getString(R.string.battery_drain)
                 if (startBattery >= 0 && endBattery >= 0) {
-                    val consumption = startBattery - endBattery
-                    batteryConsumptionText.text = "${itemView.context.getString(R.string.battery_drain)}: ${consumption}% ($startBattery% → $endBattery%)"
-                    batteryConsumptionText.visibility = View.VISIBLE
-
-                    // Color red if consumption > 10%
-                    if (consumption > 10) {
-                        batteryConsumptionText.setTextColor(
-                            itemView.context.getColor(android.R.color.holo_red_light)
-                        )
-                    } else {
-                        batteryConsumptionText.setTextColor(
-                            itemView.context.getColor(R.color.text_secondary)
-                        )
+                    val diff = endBattery - startBattery  // positiv = Gain (geladen), negativ = Drain
+                    val sign = if (diff > 0) "+" else if (diff < 0) "" else "±"
+                    batteryConsumptionText.text = "$drainLabel: $sign$diff%"
+                    val colorRes = when {
+                        diff < 0 -> R.color.status_error
+                        diff > 0 -> R.color.accent_green_light
+                        else -> R.color.text_secondary
                     }
+                    batteryConsumptionText.setTextColor(ctx.getColor(colorRes))
                 } else {
-                    batteryConsumptionText.text = "${itemView.context.getString(R.string.battery_drain)}: N/A"
-                    batteryConsumptionText.visibility = View.VISIBLE
-                    batteryConsumptionText.setTextColor(
-                        itemView.context.getColor(R.color.text_secondary)
-                    )
+                    batteryConsumptionText.text = "$drainLabel: N/A"
+                    batteryConsumptionText.setTextColor(ctx.getColor(R.color.text_secondary))
                 }
 
                 // Selection mode UI
@@ -534,7 +544,7 @@ class HistoryActivity : AppCompatActivity() {
                 packageCard.isChecked = isSelected
                 packageCard.strokeWidth = if (isSelected) 2 else 0
                 packageCard.strokeColor = if (isSelected) {
-                    itemView.context.getColor(R.color.accent_green_light)
+                    ctx.getColor(R.color.accent_green_light)
                 } else {
                     0
                 }
@@ -554,24 +564,41 @@ class HistoryActivity : AppCompatActivity() {
 
     companion object {
         /**
-         * Builds a compact one-line config label for a session tile, replacing
-         * the old "Dev" / "User" badge with what was actually configured.
-         * Examples:
-         *   🧠 model1.pt · Continuous · Standard (10s)
-         *   🧠 3 models · Interval every 30 min · 2 methods
+         * Extracts the distinct list of model names actually used in this session.
+         * Falls back to the primary modelName when no multi-model record is found.
+         * Pause records are expected to be filtered out by the caller.
          */
-        fun configLabel(records: List<PredictionRecord>): String {
+        fun extractModelNames(records: List<PredictionRecord>): List<String> {
+            if (records.isEmpty()) return emptyList()
+            // All-In-One mode: each record carries one entry per active model.
+            val allInOne = records
+                .mapNotNull { it.allInOneResults }
+                .firstOrNull { it.isNotEmpty() }
+            if (allInOne != null) {
+                return allInOne.map { it.modelName }.distinct()
+            }
+            // Interval Multi-Model: per-(model, sub-mode) entries.
+            val intervalModels = records
+                .flatMap { it.longSubResults.orEmpty() }
+                .mapNotNull { it.modelName }
+                .distinct()
+            if (intervalModels.isNotEmpty()) return intervalModels
+            // Single-model fallback.
+            return listOf(records.first().modelName)
+        }
+
+        /**
+         * Compact one-line label describing the recording path only — model info is
+         * rendered separately in the tile, so we don't double it up here.
+         * Examples:
+         *   Continuous · Standard (10s)
+         *   Interval every 30 min · 2 methods
+         */
+        fun pathLabel(records: List<PredictionRecord>): String {
             if (records.isEmpty()) return ""
             val first = records.first()
 
-            val multiModelCount = records
-                .mapNotNull { it.allInOneResults }
-                .firstOrNull { it.isNotEmpty() }
-                ?.size ?: 1
-            val modelLabel = if (multiModelCount >= 2) "🧠 $multiModelCount models"
-            else "🧠 ${first.modelName}"
-
-            val pathLabel = if (first.recordingMode == RecordingMode.LONG) {
+            return if (first.recordingMode == RecordingMode.LONG) {
                 val interval = first.longIntervalMinutes
                 val intervalStr = interval?.let { mins ->
                     if (mins >= 60 && mins % 60 == 0) "every ${mins / 60} h"
@@ -591,8 +618,18 @@ class HistoryActivity : AppCompatActivity() {
             } else {
                 "Continuous · ${first.recordingMode.label}"
             }
+        }
 
-            return "$modelLabel · $pathLabel"
+        /**
+         * Kept for callers outside the tile UI (dialogs, headers) that still want
+         * the combined "model · path" label.
+         */
+        fun configLabel(records: List<PredictionRecord>): String {
+            if (records.isEmpty()) return ""
+            val names = extractModelNames(records)
+            val modelLabel = if (names.size >= 2) "🧠 ${names.size} models"
+            else "🧠 ${names.first().stripModelSuffix()}"
+            return "$modelLabel · ${pathLabel(records)}"
         }
 
         /**
