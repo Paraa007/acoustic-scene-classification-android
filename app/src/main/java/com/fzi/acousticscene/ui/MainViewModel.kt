@@ -81,17 +81,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _wizard = MutableStateFlow(WizardViewState())
     val wizard: StateFlow<WizardViewState> = _wizard.asStateFlow()
 
-    fun resetWizard(availableModels: List<String>, prefill: SessionConfig? = null) {
+    fun resetWizard(
+        availableModels: List<String>,
+        prefill: SessionConfig? = null,
+        quickStartMode: Boolean = false
+    ) {
         _wizard.value = if (prefill != null) {
             WizardViewState(
-                step = WizardStep.Models,
+                step = if (quickStartMode) WizardStep.Summary else WizardStep.Models,
                 availableModels = availableModels,
                 selectedModels = prefill.modelNames.filter { it in availableModels },
                 category = prefill.category,
                 continuousSubMode = prefill.continuousSubMode,
                 intervalPause = prefill.intervalPause,
                 intervalMethodsByModel = prefill.intervalMethodsByModel,
-                sessionDuration = prefill.sessionDuration
+                sessionDuration = prefill.sessionDuration,
+                quickStartMode = quickStartMode
             )
         } else {
             WizardViewState(availableModels = availableModels)
@@ -221,6 +226,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     @Volatile private var isRunning = false
     @Volatile private var isPaused = false
+    @Volatile private var pausePending = false  // user pressed Pause, frame not closed yet
+    private var pendingAutoResumeMs: Long? = null
     @Volatile private var stopReasonAuto = false  // true if soft-stop triggered
 
     init {
@@ -316,6 +323,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         isRunning = true
         isPaused = false
+        pausePending = false
+        pendingAutoResumeMs = null
         stopReasonAuto = false
         sessionStartTime = System.currentTimeMillis()
         sessionResumeWallClockMs = SystemClock.elapsedRealtime()
@@ -333,7 +342,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         _uiState.update { it.copy(
             isPaused = false,
+            pausePending = false,
+            pauseTotalMs = null,
+            userPauseDeadlineElapsedMs = null,
             sessionElapsedMs = 0L,
+            frameElapsedMs = 0L,
+            frameSegments = frameSegmentsFor(config),
             liveResultsByModel = emptyMap(),
             aggregateResultsByModel = emptyMap(),
             cycleCountByModelMethod = emptyMap(),
@@ -385,12 +399,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun runSessionLoop(config: SessionConfig) {
         while (isRunning) {
-            // Bail immediately if the coroutine has been cancelled — covers the
-            // race where stopSession() flips isRunning AND cancels the job, but
-            // a fresh startSession() flips isRunning back to true before the old
-            // loop observes cancellation at a suspension point. Without this
-            // every old loop would keep spinning against the new session's mic.
+            // See comment in startSession() for why this matters.
             currentCoroutineContext().ensureActive()
+
+            // Frame boundary: if the user pressed Pause during the previous
+            // frame, activate the real pause now (status countdown starts
+            // ticking from here, not from the button press). The volume chart
+            // and inner ring stay frozen.
+            activatePauseAtFrameEnd()
+
             // Hold here while paused (clip-accurate: we never enter mid-cycle).
             while (isPaused && isRunning) {
                 delay(300L)
@@ -399,24 +416,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val cycleStartedAt = System.currentTimeMillis()
             val mode = effectiveModeFor(config)
-            // Release the previous AudioRecord native resource before swapping in
-            // a new instance — Android limits concurrent open AudioRecords and
-            // leaked references make the next session unable to acquire the mic.
-            audioRecorder.stopRecording()
-            audioRecorder = AudioRecorder(durationSeconds = mode.durationSeconds)
-            startVolumeObservation()
+            val frameSegments = frameSegmentsFor(config)
+            _uiState.update { it.copy(
+                frameSegments = frameSegments,
+                frameElapsedMs = 0L,
+                recordingProgress = 0f
+            ) }
 
-            // For AVERAGE in continuous: the AVG flow does its own per-second loop.
-            // For STANDARD/FAST or any Interval method: record once, then infer.
-            val cycleResult: CycleOutcome = (when {
+            // For AVERAGE: 10 internal 1 s clips, runs its own loop. Single
+            // logical frame, internally 10 segments.
+            // For FAST: 10 separate 1 s cycles bundled into one 10 s frame.
+            // For STANDARD: one 10 s clip = one frame.
+            // For INTERVAL: one 10 s clip + a planned interval-pause.
+            val cycleResult: CycleOutcome? = when {
                 config.category == RecordingCategory.CONTINUOUS &&
                         config.continuousSubMode == LongSubMode.AVERAGE -> runAverageCycle(config)
+                config.category == RecordingCategory.CONTINUOUS &&
+                        config.continuousSubMode == LongSubMode.FAST -> runFastFrame(config, cycleStartedAt)
                 config.category == RecordingCategory.CONTINUOUS -> runSingleClipCycle(config, mode)
                 else /* INTERVAL */ -> runIntervalCycle(config)
-            }) ?: continue
+            }
 
-            // Persist this cycle as a single PredictionRecord (or one per model row, as designed).
-            persistCycle(config, cycleResult, cycleStartedAt)
+            // FAST persists each 1 s cycle inside runFastFrame; the other paths
+            // persist once per frame here.
+            if (cycleResult != null &&
+                !(config.category == RecordingCategory.CONTINUOUS &&
+                        config.continuousSubMode == LongSubMode.FAST)
+            ) {
+                persistCycle(config, cycleResult, cycleStartedAt)
+            }
+            if (cycleResult == null) continue
 
             // Interval: pause between recordings, then evaluation prompt.
             if (config.category == RecordingCategory.INTERVAL && isRunning) {
@@ -427,6 +456,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+    }
+
+    private fun frameSegmentsFor(config: SessionConfig): Int =
+        if (config.category == RecordingCategory.CONTINUOUS &&
+            (config.continuousSubMode == LongSubMode.FAST ||
+                    config.continuousSubMode == LongSubMode.AVERAGE)) 10 else 1
+
+    /**
+     * Bundles ten 1 s FAST cycles into one 10 s frame. Each cycle still
+     * persists its own PredictionRecord (matches pre-frame behavior), but the
+     * inner ring + volume chart see one continuous 10 s frame instead of
+     * resetting every second.
+     *
+     * Returns the last cycle's outcome so the outer loop can carry it for
+     * any frame-level side-effects; null if no clip produced a result.
+     */
+    private suspend fun runFastFrame(config: SessionConfig, frameStartedAt: Long): CycleOutcome? {
+        val slotCount = 10
+        var last: CycleOutcome? = null
+        for (i in 0 until slotCount) {
+            if (!isRunning) break
+            currentCoroutineContext().ensureActive()
+            val cycleStartedAt = System.currentTimeMillis()
+            val outcome = runSingleClipCycle(
+                config = config,
+                mode = RecordingMode.FAST,
+                slotIndex = i,
+                slotCount = slotCount
+            ) ?: continue
+            persistCycle(config, outcome, cycleStartedAt)
+            last = outcome
+        }
+        return last
     }
 
     /**
@@ -440,11 +502,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sessionTimerJob?.cancel()
         audioRecorder.stopRecording()
         ActiveSessionRegistry.unregister()
+        pausePending = false
+        pendingAutoResumeMs = null
         _uiState.update { it.copy(
             appState = AppState.Ready,
             isPaused = false,
+            pausePending = false,
+            pauseTotalMs = null,
+            userPauseDeadlineElapsedMs = null,
             recordingProgress = 0f,
             currentVolume = 0f,
+            frameElapsedMs = 0L,
             perSecondResults = List(10) { null },
             runningAverageResult = null
         ) }
@@ -468,8 +536,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * One Continuous cycle for the FAST/STANDARD path. Records, then runs every
      * model on the buffer.
      */
-    private suspend fun runSingleClipCycle(config: SessionConfig, mode: RecordingMode): CycleOutcome? {
-        val samples = recordCycleAudio(mode) ?: return null
+    private suspend fun runSingleClipCycle(
+        config: SessionConfig,
+        mode: RecordingMode,
+        slotIndex: Int = 0,
+        slotCount: Int = 1
+    ): CycleOutcome? {
+        val samples = recordCycleAudio(mode, slotIndex, slotCount) ?: return null
         val sub = config.continuousSubMode
         val perModel = mutableMapOf<String, MutableMap<LongSubMode, ClassificationResult>>()
         _uiState.update { it.copy(appState = AppState.Processing, liveResultsByModel = emptyMap()) }
@@ -523,13 +596,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val cycleStart = System.currentTimeMillis()
 
         for (i in 0 until totalClips) {
-            if (!isRunning || isPaused) break
+            // Frame-accurate pause: pausePending bubbles up via pauseSession()
+            // but the actual pause is deferred until this frame closes. Only
+            // bail on hard stop here.
+            if (!isRunning) break
             // Release the previous 1-second recorder before allocating the next one.
             audioRecorder.stopRecording()
             val recorder = AudioRecorder(durationSeconds = 1)
             audioRecorder = recorder
             startVolumeObservation()
             var clipSamples: FloatArray? = null
+            val slotStartMs = (i * 10_000L) / totalClips
+            val slotSpanMs = 10_000L / totalClips
             // No CancellationException catch — propagate up so the recording job
             // can actually terminate. See comment in recordCycleAudio() for why.
             recorder.startRecording().collect { state ->
@@ -537,10 +615,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is RecordingState.Completed -> clipSamples = state.samples
                     is RecordingState.Progress -> {
                         val overall = (i + state.progress) / totalClips
+                        val frameMs = slotStartMs + (state.progress * slotSpanMs).toLong()
                         _uiState.update {
                             it.copy(
                                 appState = AppState.Recording(totalClips - i),
-                                recordingProgress = overall
+                                recordingProgress = overall,
+                                frameElapsedMs = frameMs
                             )
                         }
                     }
@@ -721,14 +801,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Drives the AudioRecorder for one full cycle (Continuous single-clip / Interval).
-     * Returns the captured samples, or null if recording was cancelled or errored.
+     * Drives the AudioRecorder for one cycle. The cycle occupies slot
+     * [slotIndex] of [slotCount] inside the current 10 s frame, so this routine
+     * also drives `frameElapsedMs` (and `recordingProgress` as the same value
+     * expressed in 0..1). For non-FAST modes the call is just (0, 1) — one
+     * slot = the whole frame.
+     *
+     * Creates and parks a fresh AudioRecorder (the previous one is released
+     * first to avoid leaking native AudioRecord references — Android limits
+     * how many can be open at once).
      */
-    private suspend fun recordCycleAudio(mode: RecordingMode): FloatArray? {
+    private suspend fun recordCycleAudio(
+        mode: RecordingMode,
+        slotIndex: Int = 0,
+        slotCount: Int = 1
+    ): FloatArray? {
         val durationSeconds = mode.durationSeconds
+        audioRecorder.stopRecording()
+        audioRecorder = AudioRecorder(durationSeconds = durationSeconds)
+        startVolumeObservation()
+
+        val slotStartMs = (slotIndex * 10_000L) / slotCount
+        val slotSpanMs = 10_000L / slotCount
+
         _uiState.update { it.copy(
             appState = AppState.Recording(durationSeconds),
-            recordingProgress = 0f
+            recordingProgress = slotIndex.toFloat() / slotCount,
+            frameElapsedMs = slotStartMs
         ) }
         var captured: FloatArray? = null
         // CancellationException is intentionally NOT caught here — it has to bubble
@@ -740,9 +839,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 is RecordingState.Started -> Unit
                 is RecordingState.Progress -> {
                     val remaining = (durationSeconds * (1f - state.progress)).toInt()
+                    val frameMs = slotStartMs + (state.progress * slotSpanMs).toLong()
                     _uiState.update { it.copy(
                         appState = AppState.Recording(remaining),
-                        recordingProgress = state.progress
+                        recordingProgress = (slotIndex + state.progress) / slotCount,
+                        frameElapsedMs = frameMs
                     ) }
                 }
                 is RecordingState.Completed -> captured = state.samples
@@ -758,10 +859,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Interval pause loop — clip-accurate, watches isPaused / isRunning and the
      * session-timer's external soft-stop signal.
+     *
+     * At entry the frame just closed — clear `frameElapsedMs` so the volume
+     * chart and inner ring read empty during the planned pause. Also let any
+     * user-Pause-pending become active here, since the recording frame is done.
      */
     private suspend fun runIntervalPause(pauseMs: Long) {
+        _uiState.update { it.copy(frameElapsedMs = 0L, recordingProgress = 0f) }
+        activatePauseAtFrameEnd()
         var remaining = pauseMs
         while (remaining > 0 && isRunning) {
+            // Pressing Pause during the planned interval-pause also takes
+            // effect at the next half-second tick — no frame to wait on here.
+            activatePauseAtFrameEnd()
             if (isPaused) {
                 _uiState.update { it.copy(appState = AppState.UserPaused((remaining / 1000L).toInt())) }
                 delay(500L)
@@ -949,6 +1059,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "stopSession()")
         isRunning = false
         isPaused = false
+        pausePending = false
+        pendingAutoResumeMs = null
+        autoResumeJob?.cancel()
+        autoResumeJob = null
         recordingJob?.cancel()
         sessionTimerJob?.cancel()
         audioRecorder.stopRecording()
@@ -970,34 +1084,79 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Pauses the session. If [autoResumeAfterMs] is non-null, schedules an
-     * automatic resume after that many milliseconds (the user can still resume
-     * earlier manually). Null = indefinite pause.
+     * Requests a pause. Doesn't pause immediately — the recording loop has to
+     * finish the current 10 s frame first, so the inner ring + volume chart
+     * close cleanly at 10 s instead of mid-cycle. Once the frame closes, the
+     * recording loop calls [activatePauseAtFrameEnd] and the real pause begins
+     * (status label countdown starts ticking, auto-resume job starts).
+     *
+     * If [autoResumeAfterMs] is non-null, an auto-resume timer fires that long
+     * AFTER the real pause has activated (not from the moment the button was
+     * pressed). Null = indefinite pause.
+     *
+     * If a frame is not currently running (e.g. the user pressed Pause during
+     * an interval-pause), the loop activates the pause at its next gate check.
      */
     fun pauseSession(autoResumeAfterMs: Long? = null) {
-        if (!isRunning || isPaused) return
+        if (!isRunning || isPaused || pausePending) return
+        pausePending = true
+        pendingAutoResumeMs = autoResumeAfterMs
+        _uiState.update { it.copy(
+            pausePending = true,
+            pauseTotalMs = autoResumeAfterMs
+        ) }
+        // Real pause is wired up by activatePauseAtFrameEnd() after the frame
+        // closes. Synthetic PAUSE record is written when the user resumes.
+    }
+
+    /**
+     * Called by the recording loop at frame boundaries (and at the top of the
+     * interval-pause loop) so that a pending pause-request kicks in cleanly
+     * without breaking the middle of a cycle.
+     */
+    private fun activatePauseAtFrameEnd() {
+        if (!pausePending || isPaused) return
+        pausePending = false
         isPaused = true
         sessionElapsedAtPauseMs += SystemClock.elapsedRealtime() - sessionResumeWallClockMs
         pauseStartedWallClockMs = SystemClock.elapsedRealtime()
-        val deadline = autoResumeAfterMs?.let { SystemClock.elapsedRealtime() + it }
-        _uiState.update { it.copy(isPaused = true, userPauseDeadlineElapsedMs = deadline) }
+        val autoResumeMs = pendingAutoResumeMs
+        val deadline = autoResumeMs?.let { SystemClock.elapsedRealtime() + it }
+        _uiState.update { it.copy(
+            isPaused = true,
+            pausePending = false,
+            userPauseDeadlineElapsedMs = deadline,
+            pauseTotalMs = autoResumeMs
+        ) }
         autoResumeJob?.cancel()
-        autoResumeJob = if (autoResumeAfterMs != null) {
+        autoResumeJob = if (autoResumeMs != null) {
             viewModelScope.launch {
-                delay(autoResumeAfterMs)
+                delay(autoResumeMs)
                 if (isPaused && isRunning) resumeSession()
             }
         } else null
-        // Synthetic PAUSE record is written when the user resumes (so we know the
-        // duration). Deferred persistence avoids zero-length pauses if the user
-        // pauses then immediately stops.
+        pendingAutoResumeMs = null
     }
 
     private var pauseStartedWallClockMs: Long = 0L
     private var autoResumeJob: Job? = null
 
     fun resumeSession() {
-        if (!isRunning || !isPaused) return
+        if (!isRunning) return
+        // If the user hits Resume while the pause is still only pending (frame
+        // hadn't closed yet), just cancel the pending state without writing a
+        // synthetic Pause record — no actual pause time elapsed.
+        if (pausePending && !isPaused) {
+            pausePending = false
+            pendingAutoResumeMs = null
+            _uiState.update { it.copy(
+                pausePending = false,
+                pauseTotalMs = null,
+                userPauseDeadlineElapsedMs = null
+            ) }
+            return
+        }
+        if (!isPaused) return
         autoResumeJob?.cancel()
         autoResumeJob = null
         val pauseDurationMs = SystemClock.elapsedRealtime() - pauseStartedWallClockMs
@@ -1006,7 +1165,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         isPaused = false
         sessionResumeWallClockMs = SystemClock.elapsedRealtime()
-        _uiState.update { it.copy(isPaused = false, userPauseDeadlineElapsedMs = null) }
+        _uiState.update { it.copy(
+            isPaused = false,
+            userPauseDeadlineElapsedMs = null,
+            pauseTotalMs = null
+        ) }
     }
 
     private fun persistPauseRecord(durationMs: Long) {

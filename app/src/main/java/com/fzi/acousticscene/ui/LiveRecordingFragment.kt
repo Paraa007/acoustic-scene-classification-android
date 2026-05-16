@@ -188,13 +188,13 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             viewModel.startSession()
         }
 
-        // Stopwatch
+        // Stopwatch + volume chart share the same frame clock so they stay in
+        // lock-step — `frameElapsedMs` is 0..10000 for the active 10 s frame.
         stopwatch.sessionElapsedMs = state.sessionElapsedMs
         stopwatch.sessionTotalMs = config.sessionDuration.totalMs
-        stopwatch.cycleProgress = state.recordingProgress
+        stopwatch.cycleProgress = state.frameElapsedMs / 10_000f
         stopwatch.paused = state.isPaused
-        stopwatch.cycleSegments = if (config.category == RecordingCategory.CONTINUOUS &&
-            config.continuousSubMode == LongSubMode.AVERAGE) 10 else 1
+        stopwatch.cycleSegments = state.frameSegments
 
         statusLabel.text = labelForState(state)
         managePauseCountdown(state)
@@ -204,20 +204,17 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
 
         renderEvaluationCard(state)
 
-        pauseResumeButton.text = getString(if (state.isPaused) R.string.live_resume else R.string.live_pause)
+        pauseResumeButton.text = getString(
+            if (state.isPaused || state.pausePending) R.string.live_resume else R.string.live_pause
+        )
 
-        // Volume — feed once per emission. VolumeLineChartView handles the buffer internally.
-        volumeChart.setMaxDuration((config.continuousSubMode.let {
-            when (config.category) {
-                RecordingCategory.CONTINUOUS -> when (it) {
-                    LongSubMode.FAST -> 1f
-                    LongSubMode.AVERAGE -> 1f
-                    LongSubMode.STANDARD -> 10f
-                }
-                RecordingCategory.INTERVAL -> 10f
-            }
-        }))
-        volumeChart.addDataPoint(state.currentVolume)
+        // Volume — only sample while a frame is actively recording. During a
+        // real pause we freeze the last drawn line on screen; during an
+        // interval-pause the ViewModel resets frameElapsedMs to 0 and the
+        // chart clears automatically on the next frame.
+        if (!state.isPaused) {
+            volumeChart.submitSample(state.currentVolume, state.frameElapsedMs)
+        }
 
         // Build/update per-model cards.
         ensureCards(config)
@@ -365,8 +362,17 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     }
 
     private fun labelForState(state: UiState): String {
-        // When the user paused with a timer, show the auto-resume countdown next
-        // to "Paused" so they know how long the session will idle for.
+        // Pending pause: user pressed Pause but the current 10 s frame is still
+        // finishing. Show the chosen pause duration *frozen* (it doesn't tick
+        // down yet) so the user sees the countdown is queued, not active.
+        if (state.pausePending) {
+            val total = state.pauseTotalMs
+            return if (total != null) {
+                "Paused · ${formatClockSeconds((total / 1000L).toInt())}"
+            } else "Paused"
+        }
+        // Real pause: show the countdown deadline as a live ticker (or just
+        // "Paused" for an indefinite pause).
         if (state.isPaused) {
             val deadline = state.userPauseDeadlineElapsedMs
             return if (deadline != null) {
@@ -374,14 +380,12 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
                 "Paused · ${formatClockSeconds((remainingMs / 1000L).toInt())}"
             } else "Paused"
         }
+        // Otherwise the status area stays empty — the stopwatch + bars already
+        // tell the user everything they need.
         return when (val s = state.appState) {
-            is AppState.Recording -> "Recording · ${formatClockSeconds(s.secondsRemaining)}"
-            is AppState.Processing -> "Processing"
-            is AppState.Paused -> "Pause · ${formatClockSeconds(s.secondsRemaining)}"
-            is AppState.UserPaused -> "Paused"
             is AppState.Error -> "Error: ${s.message}"
             is AppState.Loading -> getString(R.string.live_loading_models)
-            is AppState.Ready -> if (state.isModelLoaded) "Starting…" else getString(R.string.live_loading_models)
+            is AppState.Ready -> if (state.isModelLoaded) "" else getString(R.string.live_loading_models)
             else -> ""
         }
     }
