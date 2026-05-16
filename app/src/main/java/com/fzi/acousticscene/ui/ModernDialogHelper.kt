@@ -273,40 +273,70 @@ object ModernDialogHelper {
             btnRename.visibility = View.GONE
         }
 
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        // Datum-Format leserlich (z.B. "16. Mai 2026 · 10:30") statt der alten ISO-Form.
+        val dateFormat = SimpleDateFormat("d. MMMM yyyy · HH:mm", Locale.getDefault())
         // Pause-Records sind synthetisch — Model/Mode/Avg-Detection orientiert sich
         // ausschließlich an echten Aufnahmen, sonst zeigt der Header bei einer Session,
         // die mit einer Pause endet, einen Pause-Placeholder statt des Modus.
         val realRecords = packageRecords.filterNot { it.isPause }
         val firstRecord = realRecords.firstOrNull() ?: packageRecords.firstOrNull()
         val lastRecord = realRecords.lastOrNull() ?: packageRecords.lastOrNull()
+        val sourceRecords = realRecords.ifEmpty { packageRecords }
 
-        // Time info
+        // Start / End (Label + Wert untereinander, größere Schrift)
         dialog.findViewById<TextView>(R.id.startTimeText).text =
             firstRecord?.let { dateFormat.format(Date(it.timestamp)) } ?: "N/A"
         dialog.findViewById<TextView>(R.id.endTimeText).text =
             lastRecord?.let { dateFormat.format(Date(it.timestamp)) } ?: "N/A"
 
-        // Model info
-        val modelName = firstRecord?.modelName ?: "model1.pt"
-        val numClasses = ModelConfig.getClassCountForModel(modelName)
-        dialog.findViewById<TextView>(R.id.modelText).text = "${modelName.stripModelSuffix()} ($numClasses Classes)"
-
-        // Mode info — for LONG records the label reflects the user-chosen pause interval
-        // (e.g. "every 1h") instead of the static enum label.
-        val recordingMode = firstRecord?.let { rec ->
-            if (rec.recordingMode == RecordingMode.LONG && rec.longIntervalMinutes != null) {
-                "every ${formatLongIntervalMinutes(rec.longIntervalMinutes)}"
-            } else {
-                rec.recordingMode.label
+        // Modell-Liste: pro Modell eine fette Zeile mit Brain-Icon (wie in der Tile)
+        val modelListLayout = dialog.findViewById<LinearLayout>(R.id.dialogModelListLayout)
+        modelListLayout.removeAllViews()
+        HistoryActivity.extractModelNames(sourceRecords).forEach { name ->
+            val tv = TextView(context).apply {
+                text = "🧠 ${name.stripModelSuffix()}"
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
             }
-        } ?: "Standard"
-        dialog.findViewById<TextView>(R.id.modeText).text = recordingMode
+            modelListLayout.addView(tv)
+        }
 
-        // Count and confidence — Pause-Records inflate sonst die "recordings"-Zahl.
-        dialog.findViewById<TextView>(R.id.countText).text = "${realRecords.size} ${context.getString(R.string.recordings)}"
-        dialog.findViewById<TextView>(R.id.avgConfidenceText).text =
-            String.format(Locale.US, "%.1f%%", stats.averageConfidence)
+        // Stats-Block (Recordings + Duration + Pause), fett
+        val durationMs = (lastRecord?.timestamp ?: 0L) - (firstRecord?.timestamp ?: 0L)
+        val pauseSec = packageRecords
+            .filter { it.isPause }
+            .sumOf { it.pauseDurationSec ?: 0L }
+        dialog.findViewById<TextView>(R.id.dialogRecordingsText).text =
+            "${context.getString(R.string.recordings)}: ${realRecords.size}"
+        dialog.findViewById<TextView>(R.id.dialogDurationText).text =
+            "${context.getString(R.string.duration)}: ${HistoryActivity.formatDuration(durationMs)}"
+        dialog.findViewById<TextView>(R.id.dialogPauseText).text =
+            "${context.getString(R.string.pause)}: ${HistoryActivity.formatPauseDuration(pauseSec)}"
+
+        // Konfiguration (kompakt, secondary)
+        dialog.findViewById<TextView>(R.id.dialogConfigText).text =
+            HistoryActivity.pathLabel(sourceRecords)
+
+        // Battery Drain: ± Differenz, rot bei Drain, grün bei Gain, grau bei N/A
+        val batteryText = dialog.findViewById<TextView>(R.id.dialogBatteryText)
+        val drainLabel = context.getString(R.string.battery_drain)
+        val startBattery = firstRecord?.batteryLevel ?: -1
+        val endBattery = lastRecord?.batteryLevel ?: -1
+        if (startBattery >= 0 && endBattery >= 0) {
+            val diff = endBattery - startBattery
+            val sign = if (diff > 0) "+" else if (diff < 0) "" else "±"
+            batteryText.text = "$drainLabel: $sign$diff%"
+            val colorRes = when {
+                diff < 0 -> R.color.status_error
+                diff > 0 -> R.color.accent_green_light
+                else -> R.color.text_secondary
+            }
+            batteryText.setTextColor(ContextCompat.getColor(context, colorRes))
+        } else {
+            batteryText.text = "$drainLabel: N/A"
+            batteryText.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+        }
 
         // Fill model distribution container with progress bars
         val distributionContainer = dialog.findViewById<LinearLayout>(R.id.distributionContainer)
