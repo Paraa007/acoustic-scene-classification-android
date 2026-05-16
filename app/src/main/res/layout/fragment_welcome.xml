@@ -6,37 +6,6 @@
     android:background="@color/background_dark"
     android:padding="24dp">
 
-    <LinearLayout
-        android:id="@+id/themeToggleContainer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageView
-            android:id="@+id/iconLightMode"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_light_mode"
-            android:layout_marginEnd="6dp"
-            android:contentDescription="@string/light_mode" />
-
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/themeSwitch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <ImageView
-            android:id="@+id/iconDarkMode"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_dark_mode"
-            android:layout_marginStart="6dp"
-            android:contentDescription="@string/dark_mode" />
-    </LinearLayout>
-
     <TextView
         android:id="@+id/welcomeTitle"
         android:layout_width="wrap_content"
@@ -72,27 +41,17 @@
             app:cornerRadius="14dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLastConfig"
+            android:id="@+id/btnQuickStart"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/welcome_last_config"
+            android:text="@string/welcome_quick_start"
             android:textSize="16sp"
             android:paddingTop="20dp"
             android:paddingBottom="20dp"
             android:layout_marginBottom="12dp"
             android:visibility="gone"
             app:cornerRadius="14dp" />
-
-        <TextView
-            android:id="@+id/lastConfigLabel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary"
-            android:gravity="center"
-            android:layout_marginBottom="12dp"
-            android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHistory"
