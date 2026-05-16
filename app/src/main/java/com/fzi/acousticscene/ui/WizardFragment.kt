@@ -198,36 +198,17 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     private fun renderClipDuration(state: WizardViewState) {
-        // In Continuous, the same sub-mode runs against every selected model, so
-        // a clip duration is only available if it matches every model's training
-        // duration. Mixing 10 s + 1 s models leaves nothing valid — we surface
-        // that explicitly via the hint instead of presenting broken choices.
-        val durations = state.selectedModels.map { ModelTrainingDuration.secondsForFilename(it) }.toSet()
-        val mixedDurations = durations.size > 1
-        if (mixedDurations) {
-            contentRoot.addView(hint(getString(R.string.wizard_clip_mixed_durations)))
-        }
-        for (sub in listOf(LongSubMode.FAST, LongSubMode.STANDARD, LongSubMode.AVERAGE)) {
-            val compatibleAll = durations.all { sub.isCompatibleWith(it) }
-            val labelRes = when (sub) {
-                LongSubMode.FAST -> R.string.wizard_clip_fast
-                LongSubMode.STANDARD -> R.string.wizard_clip_standard
-                LongSubMode.AVERAGE -> R.string.wizard_clip_avg
-            }
-            val descRes = when (sub) {
-                LongSubMode.FAST -> R.string.mode_desc_fast
-                LongSubMode.STANDARD -> R.string.mode_desc_standard
-                LongSubMode.AVERAGE -> R.string.mode_desc_avg
-            }
-            addPickRow(
-                label = getString(labelRes),
-                sub = if (compatibleAll) getString(descRes)
-                else getString(R.string.wizard_clip_incompatible_for_models),
-                selected = state.continuousSubMode == sub && compatibleAll,
-                enabled = compatibleAll,
-                onClick = { viewModel.wizardSetContinuousSubMode(sub) }
-            )
-        }
+        // Same shape as renderIntervalMethods: one card per model, the locked
+        // default for that model's training duration is always ticked and
+        // disabled, Average can be added on top, and the cross-duration method
+        // (Standard for 1 s-models, Fast for 10 s-models) shows up disabled with
+        // an explanation. The renderer is split across both branches because
+        // the toggle target differs (continuous vs. interval methods map).
+        renderMethodsPerModel(
+            state = state,
+            current = { viewModel.wizard.value.continuousMethodsByModel },
+            onToggle = { model, sub -> viewModel.wizardToggleContinuousMethod(model, sub) }
+        )
     }
 
     private fun renderIntervalPause(state: WizardViewState) {
@@ -242,8 +223,20 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     private fun renderIntervalMethods(state: WizardViewState) {
+        renderMethodsPerModel(
+            state = state,
+            current = { viewModel.wizard.value.intervalMethodsByModel },
+            onToggle = { model, sub -> viewModel.wizardToggleIntervalMethod(model, sub) }
+        )
+    }
+
+    private fun renderMethodsPerModel(
+        state: WizardViewState,
+        current: () -> Map<String, Set<LongSubMode>>,
+        onToggle: (String, LongSubMode) -> Unit
+    ) {
         viewModel.wizardEnsureMethodDefaults()
-        val current = viewModel.wizard.value.intervalMethodsByModel
+        val checkedByModel = current()
         for (model in state.selectedModels) {
             val card = MaterialCardView(requireContext()).apply {
                 radius = dp(12f).toFloat()
@@ -270,7 +263,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             inner.addView(title)
             val locked = ModelTrainingDuration.defaultSubMode(model)
             val modelDuration = ModelTrainingDuration.secondsForFilename(model)
-            val checked = current[model].orEmpty()
+            val checked = checkedByModel[model].orEmpty()
             for (sub in LongSubMode.entries) {
                 val compatible = sub.isCompatibleWith(modelDuration)
                 val row = MaterialCheckBox(requireContext()).apply {
@@ -284,7 +277,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
                     // disabled so the user can't pick a Standard for a 1s-model
                     // (or vice versa).
                     isEnabled = sub != locked && compatible
-                    setOnCheckedChangeListener { _, _ -> viewModel.wizardToggleIntervalMethod(model, sub) }
+                    setOnCheckedChangeListener { _, _ -> onToggle(model, sub) }
                 }
                 inner.addView(row)
             }
@@ -309,12 +302,17 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n"), WizardStep.Models, tappable)
         addSummaryRow(getString(R.string.wizard_summary_category), state.category?.label.orEmpty(), WizardStep.Category, tappable)
         when (state.category) {
-            RecordingCategory.CONTINUOUS -> addSummaryRow(
-                getString(R.string.wizard_summary_clip),
-                state.continuousSubMode?.label.orEmpty(),
-                WizardStep.ClipDuration,
-                tappable
-            )
+            RecordingCategory.CONTINUOUS -> {
+                val methodLines = state.selectedModels.joinToString("\n") { name ->
+                    "$name: " + state.continuousMethodsByModel[name].orEmpty().joinToString(", ") { it.label }
+                }
+                addSummaryRow(
+                    getString(R.string.wizard_summary_clip),
+                    methodLines,
+                    WizardStep.ClipDuration,
+                    tappable
+                )
+            }
             RecordingCategory.INTERVAL -> {
                 addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause, tappable)
                 val methodLines = state.selectedModels.joinToString("\n") { name ->

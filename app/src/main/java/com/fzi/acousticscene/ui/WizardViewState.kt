@@ -2,7 +2,6 @@ package com.fzi.acousticscene.ui
 
 import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
-import com.fzi.acousticscene.model.ModelTrainingDuration
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.model.SessionDuration
@@ -18,7 +17,7 @@ data class WizardViewState(
     val availableModels: List<String> = emptyList(),
     val selectedModels: List<String> = emptyList(),
     val category: RecordingCategory? = null,
-    val continuousSubMode: LongSubMode? = null,
+    val continuousMethodsByModel: Map<String, Set<LongSubMode>> = emptyMap(),
     val intervalPause: LongInterval? = null,
     val intervalMethodsByModel: Map<String, Set<LongSubMode>> = emptyMap(),
     val sessionDuration: SessionDuration = SessionDuration.DEFAULT,
@@ -42,10 +41,9 @@ data class WizardViewState(
     fun canAdvance(): Boolean = when (step) {
         WizardStep.Models -> selectedModels.isNotEmpty()
         WizardStep.Category -> category != null
-        WizardStep.ClipDuration -> continuousSubMode != null &&
-                selectedModels.all {
-                    continuousSubMode.isCompatibleWith(ModelTrainingDuration.secondsForFilename(it))
-                }
+        WizardStep.ClipDuration -> selectedModels.all {
+            continuousMethodsByModel[it]?.isNotEmpty() == true
+        }
         WizardStep.IntervalPause -> intervalPause != null
         WizardStep.IntervalMethods -> selectedModels.all {
             intervalMethodsByModel[it]?.isNotEmpty() == true
@@ -60,7 +58,7 @@ data class WizardViewState(
         return SessionConfig(
             modelNames = selectedModels,
             category = cat,
-            continuousSubMode = continuousSubMode ?: LongSubMode.STANDARD,
+            continuousMethodsByModel = continuousMethodsByModel,
             intervalPause = intervalPause,
             intervalMethodsByModel = intervalMethodsByModel,
             sessionDuration = sessionDuration
