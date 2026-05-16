@@ -97,7 +97,19 @@ data class PredictionRecord(
     // CSV carries an explicit gap row. When true, all classification fields are
     // placeholders and only `pauseDurationSec` is meaningful.
     val isPause: Boolean = false,
-    val pauseDurationSec: Long? = null
+    val pauseDurationSec: Long? = null,
+    // Wizard-snapshot. All seven nullable on legacy records (persisted before the
+    // CSV-completeness migration); new records carry the full SessionConfig 1:1
+    // so the CSV export can reproduce the wizard answers without reconstruction.
+    val modelsSelected: List<String>? = null,
+    val recordingCategory: RecordingCategory? = null,
+    val continuousMethodsByModel: Map<String, Set<LongSubMode>>? = null,
+    val intervalMethodsByModel: Map<String, Set<LongSubMode>>? = null,
+    val sessionDurationPlanned: SessionDuration? = null,
+    val pauseAutoResumeMin: Int? = null,
+    // Per-second RMS volume mean across the 10 s frame (length 10). For 1 s-long
+    // FAST cycles only s1 carries data, s2..s10 = 0.
+    val perSecondVolumes: FloatArray? = null
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige
@@ -124,6 +136,14 @@ data class PredictionRecord(
     }
     
     /**
+     * Formatiert sessionStartTime im selben Stil wie [getFormattedDateTime].
+     */
+    fun getFormattedSessionStartTime(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        return sdf.format(Date(sessionStartTime))
+    }
+
+    /**
      * Konvertiert zu CSV-Zeile
      * Enthält jetzt auch Top 3 Predictions und Batterie-Level.
      *
@@ -133,25 +153,75 @@ data class PredictionRecord(
      *   Spalten pro Modell, ohne dass Records ohne ALL-IN-ONE-Daten einen Defekt erzeugen.
      */
     fun toCsvRow(allInOneModelNames: List<String>? = null): String {
-        // Synthetic PAUSE record: classification cells stay empty, only timestamp
-        // + mode_label + pause_duration_sec carry data.
+        // Session/wizard snapshot cells — present on every row (PAUSE included)
+        // so a single session reads as one coherent block in the CSV.
+        val sessionStartStr = getFormattedSessionStartTime()
+        val sessionDurationStr = sessionDurationPlanned?.label.orEmpty()
+        val modelsSelectedStr = modelsSelected?.joinToString("|").orEmpty()
+        val categoryStr = recordingCategory?.label.orEmpty()
+        fun serializeMethodMap(map: Map<String, Set<LongSubMode>>?): String =
+            map?.takeIf { it.isNotEmpty() }
+                ?.entries
+                ?.sortedBy { it.key }
+                ?.joinToString("|") { (m, methods) ->
+                    "$m:" + methods.sortedBy { it.ordinal }.joinToString(",") { it.name }
+                }
+                .orEmpty()
+        val continuousMethodsStr = serializeMethodMap(continuousMethodsByModel)
+        val intervalMethodsStr = serializeMethodMap(intervalMethodsByModel)
+        val pauseAutoResumeStr = pauseAutoResumeMin?.toString().orEmpty()
+        val longIntervalStr = longIntervalMinutes?.toString() ?: ""
+
+        // Per-second volume cells — PAUSE rows fill 0.000, regular rows fill the
+        // actual buckets, legacy rows (perSecondVolumes == null) stay empty.
+        val volumeSecondCells: List<String> = when {
+            isPause -> List(10) { "0.000" }
+            perSecondVolumes != null -> List(10) { i ->
+                String.format(Locale.US, "%.3f", perSecondVolumes.getOrNull(i) ?: 0f)
+            }
+            else -> List(10) { "" }
+        }
+
+        // Mean/peak — same treatment: 0 for PAUSE, formatted for real, blank for legacy.
+        val volumeMeanCell = when {
+            isPause -> "0.000"
+            volumeMean != null -> String.format(Locale.US, "%.3f", volumeMean)
+            else -> ""
+        }
+        val volumePeakCell = when {
+            isPause -> "0.000"
+            volumePeak != null -> String.format(Locale.US, "%.3f", volumePeak)
+            else -> ""
+        }
+
+        // Synthetic PAUSE record: classification cells stay empty, only timestamp,
+        // session block, mode_label, volume zeros and pause_duration_sec carry data.
         if (isPause) {
             val baseCells = listOf(
                 id.toString(),
                 getFormattedDateTime(),
+                sessionStartStr,
+                sessionDurationStr,
                 "",                       // battery
                 "",                       // class_display_name
                 "0",                      // confidence_percent
                 "",                       // inference_time_sec
                 "PAUSE",                  // recording_mode → "PAUSE" makes filtering trivial
+                "",                       // model_name
+                modelsSelectedStr,
+                categoryStr,
+                continuousMethodsStr,
+                intervalMethodsStr,
+                pauseAutoResumeStr,
                 "", "", "", "", "", "",   // top1..top3
                 "",                       // probabilities
                 "",                       // user_selected_class
                 "",                       // per_second_clips
                 "", "", "",               // long_standard / fast / average
-                "",                       // long_interval_min
-                "",                       // volume_mean
-                "",                       // volume_peak
+                longIntervalStr,
+                volumeMeanCell,
+                volumePeakCell
+            ) + volumeSecondCells + listOf(
                 pauseDurationSec?.toString().orEmpty()
             )
             val emptyAllInOne = allInOneModelNames?.map { "" }.orEmpty()
@@ -159,7 +229,6 @@ data class PredictionRecord(
         }
 
         // Probabilities mit Klassennamen (statt Indizes)
-        val probHeaders = SceneClass.entries.sortedBy { it.index }.map { it.name }
         val probsString = allProbabilities.joinToString(";") {
             String.format(Locale.US, "%.4f", it)
         }
@@ -212,32 +281,40 @@ data class PredictionRecord(
         val longStdStr = subCell(LongSubMode.STANDARD)
         val longFastStr = subCell(LongSubMode.FAST)
         val longAvgStr = subCell(LongSubMode.AVERAGE)
-        val longIntervalStr = longIntervalMinutes?.toString() ?: ""
 
         val baseCells = listOf(
             id.toString(),
             getFormattedDateTime(),
-            batteryString,  // NEU: battery_percent nach timestamp
-            "\"${sceneClass.label}\"",  // class_display_name (ohne class_index, class_name)
+            sessionStartStr,
+            sessionDurationStr,
+            batteryString,
+            "\"${sceneClass.label}\"",
             confidencePercent.toString(),
             String.format(Locale.US, "%.2f", inferenceTimeMs / 1000.0),
-            recordingModeWithTime,  // recording_mode mit Zeit (ohne recording_duration_sec)
+            recordingModeWithTime,
+            modelName,
+            modelsSelectedStr,
+            categoryStr,
+            continuousMethodsStr,
+            intervalMethodsStr,
+            pauseAutoResumeStr,
             // Top 3 Predictions (ohne Indexe, ohne name)
-            "\"${top1.first.label}\"",  // top1_display_name
-            String.format(Locale.US, "%.2f", top1.second * 100),  // top1_confidence_percent
-            "\"${top2.first.label}\"",  // top2_display_name
-            String.format(Locale.US, "%.2f", top2.second * 100),  // top2_confidence_percent
-            "\"${top3_entry.first.label}\"",  // top3_display_name
-            String.format(Locale.US, "%.2f", top3_entry.second * 100),  // top3_confidence_percent
-            probsString,  // probabilities mit Klassennamen im Header
-            userClassStr,  // user_selected_class (empty if no evaluation)
-            "\"$perSecondStr\"",  // per_second_clips (AVERAGE mode)
-            "\"$longStdStr\"",   // long_standard (LONG sub-mode)
-            "\"$longFastStr\"",  // long_fast (LONG sub-mode)
-            "\"$longAvgStr\"",   // long_average (LONG sub-mode)
-            "\"$longIntervalStr\"",  // long_interval_min (LONG mode pause interval, minutes)
-            volumeMean?.let { String.format(Locale.US, "%.3f", it) }.orEmpty(),
-            volumePeak?.let { String.format(Locale.US, "%.3f", it) }.orEmpty(),
+            "\"${top1.first.label}\"",
+            String.format(Locale.US, "%.2f", top1.second * 100),
+            "\"${top2.first.label}\"",
+            String.format(Locale.US, "%.2f", top2.second * 100),
+            "\"${top3_entry.first.label}\"",
+            String.format(Locale.US, "%.2f", top3_entry.second * 100),
+            probsString,
+            userClassStr,
+            "\"$perSecondStr\"",
+            "\"$longStdStr\"",
+            "\"$longFastStr\"",
+            "\"$longAvgStr\"",
+            "\"$longIntervalStr\"",
+            volumeMeanCell,
+            volumePeakCell
+        ) + volumeSecondCells + listOf(
             ""  // pause_duration_sec (empty for non-PAUSE rows)
         )
 
@@ -253,18 +330,23 @@ data class PredictionRecord(
 
         return (baseCells + allInOneCells).joinToString(",")
     }
-    
+
     companion object {
         /**
-         * CSV Header mit Top 3 Predictions und Batterie-Level
-         * Entfernt: class_index, class_name, recording_duration_sec, top1_index, top1_name, top2_index, top2_name, top3_index, top3_name
-         * Geändert: recording_mode enthält jetzt Zeit (z.B. "STANDARD (10s)"), probabilities enthält Klassennamen
-         * NEU: battery_percent nach timestamp
+         * CSV Header. Spalten in der Reihenfolge wie [toCsvRow] sie erzeugt —
+         * gruppiert in Session-Meta (timestamp + Session-Start/Duration), Predict
+         * (battery/class/confidence/inference/mode), Session-Config (model_name +
+         * Wizard-Block), Top-N, Probabilities, Aux (user_selected, per_second_clips,
+         * long_*), Volume (mean/peak + s1..s10), Pause.
          */
         fun getCsvHeader(allInOneModelNames: List<String>? = null): String {
             // Probabilities mit Display-Namen (wie top3_display_name) - mit Anführungszeichen
             val probHeaders = SceneClass.entries.sortedBy { it.index }.joinToString(";") { "\"${it.label}\"" }
-            val base = "id,timestamp,battery_percent,class_display_name,confidence_percent,inference_time_sec,recording_mode," +
+            val volumeSecondCols = (1..10).joinToString(",") { "volume_s$it" }
+            val base = "id,timestamp,session_start_time,session_duration_planned," +
+                    "battery_percent,class_display_name,confidence_percent,inference_time_sec," +
+                    "recording_mode,model_name,models_selected,category,continuous_methods_by_model," +
+                    "interval_methods_by_model,pause_auto_resume_min," +
                     "top1_display_name,top1_confidence_percent," +
                     "top2_display_name,top2_confidence_percent," +
                     "top3_display_name,top3_confidence_percent," +
@@ -272,7 +354,9 @@ data class PredictionRecord(
                     "user_selected_class," +
                     "per_second_clips," +
                     "long_standard,long_fast,long_average,long_interval_min," +
-                    "volume_mean,volume_peak,pause_duration_sec"
+                    "volume_mean,volume_peak," +
+                    "$volumeSecondCols," +
+                    "pause_duration_sec"
             val allInOneCols = if (!allInOneModelNames.isNullOrEmpty()) {
                 "," + allInOneModelNames.joinToString(",") { "allinone_${it.removeSuffix(".pt")}" }
             } else ""

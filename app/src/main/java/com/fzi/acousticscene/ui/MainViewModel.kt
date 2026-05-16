@@ -604,7 +604,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val volume = audioRecorder.snapshotVolumeStats()
         accumulateAggregate(perModel)
         accumulateSessionVolume(volume.mean)
-        return CycleOutcome(perModel = perModel, volume = volume, perSecondClips = null)
+        return CycleOutcome(
+            perModel = perModel,
+            volume = volume,
+            perSecondClips = null,
+            perSecondVolumes = padToTen(volume.perSecondMeans)
+        )
+    }
+
+    /**
+     * Pads a per-second volume array to length 10 so the CSV always has
+     * `volume_s1..volume_s10` to fill. Short cycles (FAST = 1 s) end up with
+     * `s1` populated and `s2..s10` = 0.
+     */
+    private fun padToTen(src: FloatArray): FloatArray {
+        val out = FloatArray(10)
+        val n = minOf(src.size, 10)
+        for (i in 0 until n) out[i] = src[i]
+        return out
     }
 
     /**
@@ -711,7 +728,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return CycleOutcome(
             perModel = perModel,
             volume = volume,
-            perSecondClips = perSecondClipsByPrimary.takeIf { it.isNotEmpty() }
+            perSecondClips = perSecondClipsByPrimary.takeIf { it.isNotEmpty() },
+            perSecondVolumes = padToTen(volume.perSecondMeans)
         )
     }
 
@@ -877,7 +895,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             longIntervalMinutes = config.intervalPause?.pauseMinutes,
             allInOneResults = allInOne,
             volumeMean = outcome.volume.mean,
-            volumePeak = outcome.volume.peak
+            volumePeak = outcome.volume.peak,
+            modelsSelected = config.modelNames,
+            recordingCategory = config.category,
+            // Mirror the wizard snapshot 1:1 — both maps are per-model sets; Interval
+            // also picks methods per model since the May 2026 wizard rework.
+            continuousMethodsByModel = if (config.category == RecordingCategory.CONTINUOUS) {
+                config.continuousMethodsByModel.takeIf { it.isNotEmpty() }
+            } else null,
+            intervalMethodsByModel = if (config.category == RecordingCategory.INTERVAL) {
+                config.intervalMethodsByModel.takeIf { it.isNotEmpty() }
+            } else null,
+            sessionDurationPlanned = config.sessionDuration,
+            perSecondVolumes = outcome.perSecondVolumes
         )
         predictionRepository.addPrediction(record)
         updateStatistics()
@@ -1036,6 +1066,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sessionElapsedAtPauseMs += SystemClock.elapsedRealtime() - sessionResumeWallClockMs
         pauseStartedWallClockMs = SystemClock.elapsedRealtime()
         val autoResumeMs = pendingAutoResumeMs
+        pauseStartedAutoResumeMin = autoResumeMs?.let { (it / 60_000L).toInt() }
         val deadline = autoResumeMs?.let { SystemClock.elapsedRealtime() + it }
         _uiState.update { it.copy(
             isPaused = true,
@@ -1055,6 +1086,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var pauseStartedWallClockMs: Long = 0L
     private var autoResumeJob: Job? = null
+    // Picker value (in minutes) that the user chose for the currently active
+    // pause — captured at the moment the real pause activates so the synthetic
+    // PAUSE record can carry it. null = "no timer" (indefinite pause).
+    private var pauseStartedAutoResumeMin: Int? = null
 
     fun resumeSession() {
         if (!isRunning) return
@@ -1088,6 +1123,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun persistPauseRecord(durationMs: Long) {
+        val config = activeConfig
         val record = PredictionRecord(
             timestamp = System.currentTimeMillis(),
             sessionStartTime = sessionStartTime,
@@ -1098,9 +1134,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             inferenceTimeMs = 0L,
             recordingMode = RecordingMode.STANDARD,
             batteryLevel = -1,
-            modelName = activeConfig?.modelNames?.firstOrNull().orEmpty(),
+            modelName = config?.modelNames?.firstOrNull().orEmpty(),
             isPause = true,
-            pauseDurationSec = durationMs / 1000L
+            pauseDurationSec = durationMs / 1000L,
+            // Volume is zero for the duration of the pause — explicit zeros so
+            // the CSV stays numeric instead of mixing empty cells in.
+            volumeMean = 0f,
+            volumePeak = 0f,
+            perSecondVolumes = FloatArray(10),
+            // Carry the same session config the surrounding regular records carry,
+            // so a PAUSE row can be filtered/aggregated together with its session.
+            modelsSelected = config?.modelNames,
+            recordingCategory = config?.category,
+            continuousMethodsByModel = if (config?.category == RecordingCategory.CONTINUOUS) {
+                config.continuousMethodsByModel.takeIf { it.isNotEmpty() }
+            } else null,
+            intervalMethodsByModel = if (config?.category == RecordingCategory.INTERVAL) {
+                config.intervalMethodsByModel.takeIf { it.isNotEmpty() }
+            } else null,
+            sessionDurationPlanned = config?.sessionDuration,
+            longIntervalMinutes = config?.intervalPause?.pauseMinutes,
+            pauseAutoResumeMin = pauseStartedAutoResumeMin
         )
         predictionRepository.addPrediction(record)
     }
@@ -1220,10 +1274,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Internal: result of one full recording cycle, ready to be persisted and
      * accumulated into the session aggregates.
+     *
+     * `perSecondVolumes` is always length 10, padded with 0 for short cycles
+     * (FAST: only s1 carries data) and assembled from the per-slice means for
+     * AVERAGE. Lives on the outcome so persistCycle doesn't have to re-derive
+     * it from the volume stats.
      */
     private data class CycleOutcome(
         val perModel: Map<String, Map<LongSubMode, ClassificationResult>>,
         val volume: AudioRecorder.VolumeStats,
-        val perSecondClips: List<PerSecondClip>?
+        val perSecondClips: List<PerSecondClip>?,
+        val perSecondVolumes: FloatArray
     )
 }
