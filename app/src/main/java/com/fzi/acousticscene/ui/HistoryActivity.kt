@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -45,14 +46,14 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var repository: PredictionRepository
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
-    private lateinit var btnBack: MaterialButton
+    private lateinit var btnBack: ImageButton
     private lateinit var adapter: PackageAdapter
 
     // Selection Mode UI
     private lateinit var normalToolbar: LinearLayout
     private lateinit var selectionToolbar: LinearLayout
     private lateinit var selectionCountText: TextView
-    private lateinit var btnCloseSelection: MaterialButton
+    private lateinit var btnCloseSelection: ImageButton
     private lateinit var btnSelectAll: MaterialButton
     private lateinit var btnExportSelected: MaterialButton
     private lateinit var btnDeleteSelected: MaterialButton
