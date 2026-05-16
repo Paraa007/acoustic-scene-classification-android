@@ -19,6 +19,7 @@ import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import java.text.SimpleDateFormat
@@ -289,7 +290,7 @@ object ModernDialogHelper {
         // Model info
         val modelName = firstRecord?.modelName ?: "model1.pt"
         val numClasses = ModelConfig.getClassCountForModel(modelName)
-        dialog.findViewById<TextView>(R.id.modelText).text = "$modelName ($numClasses Classes)"
+        dialog.findViewById<TextView>(R.id.modelText).text = "${modelName.stripModelSuffix()} ($numClasses Classes)"
 
         // Mode info — for LONG records the label reflects the user-chosen pause interval
         // (e.g. "every 1h") instead of the static enum label.
@@ -347,7 +348,7 @@ object ModernDialogHelper {
                 // record's primary model name so the stack still reads coherently.
                 val displayedModel = mName ?: recordsWithSubs.firstOrNull()?.modelName ?: "model"
                 val modelHeader = TextView(context).apply {
-                    text = "🧠 $displayedModel"
+                    text = "🧠 ${displayedModel.stripModelSuffix()}"
                     textSize = 14f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))
@@ -408,7 +409,7 @@ object ModernDialogHelper {
                 if (perModelResults.isEmpty()) return@forEach
 
                 val sectionLabel = TextView(context).apply {
-                    text = "🧠 $name"
+                    text = "🧠 ${name.stripModelSuffix()}"
                     textSize = 14f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))

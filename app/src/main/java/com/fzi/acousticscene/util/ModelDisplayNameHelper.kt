@@ -21,7 +21,19 @@ object ModelDisplayNameHelper {
 
     fun getDisplayName(context: Context, modelFileName: String): String {
         val custom = getPrefs(context).getString(KEY_PREFIX + modelFileName, null)
-        return if (!custom.isNullOrBlank()) custom else modelFileName
+        val raw = if (!custom.isNullOrBlank()) custom else modelFileName
+        return raw.stripModelSuffix()
+    }
+
+    /**
+     * True iff the user has set a custom display name for this file. Callers that
+     * used to compare `displayName != fileName` to detect a custom rename should
+     * use this instead — `getDisplayName` now always strips the `.pt` suffix, so
+     * the equality check no longer means what it used to.
+     */
+    fun hasCustomDisplayName(context: Context, modelFileName: String): Boolean {
+        val custom = getPrefs(context).getString(KEY_PREFIX + modelFileName, null)
+        return !custom.isNullOrBlank()
     }
 
     fun setDisplayName(context: Context, modelFileName: String, displayName: String) {
