@@ -90,6 +90,15 @@ data class UiState(
     val currentVolume: Float = 0f,
     val perSecondResults: List<ClassificationResult?> = List(10) { null },
     val runningAverageResult: ClassificationResult? = null,
+    // Per-model 1 s slice results streamed during a Continuous/Interval cycle.
+    // Drives the "Show Live Data" circle row for every 1 s-trained model with
+    // AVG active. Each list is fixed size 10; entries null until that slot's
+    // inference lands.
+    val perSecondResultsByModel: Map<String, List<ClassificationResult?>> = emptyMap(),
+    // Total wall-clock paused time across the active session, in ms. Used by
+    // the Session-Ended screen to show "Paused for X" alongside the recording
+    // duration.
+    val sessionPausedMs: Long = 0L,
     val pendingEvaluation: PendingEvaluation? = null,
     val isPaused: Boolean = false,
     // When the user pauses with a timer, this holds the SystemClock.elapsedRealtime()

@@ -41,13 +41,7 @@ data class WizardViewState(
     fun canAdvance(): Boolean = when (step) {
         WizardStep.Models -> selectedModels.isNotEmpty()
         WizardStep.Category -> category != null
-        WizardStep.ClipDuration -> selectedModels.all {
-            continuousMethodsByModel[it]?.isNotEmpty() == true
-        }
         WizardStep.IntervalPause -> intervalPause != null
-        WizardStep.IntervalMethods -> selectedModels.all {
-            intervalMethodsByModel[it]?.isNotEmpty() == true
-        }
         WizardStep.SessionDuration -> true
         WizardStep.Summary -> true
     }

@@ -59,33 +59,19 @@ object LastConfigStore {
             .getString(KEY, null) ?: return null
         return try {
             val p = gson.fromJson(raw, Persisted::class.java) ?: return null
-            val continuousMethods: Map<String, Set<LongSubMode>> = when {
-                p.continuousMethodsByModel != null -> p.continuousMethodsByModel.mapValues { (_, list) ->
-                    list.mapNotNull { runCatching { LongSubMode.valueOf(it) }.getOrNull() }.toSet()
-                }
-                p.continuousSubMode != null -> {
-                    // Legacy payload: rebuild per-model sets from the single
-                    // sub-mode the user picked back then, plus each model's
-                    // locked default (so a saved STANDARD config on a 1s-model
-                    // still produces a valid set after migration).
-                    val legacy = runCatching { LongSubMode.valueOf(p.continuousSubMode) }.getOrNull()
-                    p.modelNames.associateWith { name ->
-                        val locked = ModelTrainingDuration.defaultSubMode(name)
-                        val duration = ModelTrainingDuration.secondsForFilename(name)
-                        val extra = legacy?.takeIf { it.isCompatibleWith(duration) }
-                        setOfNotNull(locked, extra)
-                    }
-                }
-                else -> emptyMap()
+            // Methods aren't user-pickable any more — derive them from each
+            // model's training duration. We deliberately ignore any persisted
+            // method maps (and the legacy continuousSubMode field) because
+            // the spec narrowed: 1 s → FAST + AVG, 10 s → STANDARD.
+            val methods = p.modelNames.associateWith {
+                ModelTrainingDuration.requiredMethodsForModel(it)
             }
             SessionConfig(
                 modelNames = p.modelNames,
                 category = RecordingCategory.valueOf(p.category),
-                continuousMethodsByModel = continuousMethods,
+                continuousMethodsByModel = methods,
                 intervalPause = p.intervalPause?.let { runCatching { LongInterval.valueOf(it) }.getOrNull() },
-                intervalMethodsByModel = p.intervalMethodsByModel.mapValues { (_, list) ->
-                    list.mapNotNull { runCatching { LongSubMode.valueOf(it) }.getOrNull() }.toSet()
-                },
+                intervalMethodsByModel = methods,
                 sessionDuration = SessionDuration.valueOf(p.sessionDuration)
             )
         } catch (_: JsonSyntaxException) {
