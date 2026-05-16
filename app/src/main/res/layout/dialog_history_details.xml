@@ -50,152 +50,127 @@
                 app:rippleColor="@color/surface_variant" />
         </LinearLayout>
 
-        <!-- Meta Data Section -->
+        <!-- Meta Data Section (Tile-Style) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginBottom="16dp">
 
-            <!-- Start Time Row -->
+            <!-- Start: Label + Wert untereinander -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/start"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/startTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <!-- End: Label + Wert untereinander -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/end"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/endTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <!-- Modell-Liste (dynamisch befüllt) -->
             <LinearLayout
+                android:id="@+id/dialogModelListLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:orientation="vertical"
+                android:layout_marginTop="16dp" />
 
-                <TextView
-                    android:layout_width="100dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/start"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/startTimeText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- End Time Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Recordings -->
+            <TextView
+                android:id="@+id/dialogRecordingsText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="16dp"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
 
-                <TextView
-                    android:layout_width="100dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/end"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/endTimeText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Model Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Duration -->
+            <TextView
+                android:id="@+id/dialogDurationText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="2dp"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
 
-                <TextView
-                    android:layout_width="100dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/model_label"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/modelText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/accent_blue"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Mode Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Pause -->
+            <TextView
+                android:id="@+id/dialogPauseText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="2dp"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
 
-                <TextView
-                    android:layout_width="100dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/mode_label"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/modeText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Count Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Konfiguration (kompakt) -->
+            <TextView
+                android:id="@+id/dialogConfigText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="12dp"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary" />
 
-                <TextView
-                    android:layout_width="100dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/count"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/countText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/accent_green_light"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Avg Confidence Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Battery Drain -->
+            <TextView
+                android:id="@+id/dialogBatteryText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_marginTop="12dp"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary" />
 
-                <TextView
-                    android:layout_width="100dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/avg_confidence"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
+            <!-- Legacy IDs hidden — bestehende findViewById-Aufrufe sollen nicht crashen -->
+            <TextView
+                android:id="@+id/modelText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
 
-                <TextView
-                    android:id="@+id/avgConfidenceText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/accent_green_light"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+            <TextView
+                android:id="@+id/modeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/countText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/avgConfidenceText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Divider -->
