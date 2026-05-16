@@ -44,6 +44,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     private val viewModel: MainViewModel by activityViewModels()
 
     private lateinit var headerText: TextView
+    private lateinit var sectionLabel: TextView
     private lateinit var stepDots: LinearLayout
     private lateinit var contentRoot: LinearLayout
     private lateinit var primaryButton: MaterialButton
@@ -52,6 +53,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         headerText = view.findViewById(R.id.wizardHeader)
+        sectionLabel = view.findViewById(R.id.wizardSectionLabel)
         stepDots = view.findViewById(R.id.wizardStepDots)
         contentRoot = view.findViewById(R.id.wizardContent)
         primaryButton = view.findViewById(R.id.wizardPrimary)
@@ -97,14 +99,24 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     private fun render(state: WizardViewState) {
-        headerText.text = state.step.headerText
         if (state.quickStartMode) {
+            // Quick Start: a single read-only page; "Quick Start" sits inline with
+            // the back arrow (matching the History/Settings header pattern), and
+            // the per-step description ("Ready to start.") is dropped.
             stepDots.visibility = View.GONE
+            headerText.visibility = View.GONE
+            sectionLabel.visibility = View.VISIBLE
+            sectionLabel.text = getString(R.string.welcome_quick_start)
+            contentRoot.setPadding(0, dp(20f), 0, dp(16f))
         } else {
+            sectionLabel.visibility = View.GONE
+            headerText.visibility = View.VISIBLE
+            headerText.text = state.step.headerText
             stepDots.visibility = View.VISIBLE
             val order = state.stepOrder()
             val pos = order.indexOf(state.step) + 1
             renderStepDots(pos, order.size)
+            contentRoot.setPadding(0, 0, 0, dp(16f))
         }
         primaryButton.text = if (state.step == WizardStep.Summary) {
             getString(R.string.wizard_start)
