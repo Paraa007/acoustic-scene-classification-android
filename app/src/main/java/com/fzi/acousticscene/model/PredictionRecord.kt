@@ -103,7 +103,7 @@ data class PredictionRecord(
     // so the CSV export can reproduce the wizard answers without reconstruction.
     val modelsSelected: List<String>? = null,
     val recordingCategory: RecordingCategory? = null,
-    val continuousSubMode: LongSubMode? = null,
+    val continuousMethodsByModel: Map<String, Set<LongSubMode>>? = null,
     val intervalMethodsByModel: Map<String, Set<LongSubMode>>? = null,
     val sessionDurationPlanned: SessionDuration? = null,
     val pauseAutoResumeMin: Int? = null,
@@ -159,15 +159,16 @@ data class PredictionRecord(
         val sessionDurationStr = sessionDurationPlanned?.label.orEmpty()
         val modelsSelectedStr = modelsSelected?.joinToString("|").orEmpty()
         val categoryStr = recordingCategory?.label.orEmpty()
-        val continuousSubModeStr = continuousSubMode?.name.orEmpty()
-        val intervalMethodsStr = intervalMethodsByModel
-            ?.takeIf { it.isNotEmpty() }
-            ?.entries
-            ?.sortedBy { it.key }
-            ?.joinToString("|") { (m, methods) ->
-                "$m:" + methods.sortedBy { it.ordinal }.joinToString(",") { it.name }
-            }
-            .orEmpty()
+        fun serializeMethodMap(map: Map<String, Set<LongSubMode>>?): String =
+            map?.takeIf { it.isNotEmpty() }
+                ?.entries
+                ?.sortedBy { it.key }
+                ?.joinToString("|") { (m, methods) ->
+                    "$m:" + methods.sortedBy { it.ordinal }.joinToString(",") { it.name }
+                }
+                .orEmpty()
+        val continuousMethodsStr = serializeMethodMap(continuousMethodsByModel)
+        val intervalMethodsStr = serializeMethodMap(intervalMethodsByModel)
         val pauseAutoResumeStr = pauseAutoResumeMin?.toString().orEmpty()
         val longIntervalStr = longIntervalMinutes?.toString() ?: ""
 
@@ -209,7 +210,7 @@ data class PredictionRecord(
                 "",                       // model_name
                 modelsSelectedStr,
                 categoryStr,
-                continuousSubModeStr,
+                continuousMethodsStr,
                 intervalMethodsStr,
                 pauseAutoResumeStr,
                 "", "", "", "", "", "",   // top1..top3
@@ -294,7 +295,7 @@ data class PredictionRecord(
             modelName,
             modelsSelectedStr,
             categoryStr,
-            continuousSubModeStr,
+            continuousMethodsStr,
             intervalMethodsStr,
             pauseAutoResumeStr,
             // Top 3 Predictions (ohne Indexe, ohne name)
@@ -344,7 +345,7 @@ data class PredictionRecord(
             val volumeSecondCols = (1..10).joinToString(",") { "volume_s$it" }
             val base = "id,timestamp,session_start_time,session_duration_planned," +
                     "battery_percent,class_display_name,confidence_percent,inference_time_sec," +
-                    "recording_mode,model_name,models_selected,category,continuous_sub_mode," +
+                    "recording_mode,model_name,models_selected,category,continuous_methods_by_model," +
                     "interval_methods_by_model,pause_auto_resume_min," +
                     "top1_display_name,top1_confidence_percent," +
                     "top2_display_name,top2_confidence_percent," +
