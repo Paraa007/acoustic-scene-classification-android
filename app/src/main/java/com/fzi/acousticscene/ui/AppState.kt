@@ -145,6 +145,11 @@ data class UiState(
     // Per-(model, method) cycle counter — how many cycles each combination has produced
     // a result for. Shown on the Results Summary card.
     val cycleCountByModelMethod: Map<Pair<String, LongSubMode>, Int> = emptyMap(),
+    // Per-(model, method) top-class histogram: how many cycles each scene class
+    // was the top-1 prediction. Drives the "Die meist erwähnte Klasse"-line on
+    // the Results Summary — that's the count-based mode, separate from the
+    // probability-mean in [aggregateResultsByModel].
+    val topClassCountByModelMethod: Map<Pair<String, LongSubMode>, Map<SceneClass, Int>> = emptyMap(),
     // Wall-clock elapsed time of the active session in ms (excluding pauses).
     val sessionElapsedMs: Long = 0L,
     // Average volume (mean) accumulated across every cycle's mean — shown on Results Summary.
