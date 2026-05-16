@@ -8,7 +8,7 @@
     <string name="mode_standard">Standard (10s)</string>
     <string name="mode_fast">Fast (1s)</string>
     <string name="mode_long">every 30min</string>
-    <string name="mode_avg">Avg (10s) — 10×1s</string>
+    <string name="mode_avg">Avg (10s, 10×1s)</string>
     <string name="category_continuous">Continuous</string>
     <string name="category_interval">Interval</string>
     <string name="mode_desc_long">Records 10 s, pauses, then records again. Use it for long-term monitoring.</string>
@@ -328,7 +328,7 @@
     <!-- Welcome / Home -->
     <string name="welcome_new_session">Start new session</string>
     <string name="welcome_quick_start">Quick Start</string>
-    <string name="welcome_no_models">No models found — drop a model file into dev_models/.</string>
+    <string name="welcome_no_models">No models found. Drop a model file into dev_models/.</string>
 
     <!-- Wizard -->
     <string name="wizard_back">Back</string>
