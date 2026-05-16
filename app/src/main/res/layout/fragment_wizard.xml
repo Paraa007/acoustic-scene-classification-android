@@ -22,6 +22,18 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/wizard_back" />
 
+        <TextView
+            android:id="@+id/wizardSectionLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center_vertical|start"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/wizardStepDots"
             android:layout_width="0dp"

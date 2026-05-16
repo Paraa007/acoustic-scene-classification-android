@@ -15,8 +15,9 @@ import com.google.android.material.button.MaterialButton
 /**
  * Home page. Lists the four entry points into the app:
  * - Start new session — opens the wizard fresh
- * - Quick Start — only shown if a previous session was confirmed; opens the wizard prefilled
- *   with that config so the user can tweak before starting (or hit Start on the summary right away)
+ * - Quick Start — shown only when a saved last config exists and is still executable
+ *   1:1 against the models currently available. Skips the wizard entirely and lands
+ *   on the read-only Summary; one tap on Start kicks off the session
  * - History
  * - Settings
  */
@@ -43,11 +44,15 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
         }
 
         val lastConfig = LastConfigStore.load(requireContext())
-        if (lastConfig != null && lastConfig.modelNames.isNotEmpty()) {
+        val available = listAvailableModels()
+        if (lastConfig != null && lastConfig.isExecutable(available)) {
             btnQuickStart.visibility = View.VISIBLE
             btnQuickStart.setOnClickListener {
-                val available = listAvailableModels()
-                viewModel.resetWizard(availableModels = available, prefill = lastConfig)
+                viewModel.resetWizard(
+                    availableModels = available,
+                    prefill = lastConfig,
+                    quickStartMode = true
+                )
                 findNavController().navigate(R.id.action_welcome_to_wizard)
             }
         } else {

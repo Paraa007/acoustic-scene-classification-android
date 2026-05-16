@@ -95,6 +95,20 @@ data class UiState(
     // When the user pauses with a timer, this holds the SystemClock.elapsedRealtime()
     // deadline at which the session should auto-resume. null = indefinite pause.
     val userPauseDeadlineElapsedMs: Long? = null,
+    // User pressed Pause but the active 10 s frame is still finishing. Recording
+    // keeps running, the status label shows the chosen pause time *frozen*. Real
+    // pause kicks in only when the frame closes.
+    val pausePending: Boolean = false,
+    // The pause duration the user picked, so the UI can show it static while
+    // pausePending = true (deadline is only set once the real pause starts).
+    val pauseTotalMs: Long? = null,
+    // 0–10 000 wall-clock position inside the current 10 s frame. Drives the
+    // inner stopwatch ring AND the volume chart from one source so they can't
+    // drift apart.
+    val frameElapsedMs: Long = 0L,
+    // 1 (single arc) for STANDARD / INTERVAL, 10 (per-second segments) for FAST
+    // / AVERAGE. Read by the stopwatch view.
+    val frameSegments: Int = 1,
     // Multi-Model Evaluation (LONG mode): per-model sub-mode selection.
     // Key = model filename, value = checked sub-modes for that model. The locked
     // default (Fast for _1s_ models, Standard for the rest) is always part of the set.

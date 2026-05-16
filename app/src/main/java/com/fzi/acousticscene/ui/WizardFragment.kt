@@ -44,6 +44,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     private val viewModel: MainViewModel by activityViewModels()
 
     private lateinit var headerText: TextView
+    private lateinit var sectionLabel: TextView
     private lateinit var stepDots: LinearLayout
     private lateinit var contentRoot: LinearLayout
     private lateinit var primaryButton: MaterialButton
@@ -52,6 +53,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         headerText = view.findViewById(R.id.wizardHeader)
+        sectionLabel = view.findViewById(R.id.wizardSectionLabel)
         stepDots = view.findViewById(R.id.wizardStepDots)
         contentRoot = view.findViewById(R.id.wizardContent)
         primaryButton = view.findViewById(R.id.wizardPrimary)
@@ -85,16 +87,37 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     private fun handleBack() {
+        // Quick Start lands directly on the Summary; back leaves the wizard
+        // entirely instead of walking through steps the user never visited.
+        if (viewModel.wizard.value.quickStartMode) {
+            findNavController().popBackStack()
+            return
+        }
         if (!viewModel.wizardBack()) {
             findNavController().popBackStack()
         }
     }
 
     private fun render(state: WizardViewState) {
-        headerText.text = state.step.headerText
-        val order = state.stepOrder()
-        val pos = order.indexOf(state.step) + 1
-        renderStepDots(pos, order.size)
+        if (state.quickStartMode) {
+            // Quick Start: a single read-only page; "Quick Start" sits inline with
+            // the back arrow (matching the History/Settings header pattern), and
+            // the per-step description ("Ready to start.") is dropped.
+            stepDots.visibility = View.GONE
+            headerText.visibility = View.GONE
+            sectionLabel.visibility = View.VISIBLE
+            sectionLabel.text = getString(R.string.welcome_quick_start)
+            contentRoot.setPadding(0, dp(20f), 0, dp(16f))
+        } else {
+            sectionLabel.visibility = View.GONE
+            headerText.visibility = View.VISIBLE
+            headerText.text = state.step.headerText
+            stepDots.visibility = View.VISIBLE
+            val order = state.stepOrder()
+            val pos = order.indexOf(state.step) + 1
+            renderStepDots(pos, order.size)
+            contentRoot.setPadding(0, 0, 0, dp(16f))
+        }
         primaryButton.text = if (state.step == WizardStep.Summary) {
             getString(R.string.wizard_start)
         } else {
@@ -282,24 +305,26 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     private fun renderSummary(state: WizardViewState) {
-        addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n"), WizardStep.Models)
-        addSummaryRow(getString(R.string.wizard_summary_category), state.category?.label.orEmpty(), WizardStep.Category)
+        val tappable = !state.quickStartMode
+        addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n"), WizardStep.Models, tappable)
+        addSummaryRow(getString(R.string.wizard_summary_category), state.category?.label.orEmpty(), WizardStep.Category, tappable)
         when (state.category) {
             RecordingCategory.CONTINUOUS -> addSummaryRow(
                 getString(R.string.wizard_summary_clip),
                 state.continuousSubMode?.label.orEmpty(),
-                WizardStep.ClipDuration
+                WizardStep.ClipDuration,
+                tappable
             )
             RecordingCategory.INTERVAL -> {
-                addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause)
+                addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause, tappable)
                 val methodLines = state.selectedModels.joinToString("\n") { name ->
                     "$name: " + state.intervalMethodsByModel[name].orEmpty().joinToString(", ") { it.label }
                 }
-                addSummaryRow(getString(R.string.wizard_summary_methods), methodLines, WizardStep.IntervalMethods)
+                addSummaryRow(getString(R.string.wizard_summary_methods), methodLines, WizardStep.IntervalMethods, tappable)
             }
             null -> Unit
         }
-        addSummaryRow(getString(R.string.wizard_summary_session), state.sessionDuration.label, WizardStep.SessionDuration)
+        addSummaryRow(getString(R.string.wizard_summary_session), state.sessionDuration.label, WizardStep.SessionDuration, tappable)
     }
 
     private fun addPickRow(
@@ -351,7 +376,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         contentRoot.addView(card)
     }
 
-    private fun addSummaryRow(label: String, value: String, step: WizardStep) {
+    private fun addSummaryRow(label: String, value: String, step: WizardStep, tappable: Boolean = true) {
         val ctx = requireContext()
         val card = MaterialCardView(ctx).apply {
             radius = dp(10f).toFloat()
@@ -359,9 +384,9 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             strokeWidth = dp(1f)
             strokeColor = ContextCompat.getColor(context, R.color.text_secondary)
             setCardBackgroundColor(ContextCompat.getColor(context, R.color.surface_dark))
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { viewModel.wizardGoToStep(step) }
+            isClickable = tappable
+            isFocusable = tappable
+            if (tappable) setOnClickListener { viewModel.wizardGoToStep(step) }
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
