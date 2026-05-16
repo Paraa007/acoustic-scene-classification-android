@@ -69,19 +69,40 @@ class AudioRecorder(
     @Volatile private var volumeSampleSum: Double = 0.0
     @Volatile private var volumeSampleCount: Int = 0
     @Volatile private var volumeSamplePeak: Float = 0f
+    // Per-second RMS buckets. Length always equals `durationSeconds` — short
+    // recordings (FAST = 1 s) carry a single slot, full frames (STANDARD/LONG = 10 s)
+    // carry ten. Each slot accumulates the RMS samples that fell into that one-second
+    // window of the buffer; `snapshotVolumeStats()` reads out the mean.
+    private val perSecondSums = DoubleArray(durationSeconds)
+    private val perSecondCounts = IntArray(durationSeconds)
 
-    /** Mean/peak of the RMS samples since the last `startRecording()` call. */
-    data class VolumeStats(val mean: Float, val peak: Float)
+    /**
+     * Mean / peak / per-second-means of the RMS samples since the last
+     * `startRecording()` call. `perSecondMeans` length matches the AudioRecorder's
+     * `durationSeconds` — the consumer pads to 10 for the CSV `volume_s1..s10` columns.
+     */
+    data class VolumeStats(
+        val mean: Float,
+        val peak: Float,
+        val perSecondMeans: FloatArray
+    )
 
     fun snapshotVolumeStats(): VolumeStats {
         val mean = if (volumeSampleCount > 0) (volumeSampleSum / volumeSampleCount).toFloat() else 0f
-        return VolumeStats(mean = mean, peak = volumeSamplePeak)
+        val perSecond = FloatArray(durationSeconds) { i ->
+            if (perSecondCounts[i] > 0) (perSecondSums[i] / perSecondCounts[i]).toFloat() else 0f
+        }
+        return VolumeStats(mean = mean, peak = volumeSamplePeak, perSecondMeans = perSecond)
     }
 
     private fun resetVolumeStats() {
         volumeSampleSum = 0.0
         volumeSampleCount = 0
         volumeSamplePeak = 0f
+        for (i in perSecondSums.indices) {
+            perSecondSums[i] = 0.0
+            perSecondCounts[i] = 0
+        }
     }
 
     /**
@@ -181,6 +202,13 @@ class AudioRecorder(
                     volumeSampleSum += volume
                     volumeSampleCount++
                     if (volume > volumeSamplePeak) volumeSamplePeak = volume
+                    // Per-second bucket — chunk midpoint decides which second
+                    // window it belongs to. Coerce because the very last chunk
+                    // can end exactly at totalSamples.
+                    val chunkMid = samplesRead - read / 2
+                    val secIdx = (chunkMid / sampleRate).coerceIn(0, durationSeconds - 1)
+                    perSecondSums[secIdx] += volume
+                    perSecondCounts[secIdx]++
 
                     // Progress Update (nicht zu oft!)
                     if (samplesRead - lastProgressUpdate >= progressInterval) {

@@ -1,7 +1,7 @@
 # Acoustic Scene Classification App - Projekt-Dokumentation
 
 **FZI Karlsruhe | DCASE 2025 | Android App**
-**Stand:** 2026-05-07
+**Stand:** 2026-05-17
 
 ---
 
@@ -272,7 +272,14 @@ Nach Stop oder Auto-Stop landet der User auf einem Screen, der pro Modell × Met
 Alle Sessions als Karten mit Config-Label (`🧠 model · Continuous · Standard 10s` o. ä.), Aufnahmezahl, Dauer, Batterie-Verbrauch. Tap auf eine Session öffnet einen Detail-Dialog mit Distribution, Method Comparison (bei mehreren Methoden), Per-Second Clips (bei AVG), User Evaluations (bei Interval) und einer Pause-Sektion mit grauen Trennlinien pro Pause. Long-Press aktiviert die Mehrfachauswahl für Bulk-Export oder -Delete.
 
 ### 5.10 CSV-Export
-Pro Aufnahme-Cycle eine Zeile mit Klasse, Konfidenz, Top-3, Inferenzzeit, Modell, Modus, Batterie, `volume_mean`, `volume_peak`, `per_second_clips` (bei AVG), `long_standard`/`long_fast`/`long_average` (bei Interval-Multi-Method). Pause-Records erscheinen als eigene Zeilen mit `mode_label = "PAUSE"` und `pause_duration_sec` — `.filter(mode_label == "PAUSE")` reicht in Pandas, um sie auszuziehen.
+Pro Aufnahme-Cycle eine Zeile. Der Header gruppiert die Spalten in vier logische Blöcke:
+
+1. **Session-Meta:** `id`, `timestamp`, `session_start_time`, `session_duration_planned` (z. B. `30 min` / `Stop manually`).
+2. **Cycle + Wizard-Snapshot:** `battery_percent`, `class_display_name`, `confidence_percent`, `inference_time_sec`, `recording_mode`, `model_name` (Primary), `models_selected` (`m1.pt|m2.pt`), `category` (`Continuous`/`Interval`), `continuous_methods_by_model` (`m1.pt:STANDARD,AVERAGE|m2.pt:FAST`, leer im Interval), `interval_methods_by_model` (gleiche Serialisierung, leer im Continuous), `pause_auto_resume_min` (nur in PAUSE-Rows gesetzt).
+3. **Klassifikation:** `top1..3_display_name` + `top1..3_confidence_percent`, `probabilities[…]`, `user_selected_class`, `per_second_clips` (bei AVG), `long_standard`/`long_fast`/`long_average`/`long_interval_min` (bei Interval).
+4. **Volume + Pause:** `volume_mean`, `volume_peak`, `volume_s1`..`volume_s10` (Per-Sekunden-RMS-Mean über das 10 s-Frame; bei FAST nur `s1` gefüllt, Rest 0), `pause_duration_sec`. Bei Multi-Model-Continuous folgen dynamische `allinone_<model>`-Spalten am Ende.
+
+Pause-Records (`recording_mode = "PAUSE"`) tragen denselben Session-Snapshot wie die regulären Records darum herum — so bleibt eine Session auch beim Filtern auf PAUSE-Rows greifbar. Volume-Spalten sind in PAUSE-Rows mit `0.000` gefüllt (nicht leer), damit eine numerische Spalte ihren Typ behält. Records von vor der 2026-05-17-Migration tragen leere Zellen in den neuen Spalten — Gson liest sie ohne Crash, der CSV-Export setzt sie auf `""`.
 
 ### 5.11 Evaluation (Interval-only)
 Nach jeder Interval-Aufnahme bekommt der User eine Notification (Background) bzw. eine in-App-Card (Foreground), wo er die tatsächliche Szene angeben kann. Das Timing folgt dem im Wizard gewählten Pausen-Intervall. Im Continuous gibt es keine Evaluation-Card (würde alle paar Sekunden erscheinen).
