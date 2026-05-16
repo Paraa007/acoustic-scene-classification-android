@@ -21,7 +21,13 @@ data class WizardViewState(
     val continuousSubMode: LongSubMode? = null,
     val intervalPause: LongInterval? = null,
     val intervalMethodsByModel: Map<String, Set<LongSubMode>> = emptyMap(),
-    val sessionDuration: SessionDuration = SessionDuration.DEFAULT
+    val sessionDuration: SessionDuration = SessionDuration.DEFAULT,
+    /**
+     * True when the wizard was entered via the Quick Start shortcut on the welcome
+     * page. Renders the Summary read-only: step dots hidden, summary rows not
+     * tappable, back arrow leaves the wizard instead of walking through steps.
+     */
+    val quickStartMode: Boolean = false
 ) {
     /** Branch-aware ordered list of steps for the current category choice. */
     fun stepOrder(): List<WizardStep> = when (category) {
