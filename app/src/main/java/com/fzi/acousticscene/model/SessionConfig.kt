@@ -1,5 +1,7 @@
 package com.fzi.acousticscene.model
 
+import com.fzi.acousticscene.util.stripModelSuffix
+
 /**
  * Snapshot of every wizard answer needed to start a recording session. Built up
  * step by step in the wizard and handed to the live recording flow once the user
@@ -58,7 +60,7 @@ data class SessionConfig(
      * Compact one-line label used on history tiles.
      */
     fun shortLabel(): String {
-        val modelLabel = if (modelNames.size == 1) "🧠 ${modelNames.first()}"
+        val modelLabel = if (modelNames.size == 1) "🧠 ${modelNames.first().stripModelSuffix()}"
         else "🧠 ${modelNames.size} models"
         val pathLabel = when (category) {
             RecordingCategory.CONTINUOUS -> "Continuous · ${continuousSubMode.label}"

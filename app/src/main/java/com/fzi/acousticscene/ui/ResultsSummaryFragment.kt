@@ -14,6 +14,7 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SessionConfig
+import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
@@ -80,7 +81,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
                 setPadding(dp(14f).toInt(), dp(12f).toInt(), dp(14f).toInt(), dp(12f).toInt())
             }
             inner.addView(TextView(ctx).apply {
-                text = "🧠 $model"
+                text = "🧠 ${model.stripModelSuffix()}"
                 textSize = 15f
                 setTextColor(ContextCompat.getColor(context, R.color.text_primary))
                 setPadding(0, 0, 0, dp(8f).toInt())
