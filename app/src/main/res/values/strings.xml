@@ -181,6 +181,7 @@
     <string name="battery_drain">Battery Drain</string>
     <string name="recordings">Recordings</string>
     <string name="duration">Duration</string>
+    <string name="pause">Pause</string>
     <string name="start">Start</string>
     <string name="end">End</string>
     <string name="avg_confidence">Avg Confidence</string>
