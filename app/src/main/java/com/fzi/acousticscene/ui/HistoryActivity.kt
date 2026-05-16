@@ -478,6 +478,7 @@ class HistoryActivity : AppCompatActivity() {
             private val modelListLayout: LinearLayout = itemView.findViewById(R.id.modelListLayout)
             private val recordingsText: TextView = itemView.findViewById(R.id.recordingsText)
             private val durationText: TextView = itemView.findViewById(R.id.durationText)
+            private val pauseText: TextView = itemView.findViewById(R.id.pauseText)
             private val configText: TextView = itemView.findViewById(R.id.configText)
             private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
             private val selectionCheckbox: CheckBox = itemView.findViewById(R.id.selectionCheckbox)
@@ -507,10 +508,14 @@ class HistoryActivity : AppCompatActivity() {
                     modelListLayout.addView(tv)
                 }
 
-                // Stats: Recordings + Duration in eigenen Zeilen, fett
+                // Stats: Recordings + Duration + Pause in eigenen Zeilen, fett
                 val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
+                val pauseSec = packageRecords
+                    .filter { it.isPause }
+                    .sumOf { it.pauseDurationSec ?: 0L }
                 recordingsText.text = "${ctx.getString(R.string.recordings)}: ${recordingRecords.size}"
                 durationText.text = "${ctx.getString(R.string.duration)}: ${formatDuration(durationMs)}"
+                pauseText.text = "${ctx.getString(R.string.pause)}: ${formatPauseDuration(pauseSec)}"
 
                 // Konfiguration kompakt (nur Pfad-Teil, ohne Modell-Doppelung)
                 configText.text = pathLabel(sourceRecords)
@@ -630,6 +635,24 @@ class HistoryActivity : AppCompatActivity() {
             val modelLabel = if (names.size >= 2) "🧠 ${names.size} models"
             else "🧠 ${names.first().stripModelSuffix()}"
             return "$modelLabel · ${pathLabel(records)}"
+        }
+
+        /**
+         * Formatiert die aufsummierte Pause-Dauer (Sekunden) kompakt.
+         * Bei 0 → "0s"; deckt sich mit dem Detail-Dialog (ModernDialogHelper).
+         */
+        fun formatPauseDuration(totalSec: Long): String {
+            if (totalSec <= 0L) return "0s"
+            val h = totalSec / 3600
+            val m = (totalSec % 3600) / 60
+            val s = totalSec % 60
+            return when {
+                h > 0 && m > 0 -> "${h}h ${m}min"
+                h > 0 -> "${h}h"
+                m > 0 && s > 0 -> "${m}min ${s}s"
+                m > 0 -> "${m}min"
+                else -> "${s}s"
+            }
         }
 
         /**

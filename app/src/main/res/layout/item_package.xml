@@ -93,6 +93,16 @@
                 android:textStyle="bold"
                 android:textColor="@color/text_primary" />
 
+            <!-- Pause (Summe) -->
+            <TextView
+                android:id="@+id/pauseText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
             <!-- Konfiguration (kompakt) -->
             <TextView
                 android:id="@+id/configText"

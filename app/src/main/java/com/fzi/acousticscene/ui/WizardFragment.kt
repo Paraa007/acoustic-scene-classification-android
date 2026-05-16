@@ -27,6 +27,7 @@ import com.fzi.acousticscene.model.ModelTrainingDuration
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SessionDuration
 import com.fzi.acousticscene.model.WizardStep
+import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -164,7 +165,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         val selected = state.selectedModels.toMutableSet()
         for (modelName in state.availableModels) {
             val checkbox = MaterialCheckBox(ctx).apply {
-                text = modelName
+                text = modelName.stripModelSuffix()
                 textSize = 15f
                 isChecked = modelName in selected
                 setOnCheckedChangeListener { _, checked ->
@@ -256,7 +257,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
                 setPadding(dp(16f), dp(12f), dp(16f), dp(12f))
             }
             val title = TextView(requireContext()).apply {
-                text = getString(R.string.wizard_methods_per_model, model)
+                text = getString(R.string.wizard_methods_per_model, model.stripModelSuffix())
                 textSize = 15f
                 setTextColor(ContextCompat.getColor(context, R.color.text_primary))
             }
@@ -299,7 +300,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
 
     private fun renderSummary(state: WizardViewState) {
         val tappable = !state.quickStartMode
-        addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n"), WizardStep.Models, tappable)
+        addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n") { it.stripModelSuffix() }, WizardStep.Models, tappable)
         addSummaryRow(getString(R.string.wizard_summary_category), state.category?.label.orEmpty(), WizardStep.Category, tappable)
         when (state.category) {
             RecordingCategory.CONTINUOUS -> {
@@ -316,7 +317,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             RecordingCategory.INTERVAL -> {
                 addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause, tappable)
                 val methodLines = state.selectedModels.joinToString("\n") { name ->
-                    "$name: " + state.intervalMethodsByModel[name].orEmpty().joinToString(", ") { it.label }
+                    "${name.stripModelSuffix()}: " + state.intervalMethodsByModel[name].orEmpty().joinToString(", ") { it.label }
                 }
                 addSummaryRow(getString(R.string.wizard_summary_methods), methodLines, WizardStep.IntervalMethods, tappable)
             }
