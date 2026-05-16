@@ -125,13 +125,11 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
     }
 
     private fun methodsForModel(config: SessionConfig, modelName: String): List<LongSubMode> {
-        return when (config.category) {
-            RecordingCategory.CONTINUOUS -> listOf(config.continuousSubMode)
-            RecordingCategory.INTERVAL -> {
-                val active = config.intervalMethodsByModel[modelName].orEmpty()
-                listOf(LongSubMode.STANDARD, LongSubMode.FAST, LongSubMode.AVERAGE).filter { it in active }
-            }
+        val active = when (config.category) {
+            RecordingCategory.CONTINUOUS -> config.continuousMethodsByModel[modelName].orEmpty()
+            RecordingCategory.INTERVAL -> config.intervalMethodsByModel[modelName].orEmpty()
         }
+        return listOf(LongSubMode.STANDARD, LongSubMode.FAST, LongSubMode.AVERAGE).filter { it in active }
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()
