@@ -1113,7 +1113,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val notification = NotificationCompat.Builder(context, EVALUATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.evaluation_title))
-            .setContentText("${record.sceneClass.emoji} ${record.sceneClass.labelShort} — ${context.getString(R.string.evaluation_tap_to_rate)}")
+            .setContentText("${record.sceneClass.emoji} ${record.sceneClass.labelShort}. ${context.getString(R.string.evaluation_tap_to_rate)}")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

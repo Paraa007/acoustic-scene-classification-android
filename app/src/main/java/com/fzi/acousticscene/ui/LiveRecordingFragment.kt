@@ -291,7 +291,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             val methods = methodsForModel(config, model)
             for ((index, sub) in methods.withIndex()) {
                 container.addView(TextView(ctx).apply {
-                    text = "${index + 1} — ${sub.label}"
+                    text = "${index + 1}. ${sub.label}"
                     textSize = 13f
                     setTextColor(ContextCompat.getColor(context, R.color.accent_blue))
                     setPadding(0, dp(if (index == 0) 0f else 8f), 0, dp(4f))
@@ -447,7 +447,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             return
         }
         evaluationCard.visibility = View.VISIBLE
-        evaluationTitle.text = "${pending.modelClass.emoji} ${pending.modelClass.label} — ${getString(R.string.evaluation_question)}"
+        evaluationTitle.text = "${pending.modelClass.emoji} ${pending.modelClass.label}: ${getString(R.string.evaluation_question)}"
         if (renderedEvaluationId != pending.predictionId) {
             renderedEvaluationId = pending.predictionId
             evaluationCountdownJob?.cancel()
