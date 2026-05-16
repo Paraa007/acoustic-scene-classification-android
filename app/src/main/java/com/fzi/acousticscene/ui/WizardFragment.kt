@@ -85,6 +85,12 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     private fun handleBack() {
+        // Quick Start lands directly on the Summary; back leaves the wizard
+        // entirely instead of walking through steps the user never visited.
+        if (viewModel.wizard.value.quickStartMode) {
+            findNavController().popBackStack()
+            return
+        }
         if (!viewModel.wizardBack()) {
             findNavController().popBackStack()
         }
@@ -92,9 +98,14 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
 
     private fun render(state: WizardViewState) {
         headerText.text = state.step.headerText
-        val order = state.stepOrder()
-        val pos = order.indexOf(state.step) + 1
-        renderStepDots(pos, order.size)
+        if (state.quickStartMode) {
+            stepDots.visibility = View.GONE
+        } else {
+            stepDots.visibility = View.VISIBLE
+            val order = state.stepOrder()
+            val pos = order.indexOf(state.step) + 1
+            renderStepDots(pos, order.size)
+        }
         primaryButton.text = if (state.step == WizardStep.Summary) {
             getString(R.string.wizard_start)
         } else {
@@ -282,24 +293,26 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     private fun renderSummary(state: WizardViewState) {
-        addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n"), WizardStep.Models)
-        addSummaryRow(getString(R.string.wizard_summary_category), state.category?.label.orEmpty(), WizardStep.Category)
+        val tappable = !state.quickStartMode
+        addSummaryRow(getString(R.string.wizard_summary_models), state.selectedModels.joinToString("\n"), WizardStep.Models, tappable)
+        addSummaryRow(getString(R.string.wizard_summary_category), state.category?.label.orEmpty(), WizardStep.Category, tappable)
         when (state.category) {
             RecordingCategory.CONTINUOUS -> addSummaryRow(
                 getString(R.string.wizard_summary_clip),
                 state.continuousSubMode?.label.orEmpty(),
-                WizardStep.ClipDuration
+                WizardStep.ClipDuration,
+                tappable
             )
             RecordingCategory.INTERVAL -> {
-                addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause)
+                addSummaryRow(getString(R.string.wizard_summary_pause), state.intervalPause?.label.orEmpty(), WizardStep.IntervalPause, tappable)
                 val methodLines = state.selectedModels.joinToString("\n") { name ->
                     "$name: " + state.intervalMethodsByModel[name].orEmpty().joinToString(", ") { it.label }
                 }
-                addSummaryRow(getString(R.string.wizard_summary_methods), methodLines, WizardStep.IntervalMethods)
+                addSummaryRow(getString(R.string.wizard_summary_methods), methodLines, WizardStep.IntervalMethods, tappable)
             }
             null -> Unit
         }
-        addSummaryRow(getString(R.string.wizard_summary_session), state.sessionDuration.label, WizardStep.SessionDuration)
+        addSummaryRow(getString(R.string.wizard_summary_session), state.sessionDuration.label, WizardStep.SessionDuration, tappable)
     }
 
     private fun addPickRow(
@@ -351,7 +364,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         contentRoot.addView(card)
     }
 
-    private fun addSummaryRow(label: String, value: String, step: WizardStep) {
+    private fun addSummaryRow(label: String, value: String, step: WizardStep, tappable: Boolean = true) {
         val ctx = requireContext()
         val card = MaterialCardView(ctx).apply {
             radius = dp(10f).toFloat()
@@ -359,9 +372,9 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             strokeWidth = dp(1f)
             strokeColor = ContextCompat.getColor(context, R.color.text_secondary)
             setCardBackgroundColor(ContextCompat.getColor(context, R.color.surface_dark))
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { viewModel.wizardGoToStep(step) }
+            isClickable = tappable
+            isFocusable = tappable
+            if (tappable) setOnClickListener { viewModel.wizardGoToStep(step) }
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT

@@ -81,17 +81,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _wizard = MutableStateFlow(WizardViewState())
     val wizard: StateFlow<WizardViewState> = _wizard.asStateFlow()
 
-    fun resetWizard(availableModels: List<String>, prefill: SessionConfig? = null) {
+    fun resetWizard(
+        availableModels: List<String>,
+        prefill: SessionConfig? = null,
+        quickStartMode: Boolean = false
+    ) {
         _wizard.value = if (prefill != null) {
             WizardViewState(
-                step = WizardStep.Models,
+                step = if (quickStartMode) WizardStep.Summary else WizardStep.Models,
                 availableModels = availableModels,
                 selectedModels = prefill.modelNames.filter { it in availableModels },
                 category = prefill.category,
                 continuousSubMode = prefill.continuousSubMode,
                 intervalPause = prefill.intervalPause,
                 intervalMethodsByModel = prefill.intervalMethodsByModel,
-                sessionDuration = prefill.sessionDuration
+                sessionDuration = prefill.sessionDuration,
+                quickStartMode = quickStartMode
             )
         } else {
             WizardViewState(availableModels = availableModels)

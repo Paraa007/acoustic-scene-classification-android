@@ -29,8 +29,33 @@ data class SessionConfig(
     val isMultiModel: Boolean get() = modelNames.size >= 2
 
     /**
-     * Compact one-line label used on history tiles and the welcome page's
-     * "Letzte Config nutzen" button.
+     * Whether this saved config can still be started 1:1 with the models the app
+     * currently has access to. Used by Quick Start on the welcome page to decide
+     * whether to even offer the shortcut — if anything has drifted (model deleted
+     * from assets, sub-mode no longer compatible after a model swap, missing
+     * pause), the button hides and the user falls back to "Start new session".
+     */
+    fun isExecutable(availableModels: List<String>): Boolean {
+        if (modelNames.isEmpty()) return false
+        if (!modelNames.all { it in availableModels }) return false
+        return when (category) {
+            RecordingCategory.CONTINUOUS -> modelNames.all { model ->
+                val seconds = ModelTrainingDuration.secondsForFilename(model)
+                continuousSubMode.isCompatibleWith(seconds)
+            }
+            RecordingCategory.INTERVAL -> {
+                if (intervalPause == null) return false
+                modelNames.all { model ->
+                    val methods = intervalMethodsByModel[model].orEmpty()
+                    val seconds = ModelTrainingDuration.secondsForFilename(model)
+                    methods.isNotEmpty() && methods.all { it.isCompatibleWith(seconds) }
+                }
+            }
+        }
+    }
+
+    /**
+     * Compact one-line label used on history tiles.
      */
     fun shortLabel(): String {
         val modelLabel = if (modelNames.size == 1) "🧠 ${modelNames.first()}"
