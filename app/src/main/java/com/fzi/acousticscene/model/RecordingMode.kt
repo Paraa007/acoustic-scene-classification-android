@@ -16,30 +16,27 @@ enum class RecordingCategory(val label: String) {
 }
 
 /**
- * LONG-mode evaluation sub-modes: applied to the same 10 s recording.
- * STANDARD is always selected (default, cannot be unchecked).
+ * Per-model evaluation methods. Each method is bound to a single training
+ * duration: STANDARD only fits 10 s-trained models, FAST and AVERAGE only fit
+ * 1 s-trained ones. The wizard auto-assigns the matching methods when a model
+ * is picked — there is no user choice at this layer.
  *
- * [sliceSeconds] is the audio length each individual inference call sees —
- * STANDARD feeds the full 10 s buffer, FAST takes a 1 s middle slice,
- * AVERAGE adapts per model: 1 s-models get ten per-slice inferences averaged,
- * 10 s-models get the full 10 s buffer in one shot. The model's training
- * duration must match the slice the model receives.
+ * [sliceSeconds] is the audio length each individual inference call sees:
+ * STANDARD feeds the full 10 s buffer, FAST a 1 s slice, AVERAGE the ten
+ * 1 s slices that make up the 10 s frame (averaged after the fact).
  */
 enum class LongSubMode(val label: String, val hint: String, val sliceSeconds: Int) {
     STANDARD("Standard", "full 10 s", 10),
-    FAST("Fast", "middle 1 s", 1),
+    FAST("Fast", "live 1 s", 1),
     AVERAGE("Avg", "10 × 1 s → Ø", 1);
 
     /**
      * Whether this method can drive a model trained on [modelTrainingSeconds]-long
-     * clips. STANDARD/FAST require an exact slice match. AVERAGE is neutral and
-     * adapts: for 1 s-models it runs ten per-slice inferences and averages them,
-     * for 10 s-models it concatenates the slices and runs a single full-window
-     * inference.
+     * clips. STANDARD is 10 s only; FAST and AVERAGE are 1 s only.
      */
     fun isCompatibleWith(modelTrainingSeconds: Int): Boolean = when (this) {
-        AVERAGE -> modelTrainingSeconds == 1 || modelTrainingSeconds == 10
-        else -> sliceSeconds == modelTrainingSeconds
+        STANDARD -> modelTrainingSeconds == 10
+        FAST, AVERAGE -> modelTrainingSeconds == 1
     }
 }
 
