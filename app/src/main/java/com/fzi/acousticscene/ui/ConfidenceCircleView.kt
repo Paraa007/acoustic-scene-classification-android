@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.os.Handler
+import android.os.Looper
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
@@ -59,6 +61,12 @@ class ConfidenceCircleView @JvmOverloads constructor(
 
     private val rect = RectF()
 
+    // Eigener Handler statt eines anonymen Handlers pro setConfidence(animate=true)-Call.
+    // So können wir laufende Animations-Runnables in onDetachedFromWindow stoppen und
+    // verhindern, dass die View über das Runnable die Activity am Leben hält.
+    private val animationHandler = Handler(Looper.getMainLooper())
+    private var pendingAnimation: Runnable? = null
+
     fun setTargetSize(sizeDp: Int) {
         targetSizeDp = sizeDp
         scale = sizeDp / 200f
@@ -74,28 +82,44 @@ class ConfidenceCircleView @JvmOverloads constructor(
      * Setzt die Konfidenz (0.0 - 1.0) und animiert die Änderung
      */
     fun setConfidence(value: Float, animate: Boolean = true) {
+        // Vorherige Animation stoppen — sonst überlagern sich Step-Sequenzen,
+        // wenn setConfidence schneller aufgerufen wird als die 30-Frame-Animation
+        // durchläuft.
+        pendingAnimation?.let { animationHandler.removeCallbacks(it) }
+        pendingAnimation = null
+
         if (animate) {
-            // Einfache Animation durch schrittweise Updates
             val target = value.coerceIn(0f, 1f)
             val start = confidence
             val steps = 30
             val stepSize = (target - start) / steps
-            
-            android.os.Handler(android.os.Looper.getMainLooper()).post(object : Runnable {
+
+            val runnable = object : Runnable {
                 private var currentStep = 0
                 override fun run() {
                     if (currentStep < steps) {
                         confidence = start + stepSize * (currentStep + 1)
                         currentStep++
-                        postDelayed(this, 16) // ~60 FPS
+                        animationHandler.postDelayed(this, 16) // ~60 FPS
                     } else {
                         confidence = target
+                        pendingAnimation = null
                     }
                 }
-            })
+            }
+            pendingAnimation = runnable
+            animationHandler.post(runnable)
         } else {
             confidence = value
         }
+    }
+
+    override fun onDetachedFromWindow() {
+        // Laufende Animation abbrechen, sonst hält das gepostete Runnable
+        // die View und die View über ihren Context die Activity am Leben.
+        animationHandler.removeCallbacksAndMessages(null)
+        pendingAnimation = null
+        super.onDetachedFromWindow()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

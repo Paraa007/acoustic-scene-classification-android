@@ -139,8 +139,10 @@ class ConcentricStopwatchView @JvmOverloads constructor(
         val h = total / 3600L
         val m = (total % 3600L) / 60L
         val s = total % 60L
-        return if (h > 0) String.format("%d:%02d:%02d", h, m, s)
-        else String.format("%d:%02d", m, s)
+        // Locale.US, damit der Stoppuhr-Pattern überall identisch aussieht und nicht
+        // mal mit Tausender-Trennzeichen zwischen den Sekunden landet.
+        return if (h > 0) String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
+        else String.format(java.util.Locale.US, "%d:%02d", m, s)
     }
 
     private fun dp(v: Float) = v * resources.displayMetrics.density

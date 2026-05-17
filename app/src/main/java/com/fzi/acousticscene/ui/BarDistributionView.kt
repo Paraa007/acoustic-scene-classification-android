@@ -2,7 +2,6 @@ package com.fzi.acousticscene.ui
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
@@ -99,20 +98,24 @@ class BarDistributionView @JvmOverloads constructor(
     }
 
     private fun sceneColor(sc: SceneClass): Int {
-        // SceneClass.color isn't part of the enum — fall back to an emoji-driven palette.
-        return classColorPalette[sc.index % classColorPalette.size]
+        // Verwendet die offiziellen Scene-Class-Farben aus colors.xml — die haben
+        // Light/Night-Varianten und sind dieselben Farben, die auch der Rest der
+        // App nutzt. Vorher waren hier hardcodierte Hex-Werte, die im Dark-Mode
+        // teilweise zu dunkel waren und nicht zur restlichen UI gepasst haben.
+        val colorRes = sceneColorRes[sc.index] ?: R.color.text_secondary
+        return ContextCompat.getColor(context, colorRes)
     }
 
-    private val classColorPalette = intArrayOf(
-        Color.parseColor("#EF5350"), // Transit/Vehicles → red
-        Color.parseColor("#FFA726"), // Urban/Waiting → orange
-        Color.parseColor("#66BB6A"), // Nature → green
-        Color.parseColor("#42A5F5"), // Social → blue
-        Color.parseColor("#AB47BC"), // Work → purple
-        Color.parseColor("#FFCA28"), // Commercial → amber
-        Color.parseColor("#26A69A"), // Leisure/Sports → teal
-        Color.parseColor("#7E57C2"), // Culture/Quiet → deep purple
-        Color.parseColor("#8D6E63")  // Living Room → brown
+    private val sceneColorRes: Map<Int, Int> = mapOf(
+        0 to R.color.transit_vehicles,
+        1 to R.color.urban_waiting,
+        2 to R.color.nature,
+        3 to R.color.social,
+        4 to R.color.work,
+        5 to R.color.commercial,
+        6 to R.color.leisure_sport,
+        7 to R.color.culture_quiet,
+        8 to R.color.living_room
     )
 
     private fun dp(value: Float): Float = value * resources.displayMetrics.density

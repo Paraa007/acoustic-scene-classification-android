@@ -49,6 +49,13 @@ class ClassificationService : Service() {
         private const val ALARM_INTERVAL_MS = 30 * 1000L
         private const val ACTION_KEEP_ALIVE = "com.fzi.acousticscene.KEEP_ALIVE"
 
+        // WakeLock-Timeout. Drei mal so groß wie das Alarm-Intervall — so refresht
+        // der Keep-Alive-Alarm den Lock zuverlässig, und falls der Service hart
+        // gekillt wird, gibt Android den Lock spätestens nach diesem Fenster frei.
+        // Früher waren das vier Stunden, was bei einem Crash zu massivem Akku-Drain
+        // führen konnte.
+        private const val WAKELOCK_TIMEOUT_MS = 90 * 1000L
+
         const val ACTION_START = "com.fzi.acousticscene.START_CLASSIFICATION"
         const val ACTION_STOP = "com.fzi.acousticscene.STOP_CLASSIFICATION"
     }
@@ -133,7 +140,11 @@ class ClassificationService : Service() {
                 stopForegroundClassification()
             }
         }
-        return START_STICKY // Service wird automatisch neu gestartet wenn er beendet wird
+        // START_NOT_STICKY: Wenn das System den Service unter Memory-Druck killt,
+        // soll er NICHT automatisch ohne Intent neu starten — er hätte keinen
+        // Recording-State mehr, würde aber Notification + WakeLock-Pfad anlegen
+        // (Zombie-Recording). Der User startet die Session bewusst neu vom UI.
+        return START_NOT_STICKY
     }
     
     override fun onBind(intent: Intent?): IBinder {
@@ -247,20 +258,16 @@ class ClassificationService : Service() {
      * Wird vom Keep-Alive Alarm aufgerufen.
      */
     private fun ensureWakeLockHeld() {
-        wakeLock?.let { lock ->
-            if (!lock.isHeld) {
-                Log.w(TAG, "WakeLock was released! Re-acquiring...")
-                acquireWakeLock()
-            } else {
-                Log.d(TAG, "WakeLock still held - OK")
-            }
-        } ?: run {
-            Log.w(TAG, "WakeLock is null! Acquiring new one...")
-            acquireWakeLock()
-        }
+        // acquireWakeLock() refreshed jetzt unbedingt — egal ob held oder nicht,
+        // der Timeout wird wieder auf WAKELOCK_TIMEOUT_MS zurückgesetzt. Das ist
+        // genau das, was die periodische Aufweckung tun soll.
+        acquireWakeLock()
 
-        // Schedule next keep-alive alarm
+        // Nächsten Keep-Alive Alarm einplanen. Vorher den alten cancellen, damit
+        // wir keinen verwaisten PendingIntent stehen lassen, falls Android setExact
+        // mal nicht überschreibt.
         if (isRunning) {
+            stopKeepAliveAlarm()
             startKeepAliveAlarm()
         }
     }
@@ -273,24 +280,26 @@ class ClassificationService : Service() {
      *
      * Ohne diesen WakeLock würde Android die CPU in den Schlafmodus
      * versetzen wenn der Bildschirm ausgeht → Datenlücken!
+     *
+     * Idempotent: kann beliebig oft aufgerufen werden — wenn der Lock schon
+     * gehalten wird, refresht der erneute acquire() lediglich den Timeout.
      */
     private fun acquireWakeLock() {
-        if (wakeLock != null && wakeLock!!.isHeld) {
-            Log.d(TAG, "WakeLock already held")
-            return
-        }
-
         try {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-            wakeLock = powerManager.newWakeLock(
+            val lock = wakeLock ?: powerManager.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
                 WAKELOCK_TAG
-            ).apply {
-                // Timeout als Sicherheit: Nach 4 Stunden automatisch freigeben
-                // Falls die App abstürzt und den WakeLock nicht freigibt
-                acquire(4 * 60 * 60 * 1000L) // 4 Stunden
+            ).also {
+                it.setReferenceCounted(false)
+                wakeLock = it
             }
-            Log.d(TAG, "WakeLock acquired successfully - CPU will stay active!")
+            // Kurzer Timeout als Crash-Safety. Der Keep-Alive Alarm refresht alle
+            // ALARM_INTERVAL_MS, also lange vor Ablauf. Falls der Prozess hart
+            // stirbt, gibt Android den Lock nach WAKELOCK_TIMEOUT_MS frei statt
+            // nach Stunden.
+            lock.acquire(WAKELOCK_TIMEOUT_MS)
+            Log.d(TAG, "WakeLock acquired/refreshed (timeout: ${WAKELOCK_TIMEOUT_MS}ms)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to acquire WakeLock", e)
             serviceListener?.onError("WakeLock konnte nicht aktiviert werden: ${e.message}")

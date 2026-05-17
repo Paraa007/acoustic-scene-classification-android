@@ -32,7 +32,9 @@ class ModelInference(
 ) {
     companion object {
         private const val TAG = "ModelInference"
-        private const val INPUT_AUDIO_SIZE = 320000 // 10 seconds * 32000 Hz
+        private const val SAMPLE_RATE_HZ = 32_000
+        private const val STANDARD_AUDIO_SECONDS = 10
+        private const val INPUT_AUDIO_SIZE = SAMPLE_RATE_HZ * STANDARD_AUDIO_SECONDS
         private const val N_MELS = 256
         private const val EXPECTED_TIME_FRAMES = 641 // For 10 seconds audio
     }
@@ -54,10 +56,10 @@ class ModelInference(
      */
     fun setModelPath(newPath: String) {
         if (newPath != modelAssetPath) {
+            // Free the native PyTorch module of the previous path before swapping —
+            // otherwise the old C++ allocation stays around until GC happens.
+            release()
             modelAssetPath = newPath
-            isLoaded = false
-            module = null
-            currentModelPath = null
         }
     }
 
@@ -136,7 +138,7 @@ class ModelInference(
         }
         
         val processor = melProcessor
-        val expectedSize = mode.durationSeconds * 32000 // 32kHz sample rate
+        val expectedSize = mode.durationSeconds * SAMPLE_RATE_HZ
         
         // Normalisiere Audio-Länge
         val processedAudio = if (audioData.size != expectedSize) {
