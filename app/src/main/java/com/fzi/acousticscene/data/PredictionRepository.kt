@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.model.realOnly
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
@@ -140,19 +141,22 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Gibt Vorhersagen für heute zurück
      */
+    @Synchronized
     fun getTodaysPredictions(): List<PredictionRecord> {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         return predictions.filter { it.getFormattedDate() == today }
     }
-    
+
     /**
      * Gibt Anzahl der Vorhersagen zurück
      */
+    @Synchronized
     fun getCount(): Int = predictions.size
-    
+
     /**
      * Gibt Anzahl der heutigen Vorhersagen zurück
      */
+    @Synchronized
     fun getTodaysCount(): Int = getTodaysPredictions().size
     
     /**
@@ -221,9 +225,13 @@ class PredictionRepository private constructor(private val context: Context) {
      * Scannt zuerst alle Records nach eindeutigen ALL-IN-ONE-Modellnamen und
      * baut daraus dynamische Spalten `allinone_<model>` am Ende der Zeile.
      * Records ohne ALL-IN-ONE-Daten bekommen leere Zellen in diesen Spalten.
+     *
+     * Pause-Records werden ausgeschlossen — sie tragen Placeholder-Klassifikation
+     * (TRANSIT_VEHICLES, confidence 0) und würden den Export verfälschen.
      */
     fun exportToCsvString(records: List<PredictionRecord> = predictions): String {
-        val allInOneModelNames: List<String> = records
+        val real = records.realOnly()
+        val allInOneModelNames: List<String> = real
             .mapNotNull { it.allInOneResults }
             .flatten()
             .map { it.modelName }
@@ -232,7 +240,7 @@ class PredictionRepository private constructor(private val context: Context) {
 
         val sb = StringBuilder()
         sb.appendLine(PredictionRecord.getCsvHeader(allInOneModelNames.takeIf { it.isNotEmpty() }))
-        records.forEach { record ->
+        real.forEach { record ->
             sb.appendLine(record.toCsvRow(allInOneModelNames.takeIf { it.isNotEmpty() }))
         }
         return sb.toString()
@@ -350,10 +358,11 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Gibt Statistiken zurück
      */
+    @Synchronized
     fun getStatistics(): PredictionStatistics {
         // Pause-Records sind synthetisch (sceneClass-Placeholder, confidence=0) und
         // verfälschen sonst Distribution + Avg-Confidence.
-        val real = predictions.filterNot { it.isPause }
+        val real = predictions.realOnly()
         if (real.isEmpty()) {
             return PredictionStatistics()
         }

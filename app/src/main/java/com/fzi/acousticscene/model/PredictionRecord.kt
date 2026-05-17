@@ -364,12 +364,12 @@ data class PredictionRecord(
         }
     }
     
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as PredictionRecord
-        return id == other.id
-    }
-    
-    override fun hashCode(): Int = id.hashCode()
 }
+
+/**
+ * Synthetische Pause-Records tragen Placeholder-Felder (sceneClass = TRANSIT_VEHICLES,
+ * confidence = 0). Jede Aggregation über Szenen, Konfidenz, Modell-Accuracy etc. muss
+ * sie ausschließen, sonst verfälschen die Placeholder das Ergebnis. Diese Extension
+ * ist die Single Source of Truth — bitte überall verwenden statt `filterNot` inline.
+ */
+fun List<PredictionRecord>.realOnly(): List<PredictionRecord> = filterNot { it.isPause }
