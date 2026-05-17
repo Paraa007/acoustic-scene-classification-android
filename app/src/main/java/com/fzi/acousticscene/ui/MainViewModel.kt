@@ -230,6 +230,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         activeConfig = config
+        // Release the previous session's native modules before swapping the map —
+        // otherwise re-running the wizard leaks one PyTorch Module per model.
+        for (inf in inferencesByName.values) {
+            inf.release()
+        }
         inferencesByName = LinkedHashMap()
         for (name in config.modelNames) {
             val path = "${ModelConfig.DEV_MODELS_DIR}/$name"
