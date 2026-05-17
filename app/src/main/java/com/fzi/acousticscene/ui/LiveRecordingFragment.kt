@@ -472,12 +472,12 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
      * countdown (which can run into the multi-hour range for "every 3 h").
      */
     private fun formatClockSeconds(totalSeconds: Int): String {
-        if (totalSeconds < 60) return "%d s".format(totalSeconds)
+        if (totalSeconds < 60) return String.format(java.util.Locale.US, "%d s", totalSeconds)
         val s = totalSeconds % 60
         val m = (totalSeconds / 60) % 60
         val h = totalSeconds / 3600
-        return if (h > 0) "%d:%02d:%02d".format(h, m, s)
-        else "%d:%02d".format(m, s)
+        return if (h > 0) String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
+        else String.format(java.util.Locale.US, "%d:%02d", m, s)
     }
 
     private fun cardKey(model: String, sub: LongSubMode) = "$model::${sub.name}"
