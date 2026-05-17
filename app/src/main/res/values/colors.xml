@@ -39,16 +39,6 @@
     <color name="leisure_sport">#C62828</color>      <!-- Red - Freizeit/Sport -->
     <color name="culture_quiet">#4527A0</color>      <!-- Deep Purple - Kultur/Ruhig -->
 
-    <!-- Legacy colors -->
-    <color name="airport">#1565C0</color>
-    <color name="bus">#F9A825</color>
-    <color name="metro">#7B1FA2</color>
-    <color name="metro_station">#4527A0</color>
-    <color name="park">#2E7D32</color>
-    <color name="public_square">#E65100</color>
-    <color name="shopping_mall">#C2185B</color>
-    <color name="street_traffic">#C62828</color>
-
     <!-- UI Colors (Light Theme) -->
     <color name="primary">#2E7D32</color>             <!-- Green as Primary -->
     <color name="primary_dark">#1B5E20</color>       <!-- Darker Green -->
