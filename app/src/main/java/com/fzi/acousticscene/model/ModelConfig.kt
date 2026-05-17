@@ -6,7 +6,6 @@ package com.fzi.acousticscene.model
  * [SessionConfig].
  */
 object ModelConfig {
-    const val USER_MODEL_DIR = "user_model"
     const val DEV_MODELS_DIR = "dev_models"
     const val DEFAULT_USER_MODEL = "model1.pt"
 

@@ -26,6 +26,7 @@ import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
+import com.fzi.acousticscene.model.realOnly
 import com.fzi.acousticscene.util.ThemeHelper
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
@@ -318,7 +319,7 @@ class HistoryActivity : AppCompatActivity() {
 
     private fun calculatePackageStatistics(records: List<PredictionRecord>): PredictionStatistics {
         // Pause-Records sind synthetisch und gehören nicht in die Aggregate.
-        val real = records.filterNot { it.isPause }
+        val real = records.realOnly()
         if (real.isEmpty()) return PredictionStatistics()
         val classDistribution = real.groupBy { it.sceneClass }
             .mapValues { it.value.size }
@@ -492,7 +493,7 @@ class HistoryActivity : AppCompatActivity() {
                 // Pause synthetic records inflate counts and don't represent actual
                 // recordings, so they're filtered out of the headline numbers and the
                 // config-label derivation.
-                val recordingRecords = packageRecords.filterNot { it.isPause }
+                val recordingRecords = packageRecords.realOnly()
                 val sourceRecords = recordingRecords.ifEmpty { packageRecords }
 
                 // Modell-Liste dynamisch befüllen (eine Zeile pro Modell, ohne .pt-Endung)

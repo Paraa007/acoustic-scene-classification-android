@@ -41,7 +41,11 @@ class AudioRecorder(
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
 
-        // Empirischer Teiler für Lautstärke-Normalisierung (16-bit PCM max: 32767)
+        // Empirischer Teiler für Lautstärke-Normalisierung. 16-bit PCM hat einen
+        // theoretischen RMS-Max von ~32767, aber realistische Sprach-/Umgebungs-RMS
+        // liegen deutlich darunter (~2000–8000). 5000 als Divisor mappt eine typische
+        // Sprech-Lautstärke auf etwa 0.4–0.8, so dass die Balken-UI nicht ständig
+        // an die Decke schlägt. Wert wurde durch UI-Tests in Innenräumen kalibriert.
         private const val VOLUME_NORMALIZATION_DIVISOR = 5000.0
 
         // Smoothing-Faktor für Lautstärke (0.0 = nur neuer Wert, 1.0 = nur alter Wert)

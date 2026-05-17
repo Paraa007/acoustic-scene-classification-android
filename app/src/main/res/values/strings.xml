@@ -115,16 +115,9 @@
     <string name="view_history">View History</string>
     <string name="welcome_subtitle">Real-time Acoustic Environment Classification</string>
 
-    <!-- User Mode / Dev Mode -->
-    <string name="user_mode">User Mode</string>
-    <string name="user_mode_subtitle">Standard Classification</string>
-    <string name="dev_mode">Development Mode</string>
-    <string name="dev_mode_subtitle">Experimental Models</string>
     <string name="select_model">Select Model</string>
-    <string name="no_models_found">No models found in dev_models/</string>
     <string name="model_classes">%1$d Classes</string>
     <string name="model_info">Model: %1$s (%2$d Classes)</string>
-    <string name="back_to_user_mode">Back to User Mode</string>
 
     <!-- Multi-Model Evaluation: side-by-side multi-model comparison (Dev only) -->
     <string name="all_in_one">Multi-Model Evaluation</string>

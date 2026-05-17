@@ -19,6 +19,7 @@ import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.model.realOnly
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -202,8 +203,8 @@ object ModernDialogHelper {
         val message = buildString {
             append("${context.getString(R.string.total)}: ${stats.totalCount} ${context.getString(R.string.predictions)}\n")
             append("${context.getString(R.string.today)}: ${stats.todayCount} ${context.getString(R.string.predictions)}\n\n")
-            append("${context.getString(R.string.avg_confidence)}: ${String.format("%.1f", stats.averageConfidence)}%\n")
-            append("${context.getString(R.string.avg_inference)}: ${String.format("%.0f", stats.averageInferenceTimeMs)}ms\n\n")
+            append("${context.getString(R.string.avg_confidence)}: ${String.format(java.util.Locale.US, "%.1f", stats.averageConfidence)}%\n")
+            append("${context.getString(R.string.avg_inference)}: ${String.format(java.util.Locale.US, "%.0f", stats.averageInferenceTimeMs)}ms\n\n")
             append("${context.getString(R.string.first)}: ${stats.getFormattedFirstPrediction()}\n")
             append("${context.getString(R.string.last)}: ${stats.getFormattedLastPrediction()}\n\n")
 
@@ -278,7 +279,7 @@ object ModernDialogHelper {
         // Pause-Records sind synthetisch — Model/Mode/Avg-Detection orientiert sich
         // ausschließlich an echten Aufnahmen, sonst zeigt der Header bei einer Session,
         // die mit einer Pause endet, einen Pause-Placeholder statt des Modus.
-        val realRecords = packageRecords.filterNot { it.isPause }
+        val realRecords = packageRecords.realOnly()
         val firstRecord = realRecords.firstOrNull() ?: packageRecords.firstOrNull()
         val lastRecord = realRecords.lastOrNull() ?: packageRecords.lastOrNull()
         val sourceRecords = realRecords.ifEmpty { packageRecords }
@@ -338,9 +339,12 @@ object ModernDialogHelper {
             batteryText.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
         }
 
-        // Fill model distribution container with progress bars
+        // Fill model distribution container with progress bars.
+        // Wichtig: nur echte Records im Nenner — sonst werden die Prozente durch
+        // Pause-Records aufgebläht (Zähler kommt aus stats.classDistribution, die
+        // intern bereits realOnly() filtert).
         val distributionContainer = dialog.findViewById<LinearLayout>(R.id.distributionContainer)
-        val totalCount = packageRecords.size.toFloat()
+        val totalCount = realRecords.size.toFloat()
 
         stats.classDistribution.entries
             .sortedByDescending { it.value }

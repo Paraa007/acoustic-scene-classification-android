@@ -1,13 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto-Backup-Regeln (API < 31). Wir excluden die Vorhersage- und Konfigurations-
+  Preferences, weil sie potenziell personenbezogene Umgebungs-Klassifikationen
+  des Users enthalten (welche Räume / welche Szenen wann erkannt wurden). Die
+  sollten nicht still über Google Auto-Backup in der Cloud landen.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="predictions_prefs.xml"/>
+    <exclude domain="sharedpref" path="last_config_prefs.xml"/>
 </full-backup-content>
