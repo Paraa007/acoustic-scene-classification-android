@@ -129,11 +129,11 @@ class SettingsFragment : Fragment() {
     private fun formatFileSize(bytes: Long): String {
         if (bytes < 0) return "? KB"
         val kb = bytes / 1024.0
-        if (kb < 1024.0) return "%.0f KB".format(kb)
+        if (kb < 1024.0) return String.format(java.util.Locale.US, "%.0f KB", kb)
         val mb = kb / 1024.0
-        if (mb < 1024.0) return "%.2f MB".format(mb)
+        if (mb < 1024.0) return String.format(java.util.Locale.US, "%.2f MB", mb)
         val gb = mb / 1024.0
-        return "%.2f GB".format(gb)
+        return String.format(java.util.Locale.US, "%.2f GB", gb)
     }
 
     private fun createEmptyLabel(): TextView {
@@ -494,14 +494,14 @@ class SettingsFragment : Fragment() {
         return container
     }
 
-    private fun formatPct(v: Double): String = "%.2f%%".format(v)
+    private fun formatPct(v: Double): String = String.format(java.util.Locale.US, "%.2f%%", v)
 
     private fun formatSignedPct(v: Double): String =
-        if (v >= 0) "+%.2f%%".format(v) else "%.2f%%".format(v)
+        if (v >= 0) String.format(java.util.Locale.US, "+%.2f%%", v) else String.format(java.util.Locale.US, "%.2f%%", v)
 
     private fun formatFloat(v: Double, decimals: Int): String {
         // Trim trailing zeros for readability while keeping precision.
-        val raw = "%.${decimals}f".format(v)
+        val raw = String.format(java.util.Locale.US, "%.${decimals}f", v)
         return if ('.' in raw) raw.trimEnd('0').trimEnd('.') else raw
     }
 

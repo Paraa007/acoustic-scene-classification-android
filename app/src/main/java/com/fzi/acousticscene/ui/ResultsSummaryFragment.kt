@@ -165,7 +165,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
         val totalSec = (ms / 1000L).coerceAtLeast(0L)
         val minutes = totalSec / 60
         val seconds = totalSec % 60
-        return "%d:%02d".format(minutes, seconds)
+        return String.format(java.util.Locale.US, "%d:%02d", minutes, seconds)
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()
