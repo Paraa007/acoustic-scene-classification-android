@@ -209,15 +209,6 @@ class MelSpectrogramProcessor(
     }
     
     /**
-     * Legacy-Methode für Kompatibilität (nicht mehr verwendet, aber behalten)
-     */
-    private fun computeFFT(input: FloatArray): FloatArray {
-        val buffer = input.copyOf()
-        fft.forwardTransform(buffer)
-        return buffer
-    }
-
-    /**
      * Extrahiert Power Spectrum aus TarsosDSP FFT Ergebnis (optimiert mit Pre-allocated Buffer)
      * 
      * TarsosDSP Format: [DC, Nyquist, Re1, Im1, Re2, Im2, ...]
@@ -247,16 +238,6 @@ class MelSpectrogramProcessor(
         }
     }
     
-    /**
-     * Legacy-Methode für Kompatibilität (nicht mehr verwendet, aber behalten)
-     */
-    private fun extractPowerSpectrum(fftResult: FloatArray): FloatArray {
-        val nFreqBins = nFft / 2 + 1
-        val powerSpectrum = FloatArray(nFreqBins)
-        extractPowerSpectrumInPlace(fftResult, powerSpectrum)
-        return powerSpectrum
-    }
-
     /**
      * Wendet SPARSE Mel-Filterbank auf Power Spectrum an
      * 
@@ -397,7 +378,11 @@ class MelSpectrogramProcessor(
                 totalNonZeroBins += weights.count { it > 1e-10f }
                 filters.add(SparseMelFilter(startBin = startBin, endBin = endBin, weights = weights))
             } else {
-                // Leerer Filter (sollte nicht vorkommen)
+                // Leerer Filter — kann nur bei pathologischen FFT-Parametern entstehen
+                // (fMin/fMax außerhalb des Nyquist-Bereichs, zu wenige FFT-Bins). Wir
+                // loggen das laut, damit der Fall beim Wechsel auf ein neues Modell
+                // sichtbar wird statt stillschweigend Null-Mels zu liefern.
+                Log.w(TAG, "Empty mel filter at mel=$mel (fLow=$fLow, fCenter=$fCenter, fHigh=$fHigh) — output bin will be 0")
                 filters.add(SparseMelFilter(startBin = 0, endBin = 0, weights = floatArrayOf(0f)))
             }
         }
@@ -407,8 +392,8 @@ class MelSpectrogramProcessor(
 
         Log.d(TAG, "PERF: SPARSE Mel filterbank created in ${t1 - t0}ms")
         Log.d(TAG, "PERF: Memory savings: ${nMels * nFreqBins * 4 / 1024}KB → ${totalNonZeroBins * 4 / 1024}KB")
-        Log.d(TAG, "PERF: Avg non-zero bins per filter: ${String.format("%.1f", avgNonZeroBins)} (instead of $nFreqBins)")
-        Log.d(TAG, "PERF: Expected speedup: ${String.format("%.1f", nFreqBins / avgNonZeroBins)}x")
+        Log.d(TAG, "PERF: Avg non-zero bins per filter: ${String.format(java.util.Locale.US, "%.1f", avgNonZeroBins)} (instead of $nFreqBins)")
+        Log.d(TAG, "PERF: Expected speedup: ${String.format(java.util.Locale.US, "%.1f", nFreqBins / avgNonZeroBins)}x")
 
         return filters.toTypedArray()
     }
