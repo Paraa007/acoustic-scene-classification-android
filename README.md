@@ -26,4 +26,4 @@ Eine Aufnahme läuft durch vier Schritte:
 Projekt: FZI Forschungszentrum Informatik, Karlsruhe, DCASE 2025
 Stack: Android (Kotlin), PyTorch Mobile, TarsosDSP
 
-Mehr für Entwickler: `CLAUDE.md`, `docs/PROJEKT_DOKUMENTATION.md`, `docs/UI_REDESIGN_WIZARD.md`, `docs/MODEL_INTEGRATION_SPEC.md`.
+Mehr für Entwickler: `CLAUDE.md` im Repo-Root. Die ausführliche technische Doku (Architektur, Wizard-Flow, ML-Pipeline, Entwicklungs-Historie) wird außerhalb dieses Repos gepflegt.
