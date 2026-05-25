@@ -1,368 +1,409 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="16dp"
-    app:cardBackgroundColor="@color/dialog_surface"
-    app:cardCornerRadius="28dp"
-    app:cardElevation="8dp"
-    app:strokeWidth="0dp">
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog_root"
+    android:layout_margin="10dp">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxHeight="600dp"
-        android:fillViewport="false">
+        android:maxHeight="640dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
-
-        <!-- Header with Rename Button -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="20dp">
-
-            <TextView
-                android:id="@+id/dialogTitle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/session_details"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRename"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                app:icon="@android:drawable/ic_menu_edit"
-                app:iconTint="@color/text_secondary"
-                app:iconSize="20dp"
-                app:rippleColor="@color/surface_variant" />
-        </LinearLayout>
-
-        <!-- Meta Data Section (Tile-Style) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginBottom="16dp">
+            android:padding="22dp">
 
-            <!-- Start: Label + Wert untereinander -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/start"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/startTimeText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp" />
-
-            <!-- End: Label + Wert untereinander -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="@string/end"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/endTimeText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp" />
-
-            <!-- Modell-Liste (dynamisch befüllt) -->
+            <!-- Header: close chevron + eyebrow + title + rename -->
             <LinearLayout
-                android:id="@+id/dialogModelListLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="14dp">
+
+                <ImageButton
+                    android:id="@+id/dialogCloseButton"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_arrow_back"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/back" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/detail_eyebrow"
+                        android:textAllCaps="true"
+                        android:textSize="9.5sp"
+                        android:textColor="@color/text_faint"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.14"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/dialogTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textSize="19sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        tools:text="Park walk" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRename"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    app:icon="@drawable/ic_edit"
+                    app:iconTint="@color/text_secondary"
+                    app:iconSize="18dp"
+                    app:rippleColor="@color/surface_variant" />
+            </LinearLayout>
+
+            <!-- Meta grid: 2 columns x 4 rows -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="16dp" />
+                android:background="@drawable/bg_tile"
+                android:padding="6dp"
+                android:layout_marginBottom="17dp">
 
-            <!-- Recordings -->
-            <TextView
-                android:id="@+id/dialogRecordingsText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaStart" />
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaEnd" />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaDuration" />
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaRecordings" />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaPauses" />
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaModels" />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaConfig" />
+                    <include layout="@layout/_detail_meta_cell"
+                        android:id="@+id/detailMetaBattery" />
+                </LinearLayout>
+            </LinearLayout>
 
-            <!-- Duration -->
-            <TextView
-                android:id="@+id/dialogDurationText"
-                android:layout_width="wrap_content"
+            <!-- Section: MODEL PREDICTIONS -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="9dp">
+
+                <TextView
+                    android:id="@+id/modelDistributionHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/detail_section_predictions"
+                    android:textAllCaps="true"
+                    android:textSize="9.5sp"
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.15"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="9dp"
+                    android:background="@color/hairline" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/distributionContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- Most-heard highlight tile (filled programmatically) -->
+            <LinearLayout
+                android:id="@+id/detailMostHeard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_tile_accent"
+                android:padding="14dp"
                 android:layout_marginTop="2dp"
-                android:textSize="14sp"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:id="@+id/detailMostHeardIcon"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:background="@drawable/bg_meta_pill">
+
+                    <TextView
+                        android:id="@+id/detailMostHeardEmoji"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:textSize="18sp" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/detail_most_heard_label"
+                        android:textAllCaps="true"
+                        android:textSize="9sp"
+                        android:fontFamily="monospace"
+                        android:textColor="@color/accent_green"
+                        android:letterSpacing="0.1"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/detailMostHeardName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        tools:text="Nature" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Legacy method/per-second/user-evaluation/pauses sections — kept for back-compat,
+                 wrapped in the new tile background so they don't look out of place. -->
+
+            <TextView
+                android:id="@+id/methodComparisonHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/history_method_comparison"
+                android:textAllCaps="true"
+                android:textSize="9.5sp"
+                android:textColor="@color/text_secondary"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.15"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-
-            <!-- Pause -->
-            <TextView
-                android:id="@+id/dialogPauseText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-
-            <!-- Konfiguration (kompakt) -->
-            <TextView
-                android:id="@+id/dialogConfigText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
-
-            <!-- Battery Drain -->
-            <TextView
-                android:id="@+id/dialogBatteryText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_secondary" />
-
-            <!-- Legacy IDs hidden — bestehende findViewById-Aufrufe sollen nicht crashen -->
-            <TextView
-                android:id="@+id/modelText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="9dp"
                 android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/modeText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/countText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/avgConfidenceText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <!-- Divider -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/surface_variant"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Model Predictions Distribution Header -->
-        <TextView
-            android:id="@+id/modelDistributionHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/model_predictions"
-            android:textColor="@color/accent_green_light"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Model Distribution List Container -->
-        <LinearLayout
-            android:id="@+id/distributionContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Method Comparison Section (LONG sub-modes) -->
-        <View
-            android:id="@+id/methodComparisonDivider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/surface_variant"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/methodComparisonHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/history_method_comparison"
-            android:textColor="@color/accent_blue_light"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:layout_marginBottom="12dp"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/methodComparisonContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone" />
-
-        <!-- Per-Second Clips Section (AVERAGE mode only) -->
-        <View
-            android:id="@+id/perSecondDivider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/surface_variant"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/perSecondHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/per_second_clips_title"
-            android:textColor="@color/accent_blue_light"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:layout_marginBottom="12dp"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/perSecondContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone" />
-
-        <!-- Divider -->
-        <View
-            android:id="@+id/userDistributionDivider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/surface_variant"
-            android:layout_marginBottom="16dp" />
-
-        <!-- User Evaluations Header + Count -->
-        <LinearLayout
-            android:id="@+id/userEvaluationHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
-
-            <TextView
+            <View
+                android:id="@+id/methodComparisonDivider"
                 android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/methodComparisonContainer"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/user_evaluations"
-                android:textColor="@color/accent_blue_light"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
+                android:orientation="vertical"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone" />
+
+            <View
+                android:id="@+id/perSecondDivider"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
 
             <TextView
-                android:id="@+id/evaluationCountText"
-                android:layout_width="wrap_content"
+                android:id="@+id/perSecondHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/per_second_clips_title"
+                android:textAllCaps="true"
+                android:textSize="9.5sp"
+                android:textColor="@color/text_secondary"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.15"
+                android:textStyle="bold"
+                android:layout_marginBottom="9dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/perSecondContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone" />
+
+            <View
+                android:id="@+id/userDistributionDivider"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/userEvaluationHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="9dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/user_evaluations"
+                    android:textAllCaps="true"
+                    android:textSize="9.5sp"
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.15"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/evaluationCountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_faint"
+                    android:fontFamily="monospace"
+                    android:textSize="10.5sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/userDistributionContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="18dp" />
+
+            <View
+                android:id="@+id/pausesDivider"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/pausesHeader"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-        </LinearLayout>
+                android:textAllCaps="true"
+                android:textSize="9.5sp"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.15"
+                android:textStyle="bold"
+                android:layout_marginBottom="9dp"
+                android:visibility="gone" />
 
-        <!-- User Evaluation Distribution List Container -->
-        <LinearLayout
-            android:id="@+id/userDistributionContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="24dp" />
+            <LinearLayout
+                android:id="@+id/pausesContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone" />
 
-        <!-- Pauses Section -->
-        <View
-            android:id="@+id/pausesDivider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/surface_variant"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone" />
+            <!-- Buttons row: Export · Close (primary group) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="2dp">
 
-        <TextView
-            android:id="@+id/pausesHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:layout_marginBottom="12dp"
-            android:visibility="gone" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExport"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1.2"
+                    android:layout_marginEnd="10dp"
+                    android:text="@string/detail_export_csv"
+                    android:textAllCaps="false"
+                    android:textColor="@color/accent_ink"
+                    app:backgroundTint="@color/accent_green"
+                    app:cornerRadius="13dp" />
 
-        <LinearLayout
-            android:id="@+id/pausesContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="24dp"
-            android:visibility="gone" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnClose"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="@string/detail_close"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    app:strokeColor="@color/border_subtle"
+                    app:cornerRadius="13dp" />
+            </LinearLayout>
 
-        <!-- Buttons Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end">
-
+            <!-- Delete session — ghost button, accent red, centered -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDelete"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="@string/delete"
-                android:textColor="@color/status_error" />
+                android:layout_height="36dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="11dp"
+                android:text="@string/detail_delete"
+                android:textAllCaps="false"
+                android:textColor="@color/accent_red"
+                app:icon="@drawable/ic_delete"
+                app:iconSize="14dp"
+                app:iconTint="@color/accent_red" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnExport"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="@string/export"
-                android:textColor="@color/text_secondary" />
+            <!-- Hidden legacy fields so old findViewById doesn't crash -->
+            <TextView android:id="@+id/startTimeText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/endTimeText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <LinearLayout android:id="@+id/dialogModelListLayout" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/dialogRecordingsText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/dialogDurationText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/dialogPauseText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/dialogConfigText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/dialogBatteryText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/modelText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/modeText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/countText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+            <TextView android:id="@+id/avgConfidenceText" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnClose"
-                style="@style/Widget.Material3.Button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/close"
-                android:textColor="@color/on_primary"
-                app:backgroundTint="@color/accent_green" />
         </LinearLayout>
-    </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-</com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>
