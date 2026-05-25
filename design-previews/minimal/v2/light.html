@@ -1,0 +1,2759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Minimal · Light · v2 — Acoustic Scene Classification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   MINIMAL · LIGHT — Acoustic Scene Classification redesign
+   A calm research dashboard. Warm-neutral light, airy bento
+   grid, restraint over effect. Forest-green accent, used
+   sparingly. Mono numerals for the scientific register.
+   ============================================================ */
+
+:root {
+  --bg: #f4f4f2;
+  --surface: #ffffff;
+  --surface-2: #efeeea;
+  --border: #e4e3de;
+  --hairline: #ebeae6;
+
+  --text: #1c1d1f;
+  --text-dim: #6b6d71;
+  --text-faint: #9b9ca0;
+
+  --accent: #3c6e57;
+  --accent-soft: #e8efea;
+
+  /* 9 scene colors — muted scientific palette, light-tuned */
+  --sc-transit: #5C86A8;
+  --sc-urban: #C2A24E;
+  --sc-nature: #5E9070;
+  --sc-social: #BC7894;
+  --sc-work: #897CA8;
+  --sc-commercial: #C28D5E;
+  --sc-leisure: #BB6F66;
+  --sc-culture: #7E83AC;
+  --sc-living: #9A8268;
+
+  --r-tile: 17px;
+  --r-tile-lg: 20px;
+  --r-btn: 12px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --tile-shadow: 0 6px 20px -10px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.03);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  font-family: "Hanken Grotesk", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 960px;
+  /* Presentation backdrop: warm-neutral, a barely-there paper grain */
+  background:
+    linear-gradient(180deg, #f7f7f5 0%, var(--bg) 38%, #f1f0ed 100%);
+  color: var(--text);
+  overflow-x: auto;
+}
+
+/* ---------- Header band ---------- */
+.page-header {
+  padding: 26px 44px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.ph-left { display: flex; align-items: center; gap: 16px; }
+
+.ph-mark {
+  width: 46px; height: 46px;
+  border-radius: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  box-shadow: var(--tile-shadow);
+  flex-shrink: 0;
+}
+
+.ph-title-block { display: flex; flex-direction: column; gap: 5px; }
+
+.ph-eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.ph-title-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+
+.ph-title {
+  font-family: "Hanken Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.022em;
+  line-height: 1;
+  color: var(--text);
+}
+
+.ph-vibe {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 440px;
+  line-height: 1.45;
+}
+
+.ph-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.ph-credits {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+}
+
+.cred-group { display: flex; flex-direction: column; gap: 6px; }
+
+.cred-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.cred-val {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.cred-val b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.swatches { display: flex; gap: 6px; align-items: center; }
+
+.swatch {
+  width: 16px; height: 16px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+
+/* ---------- Wrap grid ---------- */
+.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 44px;
+  padding: 40px 44px 56px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.phone-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.caption-num {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 3px 7px;
+  border-radius: 7px;
+  letter-spacing: 0.02em;
+}
+
+.caption-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.005em;
+}
+
+/* ---------- Phone frame ---------- */
+.phone {
+  width: 404px;
+  height: 848px;
+  background: #08090a;
+  border-radius: 56px;
+  padding: 12px;
+  box-shadow:
+    0 40px 70px -28px rgba(20,22,20,0.40),
+    0 8px 24px -12px rgba(0,0,0,0.20),
+    0 0 0 1px rgba(255,255,255,0.5);
+  position: relative;
+}
+
+.screen {
+  width: 380px;
+  height: 824px;
+  border-radius: 44px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+}
+
+.island {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  width: 110px; height: 32px;
+  background: #000;
+  border-radius: 16px;
+  z-index: 60;
+}
+
+.statusbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 58px;
+  padding: 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 50;
+}
+
+.sb-time {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.sb-icons { display: flex; align-items: center; }
+
+/* scrollable content body */
+.body {
+  position: absolute;
+  top: 58px; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  z-index: 10;
+}
+.body::-webkit-scrollbar { width: 0; }
+
+.pad { padding: 0 16px 24px; }
+
+/* ============================================================
+   BENTO TILE — the signature component
+   ============================================================ */
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-tile);
+  position: relative;
+  box-shadow: var(--tile-shadow);
+}
+
+.tile > * { position: relative; }
+
+.bento {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+
+.tile-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* big display numbers — mono, the scientific register */
+.bignum {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* display headings — sans, tight */
+.headline {
+  font-family: "Hanken Grotesk", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  line-height: 1.08;
+}
+
+/* ---------- Section heading inside screen ---------- */
+.app-id {
+  padding: 20px 6px 18px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.app-id-mark {
+  width: 44px; height: 44px;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  border: 1px solid #d9e4dd;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+
+.app-id-text { display: flex; flex-direction: column; gap: 3px; }
+
+.app-id-name {
+  font-family: "Hanken Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 16.5px;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  line-height: 1.05;
+}
+
+.app-id-sub {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9.5px;
+  color: var(--text-faint);
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.icon-btn {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+
+/* eyebrow above titles */
+.eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* section rule with label */
+.sec-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sec-rule .line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  border: none;
+  border-radius: var(--r-btn);
+  font-family: "Hanken Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  letter-spacing: 0.005em;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* ---------- scene chips ---------- */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.chip-dot {
+  width: 8px; height: 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.chip b {
+  color: var(--text);
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+}
+
+/* ---------- distribution bars ---------- */
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.dist-row:last-child { margin-bottom: 0; }
+
+.dist-emoji {
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.dist-name {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  width: 78px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dist-track {
+  flex: 1;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dist-fill {
+  height: 100%;
+  border-radius: 4px;
+  transform-origin: left;
+}
+
+.dist-pct {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  width: 26px;
+  text-align: right;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dist-pct.zero { color: var(--text-faint); font-weight: 500; }
+
+/* ---------- stacked mini distribution bar ---------- */
+.ministack {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ---------- wizard option card ---------- */
+.opt {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-tile);
+  padding: 16px;
+  box-shadow: var(--tile-shadow);
+  position: relative;
+}
+
+.opt.sel {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* selection check circle */
+.checkdot {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.checkdot.on { background: var(--accent); }
+.checkdot.off {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+}
+
+/* radio dot */
+.radio {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.radio.on { border: 2px solid var(--accent); }
+.radio.off { border: 2px solid var(--border); }
+.radio.on::after {
+  content: "";
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* progress dots */
+.dots { display: flex; gap: 6px; }
+.dots .d {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.dots .d.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.dots .d.cur {
+  width: 20px;
+  border-radius: 4px;
+}
+
+/* badge — model duration */
+.dbadge {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2.5px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.01em;
+}
+.dbadge.s10 { color: var(--sc-transit); background: #e9f0f5; }
+.dbadge.s1  { color: var(--sc-commercial); background: #f4ece2; }
+
+/* ============================================================
+   LOAD ANIMATION — gentle staggered fade-up
+   ============================================================ */
+.anim {
+  opacity: 0;
+  transform: translateY(11px);
+}
+.run .anim {
+  animation: rise 0.6s var(--ease) forwards;
+  animation-delay: var(--d, 0s);
+}
+@keyframes rise {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* donut sweep — whole group rotates + scales in, segments static */
+.donut-grp {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.88);
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.run .donut-grp {
+  animation: donutIn 1.05s var(--ease) forwards;
+  animation-delay: var(--d, 0.35s);
+}
+@keyframes donutIn {
+  to { opacity: 1; transform: rotate(0deg) scale(1); }
+}
+
+.donut-label { opacity: 0; }
+.run .donut-label {
+  animation: areafade 0.55s ease forwards;
+  animation-delay: var(--d, 1.05s);
+}
+
+/* single-arc sweep */
+.arc-sweep {
+  stroke-dasharray: var(--arc) var(--rest);
+  stroke-dashoffset: var(--arc);
+}
+.run .arc-sweep {
+  animation: arcdraw 1.05s var(--ease) forwards;
+  animation-delay: var(--d, 0.4s);
+}
+@keyframes arcdraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* bar grow */
+.run .grow {
+  animation: grow 0.8s var(--ease) forwards;
+  animation-delay: var(--d, 0.4s);
+  transform: scaleX(0);
+}
+@keyframes grow {
+  to { transform: scaleX(1); }
+}
+
+/* ring draw */
+.ring-draw {
+  stroke-dasharray: var(--len);
+  stroke-dashoffset: var(--len);
+}
+.run .ring-draw {
+  animation: ringdraw 1.3s var(--ease) forwards;
+  animation-delay: var(--d, 0.35s);
+}
+@keyframes ringdraw {
+  to { stroke-dashoffset: var(--off); }
+}
+
+/* line / waveform draw */
+.line-draw {
+  stroke-dasharray: var(--len);
+  stroke-dashoffset: var(--len);
+}
+.run .line-draw {
+  animation: linedraw 1.4s var(--ease) forwards;
+  animation-delay: var(--d, 0.4s);
+}
+@keyframes linedraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* area fade */
+.area-fade { opacity: 0; }
+.run .area-fade {
+  animation: areafade 0.85s ease forwards;
+  animation-delay: var(--d, 0.85s);
+}
+@keyframes areafade { to { opacity: 1; } }
+
+/* gentle pulse for live dot */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot { animation: pulse 2s ease-in-out infinite; }
+
+/* ---- reduced-motion: show every reveal in its final state ---- */
+@media (prefers-reduced-motion: reduce) {
+  .anim, .donut-grp, .donut-label, .area-fade { opacity: 1 !important; }
+  .anim { transform: none !important; }
+  .donut-grp { transform: rotate(0deg) scale(1) !important; }
+  .grow { transform: scaleX(1) !important; }
+  .line-draw { stroke-dashoffset: 0 !important; }
+  .arc-sweep { stroke-dashoffset: 0 !important; }
+  .ring-draw { stroke-dashoffset: var(--off) !important; }
+  .live-dot { animation: none !important; }
+  .run .anim, .run .donut-grp, .run .donut-label, .run .grow,
+  .run .ring-draw, .run .line-draw, .run .area-fade, .run .arc-sweep {
+    animation: none !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER BAND
+     ============================================================ -->
+<header class="page-header">
+  <div class="ph-left">
+    <div class="ph-mark">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <rect x="2" y="11" width="3.4" height="4" rx="1.7" fill="#9b9ca0"/>
+        <rect x="7.3" y="7" width="3.4" height="12" rx="1.7" fill="#6b6d71"/>
+        <rect x="12.6" y="3" width="3.4" height="20" rx="1.7" fill="#3c6e57"/>
+        <rect x="17.9" y="8.5" width="3.4" height="9" rx="1.7" fill="#6b6d71"/>
+        <rect x="20.8" y="11" width="3.4" height="4" rx="1.7" fill="#9b9ca0"/>
+      </svg>
+    </div>
+    <div class="ph-title-block">
+      <h1 class="ph-title">Acoustic Scene Classification</h1>
+    </div>
+  </div>
+  <div class="ph-right">
+    <div class="ph-credits">
+      <div class="cred-group">
+        <span class="cred-label">Palette</span>
+        <div class="swatches">
+          <span class="swatch" style="background:#f4f4f2" title="Background #f4f4f2"></span>
+          <span class="swatch" style="background:#ffffff" title="Surface #ffffff"></span>
+          <span class="swatch" style="background:#3c6e57" title="Accent #3c6e57"></span>
+          <span class="swatch" style="background:#5E9070" title="Nature #5E9070"></span>
+          <span class="swatch" style="background:#5C86A8" title="Transit #5C86A8"></span>
+          <span class="swatch" style="background:#897CA8" title="Work #897CA8"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     PHONE WRAP GRID
+     ============================================================ -->
+<div class="wrap" id="wrap">
+
+  <!-- ========================================================
+       SCREEN 1 — MODE SELECT (Test / Config)
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad" style="display:flex; flex-direction:column; min-height:100%;">
+
+            <!-- Top brand strip -->
+            <div class="anim" style="--d:.05s; display:flex; flex-direction:column; align-items:center; gap:14px; padding:48px 6px 8px;">
+              <div class="app-id-mark" style="width:48px; height:48px; border-radius:14px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <rect x="2"  y="10" width="2.8" height="4"  rx="1.4" fill="#66686d"/>
+                  <rect x="6.6" y="6.5" width="2.8" height="11" rx="1.4" fill="#6b6f76"/>
+                  <rect x="11.2" y="3" width="2.8" height="18" rx="1.4" fill="#3c6e57"/>
+                  <rect x="15.8" y="7.5" width="2.8" height="9"  rx="1.4" fill="#6b6f76"/>
+                  <rect x="20.4" y="10.5" width="2.8" height="3" rx="1.4" fill="#66686d"/>
+                </svg>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-faint); font-weight:500; letter-spacing:.18em; text-transform:uppercase;">FZI Karlsruhe</div>
+              <h1 class="h-title anim" style="--d:.10s; font-size:22px; text-align:center; line-height:1.25;">
+                Choose how you want<br>to use the app
+              </h1>
+              <p class="anim" style="--d:.14s; font-size:13px; color:var(--text-dim); text-align:center; max-width:280px; line-height:1.5;">
+                Pick whichever fits. One runs the session, the other sets it up.
+              </p>
+            </div>
+
+            <!-- Two stacked mode tiles -->
+            <div style="display:flex; flex-direction:column; gap:14px; padding:28px 6px 6px;">
+
+              <!-- Test mode — open -->
+              <button class="anim" style="--d:.22s; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:18px 18px; background:var(--surface); border:1px solid var(--hairline); border-radius:var(--r-tile); text-align:left; cursor:pointer; transition:border-color .2s, background .2s;">
+                <div style="display:flex; align-items:center; gap:10px; width:100%;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" stroke="var(--accent)" stroke-width="1.8"/>
+                    <path d="M9.5 12.5l1.8 1.8 3.5-4" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span style="font-size:16px; font-weight:600; color:var(--text);">Test mode</span>
+                  <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-faint); letter-spacing:.14em; text-transform:uppercase;">Open</span>
+                </div>
+                <p style="font-size:12.5px; color:var(--text-dim); line-height:1.5;">Runs the session that was set up for you, then shows the results.</p>
+              </button>
+
+              <!-- Config mode — locked -->
+              <button class="anim" style="--d:.30s; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:18px 18px; background:var(--surface); border:1px solid var(--hairline); border-radius:var(--r-tile); text-align:left; cursor:pointer; transition:border-color .2s, background .2s;">
+                <div style="display:flex; align-items:center; gap:10px; width:100%;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <rect x="5" y="11" width="14" height="9" rx="2" stroke="var(--text-dim)" stroke-width="1.7"/>
+                    <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="var(--text-dim)" stroke-width="1.7" stroke-linecap="round"/>
+                    <circle cx="12" cy="15.5" r="1.3" fill="var(--text-dim)"/>
+                  </svg>
+                  <span style="font-size:16px; font-weight:600; color:var(--text);">Configuration mode</span>
+                  <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-faint); letter-spacing:.14em; text-transform:uppercase;">Locked</span>
+                </div>
+                <p style="font-size:12.5px; color:var(--text-dim); line-height:1.5;">For developers. Sets the model, recording mode and duration testers run with.</p>
+              </button>
+
+            </div>
+
+            <!-- Footer note -->
+            <div class="anim" style="--d:.42s; margin-top:auto; padding:24px 6px 6px; text-align:center;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--text-faint); font-weight:500; letter-spacing:.16em; text-transform:uppercase;">Acoustic Scene Classification</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">01</span><span class="caption-text">Mode Select</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 2 — PASSWORD (Config mode gate)
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad" style="display:flex; flex-direction:column; min-height:100%;">
+
+            <!-- Back chevron -->
+            <div class="anim" style="--d:.04s; padding:14px 4px 0;">
+              <button class="btn-ghost" style="padding:6px 4px; font-size:13px; color:var(--text-dim); display:inline-flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3l-5 5 5 5" stroke="var(--text-dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Back
+              </button>
+            </div>
+
+            <!-- Title block -->
+            <div class="anim" style="--d:.10s; display:flex; flex-direction:column; align-items:center; gap:14px; padding:34px 6px 6px;">
+              <div style="width:56px; height:56px; border-radius:16px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <rect x="5" y="11" width="14" height="9" rx="2" stroke="var(--accent)" stroke-width="1.8"/>
+                  <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/>
+                  <circle cx="12" cy="15.5" r="1.4" fill="var(--accent)"/>
+                </svg>
+              </div>
+              <h1 class="h-title anim" style="--d:.16s; font-size:22px; text-align:center; line-height:1.25;">
+                Developer access
+              </h1>
+              <p class="anim" style="--d:.20s; font-size:13px; color:var(--text-dim); text-align:center; max-width:264px; line-height:1.5;">
+                Configuration overwrites the session testers run. Password required.
+              </p>
+            </div>
+
+            <!-- Password input -->
+            <div class="anim" style="--d:.28s; display:flex; flex-direction:column; gap:8px; padding:30px 6px 6px;">
+              <label style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-faint); font-weight:500; letter-spacing:.13em; text-transform:uppercase; padding-left:2px;">Password</label>
+              <div style="display:flex; align-items:center; background:var(--surface); border:1.5px solid var(--accent-line); border-radius:12px; padding:0 4px 0 14px; height:50px;">
+                <span style="flex:1; font-family:'IBM Plex Mono',monospace; font-size:18px; color:var(--text); letter-spacing:.32em; line-height:1;">•••••••••••</span>
+                <button class="btn-ghost" style="padding:8px 10px; background:none; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;" title="Show password">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="var(--text-dim)" stroke-width="1.7" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="var(--text-dim)" stroke-width="1.7"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Unlock CTA -->
+            <div style="padding:24px 6px 6px;">
+              <button class="btn btn-primary anim" style="--d:.36s; width:100%; padding:16px; border-radius:var(--r-tile); font-size:14.5px;">
+                Unlock configuration
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">02</span><span class="caption-text">Password</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 1 — DASHBOARD
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad" style="display:flex; flex-direction:column; min-height:100%;">
+
+            <!-- Top eyebrow chip -->
+            <div class="anim" style="--d:.04s; padding:14px 0 0; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); font-weight:600; letter-spacing:.14em; text-transform:uppercase; padding:5px 10px; background:var(--accent-soft); border-radius:999px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                  <rect x="5" y="11" width="14" height="9" rx="2" stroke="var(--accent)" stroke-width="2.2"/>
+                  <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+                Config mode
+              </span>
+            </div>
+
+            <!-- App identity -->
+            <div class="anim" style="--d:.10s; display:flex; flex-direction:column; align-items:center; gap:16px; padding:30px 6px 10px;">
+              <div class="app-id-mark" style="width:64px; height:64px; border-radius:18px;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <rect x="2"  y="10" width="2.8" height="4"  rx="1.4" fill="#66686d"/>
+                  <rect x="6.6" y="6.5" width="2.8" height="11" rx="1.4" fill="#6b6f76"/>
+                  <rect x="11.2" y="3" width="2.8" height="18" rx="1.4" fill="#5f9d80"/>
+                  <rect x="15.8" y="7.5" width="2.8" height="9"  rx="1.4" fill="#6b6f76"/>
+                  <rect x="20.4" y="10.5" width="2.8" height="3" rx="1.4" fill="#66686d"/>
+                </svg>
+              </div>
+              <h1 class="h-title anim" style="--d:.10s; font-size:24px; text-align:center; line-height:1.2;">
+                Acoustic Scene<br>Classification
+              </h1>
+            </div>
+
+            <!-- 4 Buttons stacked -->
+            <div style="display:flex; flex-direction:column; gap:12px; padding:32px 6px 6px;">
+
+              <!-- Start new session — primary CTA -->
+              <button class="btn btn-primary anim" style="--d:.20s; padding:18px; border-radius:var(--r-tile); font-size:15.5px;">
+                <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="8.2" stroke="#0f1a14" stroke-width="1.8"/>
+                  <circle cx="10" cy="10" r="3.3" fill="#0f1a14"/>
+                </svg>
+                Start new session
+              </button>
+
+              <!-- Quick Start — secondary -->
+              <button class="btn btn-secondary anim" style="--d:.26s; padding:18px; border-radius:var(--r-tile); font-size:15px;">
+                <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M8 1.5l-5 8.5h4l-1 6.5 5-8.5h-4l1-6.5z" fill="var(--text)" stroke="var(--text)" stroke-width="1" stroke-linejoin="round"/></svg>
+                Quick Start
+              </button>
+
+              <!-- History -->
+              <button class="btn btn-secondary anim" style="--d:.32s; padding:18px; border-radius:var(--r-tile); font-size:15px;">
+                <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M9 4.5v4.5l3.2 1.9" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="9" r="6.6" stroke="var(--text)" stroke-width="1.7"/></svg>
+                History
+              </button>
+
+              <!-- Settings -->
+              <button class="btn btn-secondary anim" style="--d:.38s; padding:18px; border-radius:var(--r-tile); font-size:15px;">
+                <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
+                  <circle cx="9" cy="9" r="2.7" stroke="var(--text)" stroke-width="1.7"/>
+                  <path d="M9 1.5v2.5M9 14v2.5M16.5 9H14M4 9H1.5M14.3 3.7l-1.8 1.8M5.5 12.5l-1.8 1.8M14.3 14.3l-1.8-1.8M5.5 5.5L3.7 3.7" stroke="var(--text)" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                Settings
+              </button>
+
+              <!-- Configure Test Mode (developer-only) -->
+              <button class="btn anim" style="--d:.44s; padding:18px; border-radius:var(--r-tile); font-size:15px; background:var(--accent-soft); color:var(--accent); border:1px dashed var(--accent-line);">
+                <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
+                  <path d="M3 9h12M9 3v12" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                Configure test mode
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">03</span><span class="caption-text">Config Welcome</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 4 — TEST WELCOME (Quickstart + History)
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad" style="display:flex; flex-direction:column; min-height:100%;">
+
+            <!-- Top eyebrow chip -->
+            <div class="anim" style="--d:.04s; padding:14px 0 0; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); font-weight:600; letter-spacing:.14em; text-transform:uppercase; padding:5px 10px; background:var(--accent-soft); border-radius:999px;">
+                <span style="width:6px; height:6px; border-radius:50%; background:var(--accent);"></span>
+                Test mode
+              </span>
+            </div>
+
+            <!-- Compact header -->
+            <div class="anim" style="--d:.10s; display:flex; flex-direction:column; gap:6px; padding:30px 2px 0;">
+              <h1 class="h-title" style="font-size:24px; line-height:1.2;">Quick starts</h1>
+              <p style="font-size:13px; color:var(--text-dim); line-height:1.5;">Tap one to start a recording. <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-faint); letter-spacing:.04em;">3 of 5 slots used</span></p>
+            </div>
+
+            <!-- Quickstart slots list -->
+            <div style="display:flex; flex-direction:column; gap:9px; padding:18px 2px 0;">
+
+              <!-- Slot 1 — primary (most recent / suggested) -->
+              <button class="btn btn-primary anim" style="--d:.18s; padding:14px 16px; border-radius:14px; display:flex; align-items:center; gap:14px; text-align:left; justify-content:flex-start;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600; min-width:22px; opacity:.7;">01</span>
+                <span style="display:flex; flex-direction:column; gap:2px; flex:1; align-items:flex-start;">
+                  <span style="font-size:14.5px; font-weight:600;">Quick start 1</span>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; opacity:.75; letter-spacing:.02em;">30 min recording</span>
+                </span>
+                <svg width="13" height="13" viewBox="0 0 18 18" fill="none"><path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+
+              <!-- Slot 2 — secondary -->
+              <button class="anim" style="--d:.24s; padding:13px 16px; background:var(--surface); border:1px solid var(--hairline); border-radius:14px; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600; color:var(--text-faint); min-width:22px;">02</span>
+                <span style="display:flex; flex-direction:column; gap:2px; flex:1; align-items:flex-start;">
+                  <span style="font-size:14px; font-weight:600; color:var(--text);">Quick start 2</span>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:.02em;">1 hour, fast mode</span>
+                </span>
+                <svg width="13" height="13" viewBox="0 0 18 18" fill="none"><path d="M7 4l5 5-5 5" stroke="var(--text-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+
+              <!-- Slot 3 — secondary -->
+              <button class="anim" style="--d:.30s; padding:13px 16px; background:var(--surface); border:1px solid var(--hairline); border-radius:14px; display:flex; align-items:center; gap:14px; text-align:left; cursor:pointer;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600; color:var(--text-faint); min-width:22px;">03</span>
+                <span style="display:flex; flex-direction:column; gap:2px; flex:1; align-items:flex-start;">
+                  <span style="font-size:14px; font-weight:600; color:var(--text);">Quick start 3</span>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:.02em;">4 hours, averaging</span>
+                </span>
+                <svg width="13" height="13" viewBox="0 0 18 18" fill="none"><path d="M7 4l5 5-5 5" stroke="var(--text-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+
+              <!-- Empty slot 4 — ghost -->
+              <div class="anim" style="--d:.36s; padding:12px 16px; background:transparent; border:1px dashed var(--hairline); border-radius:14px; display:flex; align-items:center; gap:14px;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:500; color:var(--text-faint); min-width:22px;">04</span>
+                <span style="font-size:12.5px; color:var(--text-faint); flex:1;">Empty slot</span>
+              </div>
+
+              <!-- Empty slot 5 — ghost -->
+              <div class="anim" style="--d:.40s; padding:12px 16px; background:transparent; border:1px dashed var(--hairline); border-radius:14px; display:flex; align-items:center; gap:14px;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:500; color:var(--text-faint); min-width:22px;">05</span>
+                <span style="font-size:12.5px; color:var(--text-faint); flex:1;">Empty slot</span>
+              </div>
+
+            </div>
+
+            <!-- Secondary — History -->
+            <div style="padding:14px 6px 6px;">
+              <button class="btn btn-secondary anim" style="--d:.32s; width:100%; padding:16px; border-radius:var(--r-tile); font-size:14px;">
+                <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M9 4.5v4.5l3.2 1.9" stroke="var(--text)" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="9" r="6.6" stroke="var(--text)" stroke-width="1.7"/></svg>
+                History
+              </button>
+            </div>
+
+            <!-- Footer note -->
+            <div class="anim" style="--d:.42s; margin-top:auto; padding:24px 6px 6px; text-align:center;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--text-faint); font-weight:500; letter-spacing:.16em; text-transform:uppercase;">Set up by the developer</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">04</span><span class="caption-text">Test Welcome</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 2 — WIZARD STEP 1/5 · SELECT MODELS
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Wizard chrome -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; gap:11px; padding:20px 6px 14px;">
+              <div class="icon-btn">
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M10.5 3.5L5 8.5l5.5 5" stroke="#1c1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div class="eyebrow">Step 1 of 4</div>
+                <div style="font-size:11px; font-weight:600; color:var(--text-dim); margin-top:2px;">New session</div>
+              </div>
+              <div class="dots">
+                <span class="d on cur"></span><span class="d"></span><span class="d"></span><span class="d"></span>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <div class="anim" style="--d:.12s; padding:6px 6px 4px;">
+              <h2 class="headline" style="font-size:25px;">Select models</h2>
+              <p style="font-size:12.5px; color:var(--text-dim); margin-top:6px;">Pick at least one model.</p>
+            </div>
+
+            <!-- Selected counter -->
+            <div class="anim" style="--d:.18s; display:flex; align-items:center; gap:9px; padding:14px 6px 14px;">
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:500; color:var(--text-dim);">2 / 4 selected</span>
+              <div style="flex:1; display:flex; gap:4px;">
+                <span style="flex:1; height:4px; border-radius:2px; background:var(--accent);"></span>
+                <span style="flex:1; height:4px; border-radius:2px; background:var(--surface-2);"></span>
+                <span style="flex:1; height:4px; border-radius:2px; background:var(--accent);"></span>
+                <span style="flex:1; height:4px; border-radius:2px; background:var(--surface-2);"></span>
+              </div>
+            </div>
+
+            <!-- Model cards -->
+            <div style="display:flex; flex-direction:column; gap:10px; padding:0 6px;">
+
+              <!-- Model 1 — SELECTED -->
+              <div class="opt sel anim" style="--d:.24s;">
+                <div style="display:flex; align-items:flex-start; gap:12px;">
+                  <div class="checkdot on">
+                    <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M2.5 7L5 9.5l5.5-6" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div style="flex:1; min-width:0;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;">dcase2025_10s_04_06_64bt</span>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                      <span class="dbadge s10">10s</span>
+                      <span style="font-size:10px; color:var(--text-dim); font-weight:500;">Test acc</span>
+                      <span style="font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--accent);">92.4%</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:11px; height:5px; background:#dde7e1; border-radius:3px; overflow:hidden;">
+                  <div class="grow" style="--d:.7s; width:92.4%; height:100%; background:var(--accent); border-radius:3px;"></div>
+                </div>
+              </div>
+
+              <!-- Model 2 -->
+              <div class="opt anim" style="--d:.30s;">
+                <div style="display:flex; align-items:flex-start; gap:12px;">
+                  <div class="checkdot off"></div>
+                  <div style="flex:1; min-width:0;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;">dcase2025_10s_04_29_32bt</span>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                      <span class="dbadge s10">10s</span>
+                      <span style="font-size:10px; color:var(--text-faint); font-weight:500;">Test acc</span>
+                      <span style="font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--text-dim);">90.1%</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:11px; height:5px; background:var(--surface-2); border-radius:3px; overflow:hidden;">
+                  <div class="grow" style="--d:.74s; width:90.1%; height:100%; background:var(--text-faint); border-radius:3px;"></div>
+                </div>
+              </div>
+
+              <!-- Model 3 — SELECTED -->
+              <div class="opt sel anim" style="--d:.36s;">
+                <div style="display:flex; align-items:flex-start; gap:12px;">
+                  <div class="checkdot on">
+                    <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M2.5 7L5 9.5l5.5-6" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div style="flex:1; min-width:0;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;">dcase2025_1s_04_06_128bt</span>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                      <span class="dbadge s1">1s</span>
+                      <span style="font-size:10px; color:var(--text-dim); font-weight:500;">Test acc</span>
+                      <span style="font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--accent);">88.7%</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:11px; height:5px; background:#dde7e1; border-radius:3px; overflow:hidden;">
+                  <div class="grow" style="--d:.8s; width:88.7%; height:100%; background:var(--accent); border-radius:3px;"></div>
+                </div>
+              </div>
+
+              <!-- Model 4 — missing test accuracy file -->
+              <div class="opt anim" style="--d:.42s;">
+                <div style="display:flex; align-items:flex-start; gap:12px;">
+                  <div class="checkdot off"></div>
+                  <div style="flex:1; min-width:0;">
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;">dcase2025_1s_05_12_96bt</span>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                      <span class="dbadge s1">1s</span>
+                      <span style="font-size:10px; color:#b1463f; font-weight:600; letter-spacing:.04em; text-transform:uppercase;">Test acc missing</span>
+                    </div>
+                    <span style="display:block; margin-top:6px; font-size:10.5px; color:#b1463f; line-height:1.4;">No accuracy value provided for this model.</span>
+                  </div>
+                </div>
+                <div style="margin-top:11px; height:5px; background:var(--surface-2); border-radius:3px; overflow:hidden; border:1px dashed rgba(177,70,63,.5);"></div>
+              </div>
+
+            </div>
+
+            <!-- Next button -->
+            <div class="anim" style="--d:.50s; padding:20px 6px 6px;">
+              <button class="btn btn-primary" style="width:100%; height:50px;">
+                Next
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M6.5 3.5L12 8.5l-5.5 5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">05</span><span class="caption-text">Wizard · Select Models</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 3 — WIZARD STEP 2/5 · RECORDING MODE
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Wizard chrome -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; gap:11px; padding:20px 6px 14px;">
+              <div class="icon-btn">
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M10.5 3.5L5 8.5l5.5 5" stroke="#1c1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div class="eyebrow">Step 2 of 4</div>
+                <div style="font-size:11px; font-weight:600; color:var(--text-dim); margin-top:2px;">New session</div>
+              </div>
+              <div class="dots">
+                <span class="d on"></span><span class="d on cur"></span><span class="d"></span><span class="d"></span>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <div class="anim" style="--d:.12s; padding:6px 6px 4px;">
+              <h2 class="headline" style="font-size:25px;">How should the app record?</h2>
+            </div>
+
+            <!-- Choice cards -->
+            <div style="display:flex; flex-direction:column; gap:13px; padding:22px 6px 0;">
+
+              <!-- Continuous — SELECTED -->
+              <div class="opt sel anim" style="--d:.20s; padding:20px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                  <div style="width:48px; height:48px; border-radius:13px; background:var(--surface); border:1px solid #d9e4dd; display:grid; place-items:center; flex-shrink:0;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 12h3l2.5-6 4 13L17 8l1.5 4H21" stroke="#3c6e57" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                      <span class="headline" style="font-size:17px;">Continuous</span>
+                      <div class="checkdot on" style="width:24px; height:24px;">
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 7L5 9.5l5.5-6" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </div>
+                    </div>
+                    <p style="font-size:12px; color:var(--text-dim); margin-top:6px; line-height:1.4;">Recordings run back-to-back, with no gap.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interval -->
+              <div class="opt anim" style="--d:.28s; padding:20px;">
+                <div style="display:flex; align-items:flex-start; gap:14px;">
+                  <div style="width:48px; height:48px; border-radius:13px; background:var(--surface-2); border:1px solid var(--border); display:grid; place-items:center; flex-shrink:0;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 12h4M10 12h4M17 12h4" stroke="#9b9ca0" stroke-width="2.2" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                      <span class="headline" style="font-size:17px;">Interval</span>
+                      <div class="checkdot off" style="width:24px; height:24px;"></div>
+                    </div>
+                    <p style="font-size:12px; color:var(--text-dim); margin-top:6px; line-height:1.4;">One recording, then a pause, then again.</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Next button -->
+            <div class="anim" style="--d:.38s; padding:24px 6px 6px;">
+              <button class="btn btn-primary" style="width:100%; height:50px;">
+                Next
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M6.5 3.5L12 8.5l-5.5 5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">06</span><span class="caption-text">Wizard · Recording Mode</span></div>
+  </div>
+
+  
+  <!-- ========================================================
+       SCREEN 5 — WIZARD STEP 4/5 · SESSION DURATION
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Wizard chrome -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; gap:11px; padding:20px 6px 14px;">
+              <div class="icon-btn">
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M10.5 3.5L5 8.5l5.5 5" stroke="#1c1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div class="eyebrow">Step 3 of 4</div>
+                <div style="font-size:11px; font-weight:600; color:var(--text-dim); margin-top:2px;">New session</div>
+              </div>
+              <div class="dots">
+                <span class="d on"></span><span class="d on"></span><span class="d on cur"></span><span class="d"></span>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <div class="anim" style="--d:.12s; padding:6px 6px 4px;">
+              <h2 class="headline" style="font-size:25px;">How long overall?</h2>
+            </div>
+
+            <!-- Duration grid -->
+            <div class="anim" style="--d:.18s; display:grid; grid-template-columns:1fr 1fr; gap:11px; padding:22px 6px 0;">
+
+              <!-- 30 min -->
+              <div class="opt" style="padding:18px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span class="bignum" style="font-size:21px;">30</span>
+                  <div class="radio off"></div>
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-top:5px;">minutes</div>
+              </div>
+
+              <!-- 1 h -->
+              <div class="opt" style="padding:18px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span class="bignum" style="font-size:21px;">1</span>
+                  <div class="radio off"></div>
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-top:5px;">hour</div>
+              </div>
+
+              <!-- 3 h — SELECTED -->
+              <div class="opt sel" style="padding:18px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span class="bignum" style="font-size:21px; color:var(--accent);">3</span>
+                  <div class="radio on"></div>
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-top:5px;">hours</div>
+              </div>
+
+              <!-- 6 h -->
+              <div class="opt" style="padding:18px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span class="bignum" style="font-size:21px;">6</span>
+                  <div class="radio off"></div>
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-top:5px;">hours</div>
+              </div>
+
+              <!-- 12 h -->
+              <div class="opt" style="padding:18px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span class="bignum" style="font-size:21px;">12</span>
+                  <div class="radio off"></div>
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-top:5px;">hours</div>
+              </div>
+
+              <!-- Stop manually -->
+              <div class="opt" style="padding:18px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="3" stroke="#9b9ca0" stroke-width="2"/></svg>
+                  <div class="radio off"></div>
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); font-weight:600; margin-top:5px;">Stop manually</div>
+              </div>
+
+            </div>
+
+            <!-- Next button -->
+            <div class="anim" style="--d:.30s; padding:24px 6px 6px;">
+              <button class="btn btn-primary" style="width:100%; height:50px;">
+                Next
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M6.5 3.5L12 8.5l-5.5 5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">07</span><span class="caption-text">Wizard · Session Duration</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 6 — WIZARD STEP 5/5 · SUMMARY
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Wizard chrome -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; gap:11px; padding:20px 6px 14px;">
+              <div class="icon-btn">
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M10.5 3.5L5 8.5l5.5 5" stroke="#1c1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div class="eyebrow">Step 4 of 4</div>
+                <div style="font-size:11px; font-weight:600; color:var(--text-dim); margin-top:2px;">New session</div>
+              </div>
+              <div class="dots">
+                <span class="d on"></span><span class="d on"></span><span class="d on"></span><span class="d on cur"></span>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <div class="anim" style="--d:.12s; padding:6px 6px 4px;">
+              <h2 class="headline" style="font-size:25px;">Ready to start.</h2>
+              <p style="font-size:12.5px; color:var(--text-dim); margin-top:6px;">Tap any row to change it.</p>
+            </div>
+
+            <!-- Review rows -->
+
+            <!-- Start button -->
+            <div class="anim" style="--d:.32s; padding:22px 6px 6px;">
+              <button class="btn btn-primary" style="width:100%; height:54px; font-size:15px; font-weight:700;">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="8.2" stroke="#ffffff" stroke-width="1.7"/>
+                  <circle cx="10" cy="10" r="3.3" fill="#ffffff"/>
+                </svg>
+                Start
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">08</span><span class="caption-text">Wizard · Summary</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 7 — LIVE RECORDING
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Status header -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; justify-content:space-between; padding:20px 6px 14px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="live-dot" style="width:8px; height:8px; border-radius:50%; background:var(--sc-leisure);"></span>
+                <span class="headline" style="font-size:17px;">Recording</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); padding:6px 11px; border-radius:9px;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; font-weight:500; color:var(--text-faint); letter-spacing:.08em;">CYCLE</span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--text);">7 s</span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-faint);">/ 10 s</span>
+              </div>
+            </div>
+
+            <!-- Rings tile -->
+            <div class="tile anim" style="--d:.12s; padding:16px; margin:0 6px 11px;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <!-- Concentric rings -->
+                <svg width="128" height="128" viewBox="0 0 128 128" style="flex-shrink:0;">
+                  <g transform="rotate(-90 64 64)">
+                    <!-- outer track + progress: r=54, C=339.29, session 24% -->
+                    <circle cx="64" cy="64" r="54" fill="none" stroke="#efeeea" stroke-width="9"/>
+                    <circle cx="64" cy="64" r="54" fill="none" stroke="#3c6e57" stroke-width="9" stroke-linecap="round"
+                      class="ring-draw" style="--len:339.29; --off:257.86; --d:.4s"/>
+                    <!-- inner track + cycle: r=40, C=251.33, cycle 70% -->
+                    <circle cx="64" cy="64" r="40" fill="none" stroke="#efeeea" stroke-width="9"/>
+                    <circle cx="64" cy="64" r="40" fill="none" stroke="#5E9070" stroke-width="9" stroke-linecap="round"
+                      class="ring-draw" style="--len:251.33; --off:75.40; --d:.6s"/>
+                  </g>
+                  <text x="64" y="61" text-anchor="middle" fill="#1c1d1f" font-family="IBM Plex Mono" font-weight="600" font-size="15" letter-spacing="-0.5">0:43:12</text>
+                  <text x="64" y="74" text-anchor="middle" fill="#9b9ca0" font-family="IBM Plex Mono" font-weight="400" font-size="8.5">/ 3:00:00</text>
+                </svg>
+                <div style="flex:1;">
+                  <div class="tile-label">Elapsed / total</div>
+                  <div class="bignum" style="font-size:22px; margin-top:6px;">0:43:12</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-dim); font-weight:400; margin-top:2px;">of 3:00:00</div>
+                  <div style="display:flex; flex-direction:column; gap:6px; margin-top:13px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                      <span style="width:8px; height:8px; border-radius:3px; background:#3c6e57;"></span>
+                      <span style="font-size:9.5px; color:var(--text-dim); font-weight:600;">Session</span>
+                      <span style="font-family:'IBM Plex Mono'; font-size:9.5px; font-weight:600; color:var(--text); margin-left:auto;">24%</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                      <span style="width:8px; height:8px; border-radius:3px; background:#5E9070;"></span>
+                      <span style="font-size:9.5px; color:var(--text-dim); font-weight:600;">Cycle</span>
+                      <span style="font-family:'IBM Plex Mono'; font-size:9.5px; font-weight:600; color:var(--text); margin-left:auto;">70%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live predictions label -->
+            <div class="anim sec-rule" style="--d:.18s; padding:4px 6px 9px;">
+              <span class="eyebrow">Live predictions</span>
+              <div class="line"></div>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); font-weight:500;">3 models</span>
+            </div>
+
+            <!-- Model Card A -->
+            <div class="tile anim" style="--d:.24s; padding:13px; margin:0 6px 9px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+                <div style="min-width:0;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_10s_04_06_64bt</div>
+                  <div style="font-size:9.5px; color:var(--text-faint); margin-top:3px;">Method · <span style="color:var(--text-dim); font-weight:600;">Standard</span></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px; background:var(--accent-soft); border:1px solid #d9e4dd; padding:4px 9px; border-radius:8px; flex-shrink:0;">
+                  <span style="font-size:12px;">🌲</span>
+                  <span style="font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--accent);">84%</span>
+                </div>
+              </div>
+              <div class="dist-row"><span class="dist-emoji">🌲</span><span class="dist-name">Nature</span><div class="dist-track"><div class="dist-fill grow" style="--d:.5s; width:84%; background:#5E9070;"></div></div><span class="dist-pct">84</span></div>
+              <div class="dist-row"><span class="dist-emoji">🚗</span><span class="dist-name">Transit/Veh.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.56s; width:7%; background:#5C86A8;"></div></div><span class="dist-pct">7</span></div>
+              <div class="dist-row"><span class="dist-emoji">🎭</span><span class="dist-name">Culture/Quiet</span><div class="dist-track"><div class="dist-fill grow" style="--d:.62s; width:4%; background:#7E83AC;"></div></div><span class="dist-pct">4</span></div>
+              <div class="dist-row"><span class="dist-emoji">💼</span><span class="dist-name">Work</span><div class="dist-track"><div class="dist-fill grow" style="--d:.68s; width:2%; background:#897CA8;"></div></div><span class="dist-pct">2</span></div>
+              <div class="dist-row"><span class="dist-emoji">👥</span><span class="dist-name">Social</span><div class="dist-track"><div class="dist-fill grow" style="--d:.72s; width:1%; background:#BC7894;"></div></div><span class="dist-pct">1</span></div>
+              <div class="dist-row"><span class="dist-emoji">🛒</span><span class="dist-name">Commercial</span><div class="dist-track"><div class="dist-fill grow" style="--d:.75s; width:1%; background:#C28D5E;"></div></div><span class="dist-pct">1</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏙️</span><span class="dist-name">Urban/Wait.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.78s; width:1%; background:#C2A24E;"></div></div><span class="dist-pct">1</span></div>
+              <div class="dist-row"><span class="dist-emoji">⚽</span><span class="dist-name">Leisure/Sp.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.81s; width:0%; background:#BB6F66;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏠</span><span class="dist-name">Living Room</span><div class="dist-track"><div class="dist-fill grow" style="--d:.84s; width:0%; background:#9A8268;"></div></div><span class="dist-pct zero">0</span></div>
+            </div>
+
+            <!-- Model Card B -->
+            <div class="tile anim" style="--d:.30s; padding:13px; margin:0 6px 11px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+                <div style="min-width:0;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_1s_04_06_128bt</div>
+                  <div style="font-size:9.5px; color:var(--text-faint); margin-top:3px;">Method · <span style="color:var(--text-dim); font-weight:600;">Fast</span></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px; background:var(--accent-soft); border:1px solid #d9e4dd; padding:4px 9px; border-radius:8px; flex-shrink:0;">
+                  <span style="font-size:12px;">🌲</span>
+                  <span style="font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--accent);">71%</span>
+                </div>
+              </div>
+              <div class="dist-row"><span class="dist-emoji">🌲</span><span class="dist-name">Nature</span><div class="dist-track"><div class="dist-fill grow" style="--d:.56s; width:71%; background:#5E9070;"></div></div><span class="dist-pct">71</span></div>
+              <div class="dist-row"><span class="dist-emoji">👥</span><span class="dist-name">Social</span><div class="dist-track"><div class="dist-fill grow" style="--d:.62s; width:12%; background:#BC7894;"></div></div><span class="dist-pct">12</span></div>
+              <div class="dist-row"><span class="dist-emoji">🚗</span><span class="dist-name">Transit/Veh.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.68s; width:9%; background:#5C86A8;"></div></div><span class="dist-pct">9</span></div>
+              <div class="dist-row"><span class="dist-emoji">💼</span><span class="dist-name">Work</span><div class="dist-track"><div class="dist-fill grow" style="--d:.72s; width:4%; background:#897CA8;"></div></div><span class="dist-pct">4</span></div>
+              <div class="dist-row"><span class="dist-emoji">🛒</span><span class="dist-name">Commercial</span><div class="dist-track"><div class="dist-fill grow" style="--d:.76s; width:2%; background:#C28D5E;"></div></div><span class="dist-pct">2</span></div>
+              <div class="dist-row"><span class="dist-emoji">🎭</span><span class="dist-name">Culture/Quiet</span><div class="dist-track"><div class="dist-fill grow" style="--d:.79s; width:1%; background:#7E83AC;"></div></div><span class="dist-pct">1</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏙️</span><span class="dist-name">Urban/Wait.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.82s; width:1%; background:#C2A24E;"></div></div><span class="dist-pct">1</span></div>
+              <div class="dist-row"><span class="dist-emoji">⚽</span><span class="dist-name">Leisure/Sp.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.85s; width:0%; background:#BB6F66;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏠</span><span class="dist-name">Living Room</span><div class="dist-track"><div class="dist-fill grow" style="--d:.88s; width:0%; background:#9A8268;"></div></div><span class="dist-pct zero">0</span></div>
+            </div>
+
+            <!-- Model Card C — Average (1s model running 10× per cycle, then averaged) -->
+            <div class="tile anim" style="--d:.34s; padding:13px; margin:0 6px 11px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+                <div style="min-width:0;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_1s_04_06_128bt</div>
+                  <div style="font-size:9.5px; color:var(--text-faint); margin-top:3px;">Method · <span style="color:var(--text-dim); font-weight:600;">Average</span></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px; background:var(--accent-soft); border:1px solid #d9e4dd; padding:4px 9px; border-radius:8px; flex-shrink:0;">
+                  <span style="font-size:12px;">🌲</span>
+                  <span style="font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--accent);">76%</span>
+                </div>
+              </div>
+
+              <!-- 10× 1s slice circles — last cycle -->
+              <div style="margin-bottom:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:7px;">
+                  <span style="font-size:9.5px; color:var(--text-faint); font-weight:500;">Last 10 s · per-second slices</span>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); font-weight:500; letter-spacing:.04em;">avg →</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 2px 2px;">
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; display:grid; place-items:center; font-size:11px;" title="t-9s · Nature">🌲</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; display:grid; place-items:center; font-size:11px;" title="t-8s · Nature">🌲</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; display:grid; place-items:center; font-size:11px;" title="t-7s · Nature">🌲</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5C86A8; display:grid; place-items:center; font-size:11px;" title="t-6s · Transit">🚗</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; display:grid; place-items:center; font-size:11px;" title="t-5s · Nature">🌲</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; display:grid; place-items:center; font-size:11px;" title="t-4s · Nature">🌲</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; display:grid; place-items:center; font-size:11px;" title="t-3s · Nature">🌲</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#BC7894; display:grid; place-items:center; font-size:11px;" title="t-2s · Social">👥</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; display:grid; place-items:center; font-size:11px;" title="t-1s · Nature">🌲</span>
+                  <span style="width:21px; height:21px; border-radius:50%; background:#5E9070; border:1.5px solid var(--accent); display:grid; place-items:center; font-size:11px;" title="now · Nature">🌲</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:8px; color:var(--text-faint); padding:5px 2px 0; letter-spacing:.04em;">
+                  <span>−10 s</span>
+                  <span>−5 s</span>
+                  <span>now</span>
+                </div>
+              </div>
+
+              <!-- Averaged distribution -->
+              <div class="dist-row"><span class="dist-emoji">🌲</span><span class="dist-name">Nature</span><div class="dist-track"><div class="dist-fill grow" style="--d:.62s; width:80%; background:#5E9070;"></div></div><span class="dist-pct">80</span></div>
+              <div class="dist-row"><span class="dist-emoji">👥</span><span class="dist-name">Social</span><div class="dist-track"><div class="dist-fill grow" style="--d:.68s; width:10%; background:#BC7894;"></div></div><span class="dist-pct">10</span></div>
+              <div class="dist-row"><span class="dist-emoji">🚗</span><span class="dist-name">Transit/Veh.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.74s; width:10%; background:#5C86A8;"></div></div><span class="dist-pct">10</span></div>
+              <div class="dist-row"><span class="dist-emoji">🎭</span><span class="dist-name">Culture/Quiet</span><div class="dist-track"><div class="dist-fill grow" style="--d:.78s; width:0%; background:#7E83AC;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">💼</span><span class="dist-name">Work</span><div class="dist-track"><div class="dist-fill grow" style="--d:.82s; width:0%; background:#897CA8;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🛒</span><span class="dist-name">Commercial</span><div class="dist-track"><div class="dist-fill grow" style="--d:.86s; width:0%; background:#C28D5E;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏙️</span><span class="dist-name">Urban/Wait.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.90s; width:0%; background:#C2A24E;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">⚽</span><span class="dist-name">Leisure/Sp.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.93s; width:0%; background:#BB6F66;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏠</span><span class="dist-name">Living Room</span><div class="dist-track"><div class="dist-fill grow" style="--d:.96s; width:0%; background:#9A8268;"></div></div><span class="dist-pct zero">0</span></div>
+            </div>
+
+            <!-- Volume graph tile -->
+            <div class="tile anim" style="--d:.36s; padding:13px; margin:0 6px 11px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <span class="tile-label">Audio level</span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span class="live-dot" style="width:6px; height:6px; border-radius:50%; background:var(--accent);"></span>
+                  <span style="font-family:'IBM Plex Mono'; font-size:11px; font-weight:600; color:var(--text);">0.47</span>
+                </div>
+              </div>
+              <svg width="100%" height="56" viewBox="0 0 332 56" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="volfillL" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#5E9070" stop-opacity="0.16"/>
+                    <stop offset="100%" stop-color="#5E9070" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="48" x2="332" y2="48" stroke="#ebeae6" stroke-width="1"/>
+                <line x1="0" y1="28" x2="332" y2="28" stroke="#efeeea" stroke-width="1" stroke-dasharray="2 4"/>
+                <path class="area-fade" style="--d:1s" d="M0,40 L14,36 L26,42 L38,29 L50,34 L62,21 L74,32 L86,17 L98,27 L110,12 L122,25 L134,19 L146,32 L158,23 L170,38 L182,27 L194,16 L206,29 L218,20 L230,34 L242,25 L254,40 L266,30 L278,19 L290,32 L302,24 L314,36 L324,29 L332,32 L332,48 L0,48 Z" fill="url(#volfillL)"/>
+                <path class="line-draw" style="--len:560; --d:.5s" d="M0,40 L14,36 L26,42 L38,29 L50,34 L62,21 L74,32 L86,17 L98,27 L110,12 L122,25 L134,19 L146,32 L158,23 L170,38 L182,27 L194,16 L206,29 L218,20 L230,34 L242,25 L254,40 L266,30 L278,19 L290,32 L302,24 L314,36 L324,29 L332,32" fill="none" stroke="#5E9070" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="332" cy="32" r="3.2" fill="#5E9070"/>
+              </svg>
+            </div>
+
+            <!-- ===== Paused: pick pause length ===== -->
+            <div class="tile anim" style="--d:.42s; padding:15px 14px 16px; margin:0 6px 11px; border-color:var(--accent-line); background:var(--accent-soft);">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                    <rect x="2.5" y="2" width="2.5" height="10" rx="1" fill="var(--accent)"/>
+                    <rect x="9" y="2" width="2.5" height="10" rx="1" fill="var(--accent)"/>
+                  </svg>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--accent);">Paused</span>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:6px;">
+                  <span class="bignum" style="font-size:19px;">3 h 15</span>
+                  <span style="font-size:10px; color:var(--text-dim); font-weight:500;">min</span>
+                </div>
+              </div>
+              <div style="font-size:11px; color:var(--text-dim); margin-bottom:11px;">How long should the pause last? (0–12 h, 15 min steps)</div>
+
+              <!-- Tick rail: 49 ticks spanning the bar -->
+              <div style="position:relative; height:36px; margin:0 5px;">
+                <!-- ticks -->
+                <div style="position:absolute; left:0; right:0; top:14px; display:flex; justify-content:space-between; align-items:flex-end; height:9px;">
+                  <span style="width:1.5px; height:9px; background:var(--text-faint); border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1.5px; height:7px; background:var(--text-faint); opacity:.7; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1.5px; height:7px; background:var(--text-faint); opacity:.7; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1px; height:5px; background:var(--text-faint); opacity:.5; border-radius:0.5px;"></span>
+                  <span style="width:1.5px; height:9px; background:var(--text-faint); border-radius:0.5px;"></span>
+                </div>
+                <!-- bar -->
+                <div style="position:absolute; left:0; right:0; top:10px; height:4px; background:var(--track); border-radius:2px;"></div>
+                <div style="position:absolute; left:0; top:10px; width:27.08%; height:4px; background:var(--accent); border-radius:2px;"></div>
+                <!-- thumb at ~3h15 of 12h (27.08%) -->
+                <div style="position:absolute; left:27.08%; top:5px; transform:translateX(-50%); width:14px; height:14px; border-radius:50%; background:var(--accent); border:2px solid var(--surface); box-shadow:0 1px 4px rgba(0,0,0,0.25);"></div>
+                <!-- labels under the major ticks -->
+                <div style="position:absolute; left:0; right:0; top:28px; display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:8.5px; font-weight:500; color:var(--text-faint); letter-spacing:.05em;">
+                  <span>0</span>
+                  <span style="opacity:0;">.</span>
+                  <span style="opacity:0;">.</span>
+                  <span style="opacity:0;">.</span>
+                  <span>3h</span>
+                  <span style="opacity:0;">.</span>
+                  <span style="opacity:0;">.</span>
+                  <span style="opacity:0;">.</span>
+                  <span>6h</span>
+                  <span style="opacity:0;">.</span>
+                  <span style="opacity:0;">.</span>
+                  <span style="opacity:0;">.</span>
+                  <span>12h</span>
+                </div>
+              </div>
+
+              <!-- Confirm row -->
+              <div style="display:flex; gap:10px; margin-top:18px;">
+                <button class="btn btn-secondary" style="flex:1; height:44px; font-size:13px;">Cancel</button>
+                <button class="btn btn-primary" style="flex:1.2; height:44px; font-size:13.5px;">
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="var(--accent-ink, #0e1813)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Confirm pause
+                </button>
+              </div>
+            </div>
+
+            <!-- Bottom controls -->
+            <div class="anim" style="--d:.42s; display:flex; gap:10px; padding:2px 6px 6px;">
+              <button class="btn btn-secondary" style="flex:1; height:50px;">
+                <svg width="14" height="14" viewBox="0 0 15 15" fill="none"><rect x="3" y="2.5" width="3.5" height="10" rx="1.2" fill="#1c1d1f"/><rect x="8.5" y="2.5" width="3.5" height="10" rx="1.2" fill="#1c1d1f"/></svg>
+                Pause
+              </button>
+              <button class="btn" style="flex:1; height:50px; background:var(--surface); border:1px solid #e4cdca; color:var(--sc-leisure);">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="2.5" y="2.5" width="9" height="9" rx="2" fill="#BB6F66"/></svg>
+                Stop
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">09</span><span class="caption-text">Live Recording</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 8 — SESSION RESULTS
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Header -->
+            <div class="anim" style="--d:.05s; padding:20px 6px 4px;">
+              <div style="display:flex; align-items:center; gap:7px;">
+                <div style="width:18px; height:18px; border-radius:6px; background:var(--accent); display:grid; place-items:center;">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5L4.3 8l4.7-5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <span class="eyebrow" style="color:var(--accent);">Session ended</span>
+              </div>
+              <h2 class="headline" style="font-size:25px; margin-top:9px;">Morning commute</h2>
+            </div>
+
+            <!-- Meta tiles -->
+            <div class="bento anim" style="--d:.12s; grid-template-columns:1fr 1fr 1fr; gap:9px; padding:14px 6px 0;">
+              <div class="tile" style="padding:13px;">
+                <div class="bignum" style="font-size:21px;">24</div>
+                <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-dim); font-weight:500; margin-top:4px; letter-spacing:.06em;">MINUTES</div>
+              </div>
+              <div class="tile" style="padding:13px;">
+                <div class="bignum" style="font-size:21px;">142</div>
+                <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-dim); font-weight:500; margin-top:4px; letter-spacing:.06em;">RECORDINGS</div>
+              </div>
+              <div class="tile" style="padding:13px;">
+                <div class="bignum" style="font-size:21px;">0</div>
+                <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-dim); font-weight:500; margin-top:4px; letter-spacing:.06em;">PAUSES</div>
+              </div>
+            </div>
+
+
+            <!-- Model reports header -->
+            <div class="anim sec-rule" style="--d:.24s; padding:16px 6px 9px;">
+              <span class="eyebrow">Model reports</span>
+              <div class="line"></div>
+            </div>
+
+            <!-- Model result A -->
+            <div class="tile anim" style="--d:.30s; padding:13px; margin:0 6px 9px;">
+              <div style="margin-bottom:10px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_10s_04_06_64bt</div>
+                <div style="display:flex; align-items:center; gap:7px; margin-top:5px;">
+                  <span class="dbadge s10">Standard</span>
+                  <span style="font-family:'IBM Plex Mono'; font-size:9px; color:var(--text-faint);">142 cycles</span>
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; margin-bottom:11px;">
+                <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:8px 9px;">
+                  <div style="font-family:'IBM Plex Mono'; font-size:7.5px; color:var(--text-faint); font-weight:500; letter-spacing:.06em;">MOST FREQUENT</div>
+                  <div style="display:flex; align-items:center; gap:4px; margin-top:4px;"><span style="font-size:11px;">🌲</span><span style="font-size:11px; font-weight:700; color:var(--sc-nature);">Nature</span></div>
+                </div>
+                <div style="width:90px; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:8px 9px;">
+                  <div style="font-family:'IBM Plex Mono'; font-size:7.5px; color:var(--text-faint); font-weight:500; letter-spacing:.06em;">AVG VOLUME</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:13px; font-weight:600; color:var(--text); margin-top:3px;">0.43</div>
+                </div>
+              </div>
+              <div class="dist-row"><span class="dist-emoji">🌲</span><span class="dist-name">Nature</span><div class="dist-track"><div class="dist-fill grow" style="--d:.5s; width:79%; background:#5E9070;"></div></div><span class="dist-pct">79</span></div>
+              <div class="dist-row"><span class="dist-emoji">🚗</span><span class="dist-name">Transit/Veh.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.56s; width:11%; background:#5C86A8;"></div></div><span class="dist-pct">11</span></div>
+              <div class="dist-row"><span class="dist-emoji">🎭</span><span class="dist-name">Culture/Quiet</span><div class="dist-track"><div class="dist-fill grow" style="--d:.62s; width:5%; background:#7E83AC;"></div></div><span class="dist-pct">5</span></div>
+              <div class="dist-row"><span class="dist-emoji">💼</span><span class="dist-name">Work</span><div class="dist-track"><div class="dist-fill grow" style="--d:.66s; width:3%; background:#897CA8;"></div></div><span class="dist-pct">3</span></div>
+              <div class="dist-row"><span class="dist-emoji">👥</span><span class="dist-name">Social</span><div class="dist-track"><div class="dist-fill grow" style="--d:.70s; width:1%; background:#BC7894;"></div></div><span class="dist-pct">1</span></div>
+              <div class="dist-row"><span class="dist-emoji">🛒</span><span class="dist-name">Commercial</span><div class="dist-track"><div class="dist-fill grow" style="--d:.73s; width:1%; background:#C28D5E;"></div></div><span class="dist-pct">1</span></div>
+            </div>
+
+            <!-- Model result B -->
+            <div class="tile anim" style="--d:.36s; padding:13px; margin:0 6px 11px;">
+              <div style="margin-bottom:10px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_1s_04_06_128bt</div>
+                <div style="display:flex; align-items:center; gap:7px; margin-top:5px;">
+                  <span class="dbadge s1">Fast</span>
+                  <span style="font-family:'IBM Plex Mono'; font-size:9px; color:var(--text-faint);">142 cycles</span>
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; margin-bottom:11px;">
+                <div style="flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:8px 9px;">
+                  <div style="font-family:'IBM Plex Mono'; font-size:7.5px; color:var(--text-faint); font-weight:500; letter-spacing:.06em;">MOST FREQUENT</div>
+                  <div style="display:flex; align-items:center; gap:4px; margin-top:4px;"><span style="font-size:11px;">🌲</span><span style="font-size:11px; font-weight:700; color:var(--sc-nature);">Nature</span></div>
+                </div>
+                <div style="width:90px; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:8px 9px;">
+                  <div style="font-family:'IBM Plex Mono'; font-size:7.5px; color:var(--text-faint); font-weight:500; letter-spacing:.06em;">AVG VOLUME</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:13px; font-weight:600; color:var(--text); margin-top:3px;">0.43</div>
+                </div>
+              </div>
+              <div class="dist-row"><span class="dist-emoji">🌲</span><span class="dist-name">Nature</span><div class="dist-track"><div class="dist-fill grow" style="--d:.56s; width:68%; background:#5E9070;"></div></div><span class="dist-pct">68</span></div>
+              <div class="dist-row"><span class="dist-emoji">👥</span><span class="dist-name">Social</span><div class="dist-track"><div class="dist-fill grow" style="--d:.62s; width:14%; background:#BC7894;"></div></div><span class="dist-pct">14</span></div>
+              <div class="dist-row"><span class="dist-emoji">🚗</span><span class="dist-name">Transit/Veh.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.66s; width:10%; background:#5C86A8;"></div></div><span class="dist-pct">10</span></div>
+              <div class="dist-row"><span class="dist-emoji">💼</span><span class="dist-name">Work</span><div class="dist-track"><div class="dist-fill grow" style="--d:.70s; width:5%; background:#897CA8;"></div></div><span class="dist-pct">5</span></div>
+              <div class="dist-row"><span class="dist-emoji">🛒</span><span class="dist-name">Commercial</span><div class="dist-track"><div class="dist-fill grow" style="--d:.73s; width:2%; background:#C28D5E;"></div></div><span class="dist-pct">2</span></div>
+              <div class="dist-row"><span class="dist-emoji">🎭</span><span class="dist-name">Culture/Quiet</span><div class="dist-track"><div class="dist-fill grow" style="--d:.76s; width:1%; background:#7E83AC;"></div></div><span class="dist-pct">1</span></div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="anim" style="--d:.42s; display:flex; gap:10px; padding:2px 6px 6px;">
+              <button class="btn btn-secondary" style="flex:1; height:50px;">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M6.5 2L2 7.5l4.5 5.5M2 7.5h11" stroke="#1c1d1f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Back to home
+              </button>
+              <button class="btn btn-primary" style="flex:1; height:50px;">
+                Open history
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 3.7v4l2.6 1.6" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/><circle cx="7.5" cy="7.5" r="5.6" stroke="#ffffff" stroke-width="1.8"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">10</span><span class="caption-text">Session Results</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 9 — HISTORY
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Header -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; justify-content:space-between; padding:20px 6px 6px;">
+              <div style="display:flex; align-items:center; gap:11px;">
+                <div class="icon-btn">
+                  <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M10.5 3.5L5 8.5l5.5 5" stroke="#1c1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <h2 class="headline" style="font-size:24px;">History</h2>
+              </div>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); padding:6px 11px; border-radius:9px;">23 total</span>
+            </div>
+
+            <!-- Session list -->
+            <div style="display:flex; flex-direction:column; gap:10px; padding:14px 6px 0;">
+
+              <!-- Card 1 — ACTIVE -->
+              <div class="tile anim" style="--d:.12s; padding:14px; border-color:var(--accent); background:var(--accent-soft);">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+                  <div>
+                    <span class="headline" style="font-size:14.5px;">Morning commute</span>
+                    <div style="font-family:'IBM Plex Mono'; font-size:9.5px; color:var(--text-dim); margin-top:3px;">today 08:14</div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:5px; background:var(--surface); border:1px solid #d9e4dd; padding:4px 8px; border-radius:7px; flex-shrink:0;">
+                    <span class="live-dot" style="width:6px; height:6px; border-radius:50%; background:var(--accent);"></span>
+                    <span style="font-family:'IBM Plex Mono'; font-size:8px; font-weight:600; letter-spacing:.06em; color:var(--accent);">ACTIVE</span>
+                  </div>
+                </div>
+                <div class="ministack" style="margin:12px 0;">
+                  <span style="flex:79; background:#5E9070;"></span>
+                  <span style="flex:11; background:#5C86A8;"></span>
+                  <span style="flex:5; background:#7E83AC;"></span>
+                  <span style="flex:5; background:#897CA8;"></span>
+                </div>
+                <div class="chip-row">
+                  <span class="chip" style="background:var(--surface);"><b>1</b> model</span>
+                  <span class="chip" style="background:var(--surface);">Continuous</span>
+                  <span class="chip" style="background:var(--surface);">Standard 10s</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:16px; margin-top:12px; padding-top:12px; border-top:1px solid #d9e4dd;">
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">142</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">recordings</span>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">24</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">min</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 2 -->
+              <div class="tile anim" style="--d:.18s; padding:14px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+                  <div>
+                    <span class="headline" style="font-size:14.5px;">Office afternoon</span>
+                    <div style="font-family:'IBM Plex Mono'; font-size:9.5px; color:var(--text-faint); margin-top:3px;">yesterday 14:30</div>
+                  </div>
+                </div>
+                <div class="ministack" style="margin:12px 0;">
+                  <span style="flex:42; background:#897CA8;"></span>
+                  <span style="flex:21; background:#5C86A8;"></span>
+                  <span style="flex:15; background:#BC7894;"></span>
+                  <span style="flex:12; background:#C28D5E;"></span>
+                  <span style="flex:10; background:#7E83AC;"></span>
+                </div>
+                <div class="chip-row">
+                  <span class="chip"><b>3</b> models</span>
+                  <span class="chip">Interval 30min</span>
+                  <span class="chip">3 methods</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:16px; margin-top:12px; padding-top:12px; border-top:1px solid var(--hairline);">
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">38</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">recordings</span>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">3</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">h</span>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:5px;">
+                    <span class="bignum" style="font-size:14px;">14</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:500;">min pause</span>
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- Card 3 -->
+              <div class="tile anim" style="--d:.28s; padding:14px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+                  <div>
+                    <span class="headline" style="font-size:14.5px;">Park walk</span>
+                    <div style="font-family:'IBM Plex Mono'; font-size:9.5px; color:var(--text-faint); margin-top:3px;">yesterday 09:02</div>
+                  </div>
+                </div>
+                <div class="ministack" style="margin:12px 0;">
+                  <span style="flex:73; background:#5E9070;"></span>
+                  <span style="flex:13; background:#BC7894;"></span>
+                  <span style="flex:9; background:#5C86A8;"></span>
+                  <span style="flex:5; background:#C2A24E;"></span>
+                </div>
+                <div class="chip-row">
+                  <span class="chip"><b>2</b> models</span>
+                  <span class="chip">Continuous</span>
+                  <span class="chip">Avg</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:16px; margin-top:12px; padding-top:12px; border-top:1px solid var(--hairline);">
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">96</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">recordings</span>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">16</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">min</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 4 -->
+              <div class="tile anim" style="--d:.34s; padding:14px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+                  <div>
+                    <span class="headline" style="font-size:14.5px;">Café test</span>
+                    <div style="font-family:'IBM Plex Mono'; font-size:9.5px; color:var(--text-faint); margin-top:3px;">2 days ago</div>
+                  </div>
+                </div>
+                <div class="ministack" style="margin:12px 0;">
+                  <span style="flex:38; background:#C28D5E;"></span>
+                  <span style="flex:26; background:#BC7894;"></span>
+                  <span style="flex:18; background:#897CA8;"></span>
+                  <span style="flex:11; background:#5C86A8;"></span>
+                  <span style="flex:7; background:#5E9070;"></span>
+                </div>
+                <div class="chip-row">
+                  <span class="chip"><b>1</b> model</span>
+                  <span class="chip">Continuous</span>
+                  <span class="chip">Fast 1s</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:16px; margin-top:12px; padding-top:12px; border-top:1px solid var(--hairline);">
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">210</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">recordings</span>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">4</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">min</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 5 -->
+              <div class="tile anim" style="--d:.40s; padding:14px; margin-bottom:4px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+                  <div>
+                    <span class="headline" style="font-size:14.5px;">Night monitoring</span>
+                    <div style="font-family:'IBM Plex Mono'; font-size:9.5px; color:var(--text-faint); margin-top:3px;">3 days ago</div>
+                  </div>
+                </div>
+                <div class="ministack" style="margin:12px 0;">
+                  <span style="flex:58; background:#7E83AC;"></span>
+                  <span style="flex:22; background:#9A8268;"></span>
+                  <span style="flex:13; background:#5E9070;"></span>
+                  <span style="flex:7; background:#5C86A8;"></span>
+                </div>
+                <div class="chip-row">
+                  <span class="chip"><b>1</b> model</span>
+                  <span class="chip">Interval 1h</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:16px; margin-top:12px; padding-top:12px; border-top:1px solid var(--hairline);">
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">12</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">recordings</span>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:4px;">
+                    <span class="bignum" style="font-size:14px;">12</span>
+                    <span style="font-size:9px; color:var(--text-faint); font-weight:600;">h</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">11</span><span class="caption-text">History</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 10 — SESSION DETAIL
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Header -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; gap:11px; padding:20px 6px 4px;">
+              <div class="icon-btn">
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M10.5 3.5L5 8.5l5.5 5" stroke="#1c1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Session details</div>
+                <h2 class="headline" style="font-size:21px; margin-top:3px;">Park walk</h2>
+              </div>
+            </div>
+
+            <!-- Meta grid -->
+            <div class="tile anim" style="--d:.12s; padding:4px 16px; margin:16px 6px 0;">
+              <div style="display:grid; grid-template-columns:1fr 1fr;">
+                <!-- row pairs -->
+                <div style="padding:13px 0; border-bottom:1px solid var(--hairline);">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">START</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:11.5px; font-weight:600; color:var(--text); margin-top:4px;">09:02</div>
+                  <div style="font-size:9px; color:var(--text-dim); margin-top:1px;">yesterday</div>
+                </div>
+                <div style="padding:13px 0 13px 16px; border-bottom:1px solid var(--hairline); border-left:1px solid var(--hairline);">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">END</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:11.5px; font-weight:600; color:var(--text); margin-top:4px;">09:18</div>
+                  <div style="font-size:9px; color:var(--text-dim); margin-top:1px;">yesterday</div>
+                </div>
+                <div style="padding:13px 0; border-bottom:1px solid var(--hairline);">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">DURATION</div>
+                  <div style="font-size:11.5px; font-weight:700; color:var(--text); margin-top:4px;"><span style="font-family:'IBM Plex Mono';">16</span> min</div>
+                </div>
+                <div style="padding:13px 0 13px 16px; border-bottom:1px solid var(--hairline); border-left:1px solid var(--hairline);">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">RECORDINGS</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:11.5px; font-weight:600; color:var(--text); margin-top:4px;">96</div>
+                </div>
+                <div style="padding:13px 0; border-bottom:1px solid var(--hairline);">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">PAUSES</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:11.5px; font-weight:600; color:var(--text); margin-top:4px;">0</div>
+                </div>
+                <div style="padding:13px 0 13px 16px; border-bottom:1px solid var(--hairline); border-left:1px solid var(--hairline);">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">MODELS</div>
+                  <div style="font-family:'IBM Plex Mono'; font-size:11.5px; font-weight:600; color:var(--text); margin-top:4px;">2</div>
+                </div>
+                <div style="padding:13px 0;">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">CONFIG</div>
+                  <div style="font-size:11px; font-weight:700; color:var(--text); margin-top:4px;">Continuous · Avg</div>
+                </div>
+                <div style="padding:13px 0 13px 16px; border-left:1px solid var(--hairline);">
+                  <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--text-faint); font-weight:500; letter-spacing:.1em;">BATTERY</div>
+                  <div style="font-size:11.5px; font-weight:700; color:var(--text); margin-top:4px;">~<span style="font-family:'IBM Plex Mono';">4</span>%</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Model predictions header -->
+            <div class="anim sec-rule" style="--d:.18s; padding:16px 6px 9px;">
+              <span class="eyebrow">Model predictions</span>
+              <div class="line"></div>
+            </div>
+
+            <!-- Model 1 -->
+            <div class="tile anim" style="--d:.24s; padding:13px; margin:0 6px 9px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:11px;">dcase2025_10s_04_06_64bt</div>
+              <div class="dist-row"><span class="dist-emoji">🌲</span><span class="dist-name">Nature</span><div class="dist-track"><div class="dist-fill grow" style="--d:.5s; width:88%; background:#5E9070;"></div></div><span class="dist-pct">88</span></div>
+              <div class="dist-row"><span class="dist-emoji">🚗</span><span class="dist-name">Transit/Veh.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.55s; width:5%; background:#5C86A8;"></div></div><span class="dist-pct">5</span></div>
+              <div class="dist-row"><span class="dist-emoji">🎭</span><span class="dist-name">Culture/Quiet</span><div class="dist-track"><div class="dist-fill grow" style="--d:.60s; width:3%; background:#7E83AC;"></div></div><span class="dist-pct">3</span></div>
+              <div class="dist-row"><span class="dist-emoji">💼</span><span class="dist-name">Work</span><div class="dist-track"><div class="dist-fill grow" style="--d:.65s; width:2%; background:#897CA8;"></div></div><span class="dist-pct">2</span></div>
+              <div class="dist-row"><span class="dist-emoji">👥</span><span class="dist-name">Social</span><div class="dist-track"><div class="dist-fill grow" style="--d:.70s; width:1%; background:#BC7894;"></div></div><span class="dist-pct">1</span></div>
+              <div class="dist-row"><span class="dist-emoji">🛒</span><span class="dist-name">Commercial</span><div class="dist-track"><div class="dist-fill grow" style="--d:.74s; width:0%; background:#C28D5E;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏙️</span><span class="dist-name">Urban/Wait.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.78s; width:0%; background:#C2A24E;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">⚽</span><span class="dist-name">Leisure/Sp.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.82s; width:0%; background:#BB6F66;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏠</span><span class="dist-name">Living Room</span><div class="dist-track"><div class="dist-fill grow" style="--d:.86s; width:0%; background:#9A8268;"></div></div><span class="dist-pct zero">0</span></div>
+            </div>
+
+            <!-- Model 2 -->
+            <div class="tile anim" style="--d:.30s; padding:13px; margin:0 6px 11px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:11px;">dcase2025_1s_04_06_128bt</div>
+              <div class="dist-row"><span class="dist-emoji">🌲</span><span class="dist-name">Nature</span><div class="dist-track"><div class="dist-fill grow" style="--d:.56s; width:80%; background:#5E9070;"></div></div><span class="dist-pct">80</span></div>
+              <div class="dist-row"><span class="dist-emoji">👥</span><span class="dist-name">Social</span><div class="dist-track"><div class="dist-fill grow" style="--d:.61s; width:9%; background:#BC7894;"></div></div><span class="dist-pct">9</span></div>
+              <div class="dist-row"><span class="dist-emoji">🚗</span><span class="dist-name">Transit/Veh.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.66s; width:6%; background:#5C86A8;"></div></div><span class="dist-pct">6</span></div>
+              <div class="dist-row"><span class="dist-emoji">💼</span><span class="dist-name">Work</span><div class="dist-track"><div class="dist-fill grow" style="--d:.71s; width:3%; background:#897CA8;"></div></div><span class="dist-pct">3</span></div>
+              <div class="dist-row"><span class="dist-emoji">🛒</span><span class="dist-name">Commercial</span><div class="dist-track"><div class="dist-fill grow" style="--d:.75s; width:2%; background:#C28D5E;"></div></div><span class="dist-pct">2</span></div>
+              <div class="dist-row"><span class="dist-emoji">🎭</span><span class="dist-name">Culture/Quiet</span><div class="dist-track"><div class="dist-fill grow" style="--d:.79s; width:0%; background:#7E83AC;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏙️</span><span class="dist-name">Urban/Wait.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.82s; width:0%; background:#C2A24E;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">⚽</span><span class="dist-name">Leisure/Sp.</span><div class="dist-track"><div class="dist-fill grow" style="--d:.85s; width:0%; background:#BB6F66;"></div></div><span class="dist-pct zero">0</span></div>
+              <div class="dist-row"><span class="dist-emoji">🏠</span><span class="dist-name">Living Room</span><div class="dist-track"><div class="dist-fill grow" style="--d:.88s; width:0%; background:#9A8268;"></div></div><span class="dist-pct zero">0</span></div>
+            </div>
+
+              <!-- Other option -->
+              <div class="tile anim" style="--d:.49s; padding:11px 13px; border-color:var(--accent-line); background:var(--accent-soft); display:flex; align-items:center; gap:11px;">
+                <span class="chip-dot" style="background:var(--text-faint); width:8px; height:8px;"></span>
+                <span style="font-size:14px;">✎</span>
+                <span style="font-size:12.5px; font-weight:600; color:var(--text); flex:1;">Other — write a note</span>
+                <div style="width:19px; height:19px; border-radius:50%; background:var(--accent); display:grid; place-items:center;">
+                  <svg width="10" height="10" viewBox="0 0 13 13" fill="none"><path d="M2.5 7L5 9.5l5.5-6" stroke="var(--accent-ink, #0e1813)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+
+              <!-- Expanded comment textarea (visible when Other is picked) -->
+              <div class="tile anim" style="--d:.52s; padding:12px 13px; background:var(--surface);">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint); margin-bottom:7px;">Your note</div>
+                <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:10px 11px; min-height:64px; font-size:12px; color:var(--text); line-height:1.45;">
+                  Indoor market — many overlapping voices, vendors calling.
+                  <span style="display:inline-block; width:1.5px; height:13px; background:var(--accent); margin-left:1px; vertical-align:-2px;"></span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:7px;">
+                  <span style="font-size:10px; color:var(--text-faint);">Visible only on Send</span>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; color:var(--text-dim);">62 / 240</span>
+                </div>
+              </div>
+
+
+            <!-- Most heard line -->
+            <div class="anim" style="--d:.36s; margin:0 6px 11px; padding:13px 15px; background:var(--accent-soft); border:1px solid #d9e4dd; border-radius:var(--r-tile); display:flex; align-items:center; gap:10px;">
+              <span style="font-size:18px;">🌲</span>
+              <div style="flex:1;">
+                <div style="font-family:'IBM Plex Mono'; font-size:8px; color:var(--accent); font-weight:600; letter-spacing:.1em;">MOST HEARD</div>
+                <div class="headline" style="font-size:15px; color:var(--accent); margin-top:2px;">Nature</div>
+              </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="anim" style="--d:.42s; display:flex; gap:10px; padding:2px 6px 4px;">
+              <button class="btn btn-primary" style="flex:1; height:48px;">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5v8M4 6l3.5 3.5L11 6M2 12.5h11" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Export CSV
+              </button>
+              <button class="btn btn-secondary" style="flex:1; height:48px;">
+                Close
+              </button>
+            </div>
+            <!-- Delete -->
+            <div class="anim" style="--d:.46s; padding:6px 6px 4px; text-align:center;">
+              <button style="background:none; border:none; cursor:pointer; font-family:'Hanken Grotesk'; font-size:12px; font-weight:600; color:var(--sc-leisure); padding:8px 16px; display:inline-flex; align-items:center; gap:6px;">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 3.5h8M5 3.5V2.3a1 1 0 011-1h1a1 1 0 011 1V3.5M3.6 3.5l.5 7a1 1 0 001 .9h2.8a1 1 0 001-.9l.5-7" stroke="#BB6F66" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Delete session
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">12</span><span class="caption-text">Session Detail</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 11 — SETTINGS
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Header -->
+            <div class="anim" style="--d:.05s; display:flex; align-items:center; gap:11px; padding:20px 6px 14px;">
+              <div class="icon-btn">
+                <svg width="16" height="16" viewBox="0 0 17 17" fill="none"><path d="M10.5 3.5L5 8.5l5.5 5" stroke="#1c1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <h2 class="headline" style="font-size:24px;">Settings</h2>
+            </div>
+
+            <!-- Appearance -->
+            <div class="anim" style="--d:.12s; padding:6px 6px 8px;">
+              <div class="eyebrow" style="margin-bottom:9px;">Appearance</div>
+              <div class="tile" style="padding:15px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:36px; height:36px; border-radius:11px; background:var(--surface-2); border:1px solid var(--border); display:grid; place-items:center; flex-shrink:0;">
+                    <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="8.5" r="3.4" stroke="#6b6d71" stroke-width="1.6"/><path d="M8.5 1.8v1.6M8.5 13.6v1.6M15.2 8.5h-1.6M3.4 8.5H1.8M13.2 3.8l-1.1 1.1M5 12l-1.1 1.1M13.2 13.2L12 12.1M5 5L3.8 3.8" stroke="#6b6d71" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="font-size:13px; font-weight:700; color:var(--text);">Theme</div>
+                    <div style="font-size:10px; color:var(--text-dim); margin-top:1px;">Light · Dark</div>
+                  </div>
+                  <!-- segmented toggle -->
+                  <div style="display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px;">
+                    <span style="display:flex; align-items:center; gap:4px; padding:5px 10px; border-radius:7px; background:var(--accent); color:#fff; font-size:10.5px; font-weight:600;">
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="2.4" fill="#fff"/><path d="M5.5 .8v1.1M5.5 9.1v1.1M9.5 5.5h-1.1M3.1 5.5H2M8.3 2.7l-.8.8M3.5 7.5l-.8.8M8.3 8.3l-.8-.8M3.5 3.5l-.8-.8" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>
+                      Light
+                    </span>
+                    <span style="display:flex; align-items:center; gap:4px; padding:5px 10px; border-radius:7px; color:var(--text-dim); font-size:10.5px; font-weight:600;">
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M9 6.2A4 4 0 014.8 2a4 4 0 100 8 4 4 0 004.2-3.8z" fill="#9b9ca0"/></svg>
+                      Dark
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Models -->
+            <div class="anim" style="--d:.18s; padding:8px 6px 8px;">
+              <div class="eyebrow" style="margin-bottom:9px;">Models</div>
+              <div class="tile" style="padding:4px 16px;">
+                <div style="display:flex; align-items:center; gap:10px; padding:13px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_10s_04_06_64bt</span>
+                  <span class="dbadge s10">10s</span>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="#9b9ca0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:13px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_10s_04_29_32bt</span>
+                  <span class="dbadge s10">10s</span>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="#9b9ca0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:13px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_1s_04_06_128bt</span>
+                  <span class="dbadge s1">1s</span>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="#9b9ca0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:13px 0;">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">dcase2025_1s_05_12_96bt</span>
+                  <span class="dbadge s1">1s</span>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="#9b9ca0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- About -->
+            <div class="anim" style="--d:.24s; padding:8px 6px 8px;">
+              <div class="eyebrow" style="margin-bottom:9px;">About</div>
+              <div class="tile" style="padding:4px 16px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="font-size:11.5px; color:var(--text-dim); font-weight:500;">App</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Acoustic Scene Classification</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 0;">
+                  <span style="font-size:11.5px; color:var(--text-dim); font-weight:500;">Scene classes</span>
+                  <span style="font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--text); font-weight:600;">9</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scene legend -->
+            <div class="anim" style="--d:.30s; padding:8px 6px 6px;">
+              <div class="eyebrow" style="margin-bottom:9px;">Scene legend</div>
+              <div class="tile" style="padding:4px 16px;">
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#5C86A8; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">🚗</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Transit/Vehicles</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#C2A24E; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">🏙️</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Urban/Waiting</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#5E9070; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">🌲</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Nature</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#BC7894; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">👥</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Social</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#897CA8; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">💼</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Work</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#C28D5E; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">🛒</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Commercial</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#BB6F66; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">⚽</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Leisure/Sports</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--hairline);">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#7E83AC; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">🎭</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Culture/Quiet</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 0;">
+                  <span style="width:14px; height:14px; border-radius:5px; background:#9A8268; flex-shrink:0;"></span>
+                  <span style="font-size:13px;">🏠</span>
+                  <span style="font-size:11.5px; color:var(--text); font-weight:600;">Living Room</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">13</span><span class="caption-text">Settings</span></div>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 12 — EVALUATION
+       ======================================================== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="statusbar">
+          <span class="sb-time">14:32</span>
+          <span class="sb-icons">
+            <svg width="62" height="15" viewBox="0 0 62 15" fill="none">
+              <rect x="0" y="8" width="3" height="6" rx="1" fill="#1c1d1f"/>
+              <rect x="5" y="6" width="3" height="8" rx="1" fill="#1c1d1f"/>
+              <rect x="10" y="3.5" width="3" height="10.5" rx="1" fill="#1c1d1f"/>
+              <rect x="15" y="1" width="3" height="13" rx="1" fill="#1c1d1f"/>
+              <path d="M25 5.5C27.5 3.2 31 1.9 34.5 1.9C38 1.9 41.5 3.2 44 5.5L41.6 8C39.7 6.2 37.2 5.2 34.5 5.2C31.8 5.2 29.3 6.2 27.4 8L25 5.5Z" fill="#1c1d1f"/>
+              <path d="M29.2 9.7C30.6 8.4 32.5 7.6 34.5 7.6C36.5 7.6 38.4 8.4 39.8 9.7L34.5 14.5L29.2 9.7Z" fill="#1c1d1f"/>
+              <rect x="49" y="3" width="11" height="9" rx="2.5" stroke="#1c1d1f" stroke-width="1.3" opacity="0.5"/>
+              <rect x="50.6" y="4.6" width="6.5" height="5.8" rx="1.3" fill="#1c1d1f"/>
+              <rect x="60.4" y="6" width="1.4" height="3.2" rx="0.7" fill="#1c1d1f" opacity="0.5"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="body">
+          <div class="pad">
+
+            <!-- Header -->
+            <div class="anim" style="--d:.05s; padding:20px 6px 4px;">
+              <div class="eyebrow">Ground truth</div>
+              <h2 class="headline" style="font-size:25px; margin-top:5px;">Rate the environment</h2>
+              <p style="font-size:12px; color:var(--text-dim); margin-top:6px; line-height:1.4;">The recording just finished — which environment was it actually?</p>
+            </div>
+
+            <!-- Prediction + countdown row -->
+            <div class="anim" style="--d:.12s; display:flex; gap:9px; padding:16px 6px 0;">
+              <!-- model prediction -->
+              <div class="tile" style="flex:1.5; padding:13px;">
+                <div class="tile-label">Model predicted</div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:7px;">
+                  <span style="font-size:20px;">🌲</span>
+                  <div>
+                    <div class="headline" style="font-size:15px; color:var(--sc-nature);">Nature</div>
+                  </div>
+                  <span style="font-family:'IBM Plex Mono'; font-size:13px; font-weight:600; color:var(--text); margin-left:auto;">84%</span>
+                </div>
+              </div>
+              <!-- countdown -->
+              <div class="tile" style="width:100px; padding:13px; display:flex; flex-direction:column; justify-content:center;">
+                <div class="tile-label">Auto-skip</div>
+                <div class="bignum" style="font-size:18px; margin-top:6px; color:var(--text-dim);">4:32</div>
+              </div>
+            </div>
+
+            <!-- Radio list label -->
+            <div class="anim sec-rule" style="--d:.18s; padding:16px 6px 9px;">
+              <span class="eyebrow">Select the actual scene</span>
+              <div class="line"></div>
+            </div>
+
+            <!-- Scene radio list -->
+            <div style="display:flex; flex-direction:column; gap:7px; padding:0 6px;">
+
+              <!-- Nature — PRESELECTED -->
+              <div class="opt sel anim" style="--d:.22s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">🌲</span>
+                  <span class="headline" style="font-size:13.5px; flex:1;">Nature</span>
+                  <div class="radio on"></div>
+                </div>
+              </div>
+
+              <!-- Transit/Vehicles -->
+              <div class="opt anim" style="--d:.25s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">🚗</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Transit/Vehicles</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+              <!-- Urban/Waiting -->
+              <div class="opt anim" style="--d:.28s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">🏙️</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Urban/Waiting</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+              <!-- Social -->
+              <div class="opt anim" style="--d:.31s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">👥</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Social</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+              <!-- Work -->
+              <div class="opt anim" style="--d:.34s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">💼</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Work</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+              <!-- Commercial -->
+              <div class="opt anim" style="--d:.37s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">🛒</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Commercial</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+              <!-- Leisure/Sports -->
+              <div class="opt anim" style="--d:.40s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">⚽</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Leisure/Sports</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+              <!-- Culture/Quiet -->
+              <div class="opt anim" style="--d:.43s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">🎭</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Culture/Quiet</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+              <!-- Living Room -->
+              <div class="opt anim" style="--d:.46s; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span style="font-size:17px;">🏠</span>
+                  <span style="font-size:13.5px; font-weight:600; color:var(--text-dim); flex:1;">Living Room</span>
+                  <div class="radio off"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Buttons -->
+            <div class="anim" style="--d:.52s; display:flex; gap:10px; padding:18px 6px 6px;">
+              <button class="btn btn-secondary" style="flex:1; height:50px;">
+                Skip
+              </button>
+              <button class="btn btn-primary" style="flex:1.4; height:50px;">
+                Send
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5L13 2l-3.5 11-2.5-4.5L2 7.5z" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><span class="caption-num">14</span><span class="caption-text">Evaluation</span></div>
+  </div>
+
+</div>
+
+<script>
+/* ---- Gentle staggered load animation ---- */
+(function () {
+  var reduced = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function settle() {
+    document.querySelectorAll('[data-count]').forEach(function (el) {
+      var end = parseFloat(el.getAttribute('data-count'));
+      el.textContent = end.toLocaleString('en-US');
+    });
+    document.querySelectorAll('.screen').forEach(function (s) {
+      s.classList.add('run');
+    });
+  }
+
+  function start() {
+    document.querySelectorAll('.screen').forEach(function (s) {
+      s.classList.add('run');
+    });
+    setTimeout(countUp, 260);
+  }
+
+  function countUp() {
+    document.querySelectorAll('[data-count]').forEach(function (el) {
+      var end = parseFloat(el.getAttribute('data-count'));
+      var dur = 950, t0 = null;
+      function step(ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min((ts - t0) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(end * eased).toLocaleString('en-US');
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function boot() {
+    requestAnimationFrame(reduced ? settle : start);
+  }
+
+  if (document.readyState === 'complete') {
+    boot();
+  } else {
+    window.addEventListener('load', boot);
+  }
+})();
+</script>
+
+</body>
+</html>
