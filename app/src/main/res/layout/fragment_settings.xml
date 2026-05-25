@@ -4,27 +4,30 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@color/background_dark">
+    android:background="@color/background_dark"
+    android:fitsSystemWindows="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingHorizontal="22dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="24dp">
 
-        <!-- Header row: back arrow + title -->
+        <!-- Header: chevron + title -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="14dp">
 
             <ImageButton
                 android:id="@+id/settingsBack"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:padding="10dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
                 android:src="@drawable/ic_arrow_back"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/wizard_back" />
@@ -32,237 +35,261 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
                 android:text="@string/settings"
-                android:textSize="24sp"
+                android:textSize="23sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:layout_marginStart="8dp" />
+                android:textColor="@color/text_primary" />
         </LinearLayout>
 
-        <!-- Appearance Section -->
-        <com.google.android.material.card.MaterialCardView
+        <!-- Appearance section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_appearance"
+            android:textAllCaps="true"
+            android:textSize="9.5sp"
+            android:textColor="@color/text_faint"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.15"
+            android:textStyle="bold"
+            android:layout_marginBottom="9dp" />
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            app:cardBackgroundColor="@color/surface_dark">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_tile"
+            android:padding="15dp"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_appearance"
-                    android:textSize="16sp"
+                    android:text="@string/dark_mode"
+                    android:textSize="13sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="16dp" />
+                    android:textColor="@color/text_primary" />
 
-                <!-- Dark Mode Toggle -->
+                <TextView
+                    android:id="@+id/themeStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/settings_theme_active_dark"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_faint" />
+            </LinearLayout>
+
+            <!-- Light/Dark segmented toggle -->
+            <LinearLayout
+                android:id="@+id/themeSegmentedToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/bg_segmented_track"
+                android:padding="3dp">
+
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:id="@+id/themeLightOption"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:layout_marginEnd="3dp"
+                    android:clickable="true"
+                    android:focusable="true">
 
-                    <!-- Sun Icon (Light Mode) -->
                     <ImageView
-                        android:id="@+id/iconLightMode"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
                         android:src="@drawable/ic_light_mode"
-                        android:layout_marginEnd="12dp"
                         android:contentDescription="@string/light_mode" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/themeLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/dark_mode"
-                            android:textSize="16sp"
-                            android:textColor="@color/text_primary" />
-
-                        <TextView
-                            android:id="@+id/themeDescription"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/settings_theme_description"
-                            android:textSize="12sp"
-                            android:textColor="@color/text_secondary"
-                            android:layout_marginTop="2dp" />
-                    </LinearLayout>
-
-                    <!-- Theme Switch -->
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/themeSwitch"
+                    <TextView
+                        android:id="@+id/themeLightLabel"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <!-- Moon Icon (Dark Mode) -->
-                    <ImageView
-                        android:id="@+id/iconDarkMode"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_dark_mode"
-                        android:layout_marginStart="12dp"
-                        android:contentDescription="@string/dark_mode" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:text="@string/settings_theme_light"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_faint" />
                 </LinearLayout>
 
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Models Section -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            app:cardBackgroundColor="@color/surface_dark">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/settings_models"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="12dp" />
-
                 <LinearLayout
-                    android:id="@+id/devModelsContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- App Info Section -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            app:cardBackgroundColor="@color/surface_dark">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
+                    android:id="@+id/themeDarkOption"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/settings_about"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="16dp" />
-
-                <!-- App Name -->
-                <LinearLayout
-                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:background="@drawable/bg_segmented_active"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
+                        android:src="@drawable/ic_dark_mode"
+                        android:contentDescription="@string/dark_mode"
+                        app:tint="@color/accent_ink" />
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/settings_app_name_label"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary" />
-
-                    <TextView
+                        android:id="@+id/themeDarkLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/app_name_full"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_primary" />
+                        android:layout_marginStart="5dp"
+                        android:text="@string/settings_theme_dark"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent_ink" />
                 </LinearLayout>
-
-                <!-- Scene Classes -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/settings_classes_label"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="9 Classes"
-                        android:textSize="14sp"
-                        android:textColor="@color/accent_green" />
-                </LinearLayout>
-
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
-        <!-- Scene Classes Legend -->
-        <com.google.android.material.card.MaterialCardView
+        <!-- Models section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_models"
+            android:textAllCaps="true"
+            android:textSize="9.5sp"
+            android:textColor="@color/text_faint"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.15"
+            android:textStyle="bold"
+            android:layout_marginBottom="9dp" />
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            app:cardBackgroundColor="@color/surface_dark">
+            android:orientation="vertical"
+            android:background="@drawable/bg_tile"
+            android:padding="6dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:id="@+id/devModelsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- About section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_about"
+            android:textAllCaps="true"
+            android:textSize="9.5sp"
+            android:textColor="@color/text_faint"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.15"
+            android:textStyle="bold"
+            android:layout_marginBottom="9dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_tile"
+            android:padding="6dp"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="9dp"
+                android:paddingVertical="11dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_app_name_label"
+                    android:textSize="11.5sp"
+                    android:textColor="@color/text_secondary" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_scene_legend"
-                    android:textSize="16sp"
+                    android:text="@string/app_name_full"
+                    android:textSize="11.5sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="16dp" />
-
-                <LinearLayout
-                    android:id="@+id/sceneLegendContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-
+                    android:textColor="@color/text_primary" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/hairline" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="9dp"
+                android:paddingVertical="11dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_classes_label"
+                    android:textSize="11.5sp"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_classes_value"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/text_primary" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Scene legend section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_scene_legend"
+            android:textAllCaps="true"
+            android:textSize="9.5sp"
+            android:textColor="@color/text_faint"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.15"
+            android:textStyle="bold"
+            android:layout_marginBottom="9dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_tile"
+            android:padding="13dp">
+
+            <LinearLayout
+                android:id="@+id/sceneLegendContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
