@@ -26,6 +26,7 @@ import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
+import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
 import com.fzi.acousticscene.util.ThemeHelper
 import com.fzi.acousticscene.util.stripModelSuffix
@@ -219,7 +220,8 @@ class HistoryActivity : AppCompatActivity() {
     // --- Existing functionality ---
 
     private fun loadHistory() {
-        val predictions = repository.getAllPredictions().sortedBy { it.timestamp }
+        val rawPredictions = repository.getAllPredictions().sortedBy { it.timestamp }
+        val predictions = applyModeFilter(rawPredictions)
         val packages = groupIntoPackages(predictions)
 
         // Alle Session-Startzeiten chronologisch sammeln
@@ -234,6 +236,24 @@ class HistoryActivity : AppCompatActivity() {
         } else {
             emptyStateText.visibility = View.GONE
             recyclerView.visibility = View.VISIBLE
+        }
+    }
+
+    /**
+     * Filters predictions down to the mode requested by the launcher, if any.
+     * Default (no extra / unknown value): no filter. TEST keeps only records
+     * with `sessionMode == TEST`; CONFIG keeps `sessionMode == CONFIG` plus
+     * legacy null records (those were saved before the tag existed and have
+     * always been a developer flow).
+     */
+    private fun applyModeFilter(predictions: List<PredictionRecord>): List<PredictionRecord> {
+        val raw = intent?.getStringExtra(EXTRA_MODE_FILTER) ?: return predictions
+        val target = runCatching { SessionMode.valueOf(raw) }.getOrNull() ?: return predictions
+        return when (target) {
+            SessionMode.TEST -> predictions.filter { it.sessionMode == SessionMode.TEST }
+            SessionMode.CONFIG -> predictions.filter {
+                it.sessionMode == SessionMode.CONFIG || it.sessionMode == null
+            }
         }
     }
 
@@ -569,6 +589,14 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     companion object {
+        /**
+         * Intent extra used by Test Welcome / Config Welcome to restrict the
+         * history to sessions launched in a given [SessionMode]. Accepted
+         * values: SessionMode enum names. Anything else (including absence)
+         * means "show all sessions".
+         */
+        const val EXTRA_MODE_FILTER = "history_mode_filter"
+
         /**
          * Extracts the distinct list of model names actually used in this session.
          * Falls back to the primary modelName when no multi-model record is found.
