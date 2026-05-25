@@ -362,4 +362,57 @@
     <string name="results_summary_title">Session ended</string>
     <string name="results_back_home">Back to home</string>
     <string name="results_open_history">Open history</string>
+
+    <!-- Mode Select (v2) -->
+    <string name="mode_select_title">Choose how you want to use the app</string>
+    <string name="mode_select_subtitle">Pick whichever fits. One runs the session, the other sets it up.</string>
+    <string name="mode_select_test_title">Test mode</string>
+    <string name="mode_select_test_chip">Open</string>
+    <string name="mode_select_test_desc">Runs the session that was set up for you, then shows the results.</string>
+    <string name="mode_select_config_title">Configuration mode</string>
+    <string name="mode_select_config_chip">Locked</string>
+    <string name="mode_select_config_desc">For developers. Sets the model, recording mode and duration testers run with.</string>
+    <string name="brand_eyebrow">FZI Karlsruhe</string>
+
+    <!-- Password Gate -->
+    <string name="password_title">Developer access</string>
+    <string name="password_subtitle">Configuration overwrites the session testers run. Password required.</string>
+    <string name="password_label">Password</string>
+    <string name="password_unlock">Unlock configuration</string>
+    <string name="password_wrong">Wrong password. Try again.</string>
+    <string name="password_show">Show password</string>
+    <string name="password_hide">Hide password</string>
+
+    <!-- Config Welcome (chip + tile) -->
+    <string name="welcome_chip_config">Config mode</string>
+    <string name="welcome_configure_test">Configure test mode</string>
+
+    <!-- Test Welcome -->
+    <string name="test_welcome_chip">Test mode</string>
+    <string name="test_welcome_header">Quick starts</string>
+    <string name="test_welcome_subtitle_used">Tap one to start a recording. %1$d of %2$d slots used</string>
+    <string name="test_welcome_empty_state">No quick starts yet — ask the developer to set one up.</string>
+    <string name="test_welcome_slot_empty">Empty slot</string>
+    <string name="test_welcome_footer">Set up by the developer</string>
+    <string name="test_welcome_slot_label">Quick start %1$d</string>
+    <string name="test_welcome_slot_delete">Delete quick start</string>
+    <string name="test_welcome_slot_deleted">Quick start %1$d deleted</string>
+
+    <!-- Slot descriptions (derived) -->
+    <string name="slot_desc_recording">%1$s recording</string>
+    <string name="slot_desc_fast">%1$s, fast mode</string>
+    <string name="slot_desc_averaging">%1$s, averaging</string>
+    <string name="slot_desc_interval">%1$s, every %2$s</string>
+    <string name="slot_desc_manual_stop">Stops on tap</string>
+
+    <!-- Quickstart slot save flow -->
+    <string name="quickstart_saved_to_slot">Saved to slot %1$d</string>
+    <string name="quickstart_pick_slot_title">Pick a slot to overwrite</string>
+    <string name="quickstart_pick_slot_subtitle">All 5 slots are full. Pick one to overwrite — the old one is replaced.</string>
+    <string name="wizard_save_as_quickstart">Save as Quick start</string>
+
+    <!-- Test acc state -->
+    <string name="test_acc_label">Test acc</string>
+    <string name="test_acc_missing">Test acc missing</string>
+    <string name="test_acc_missing_hint">No accuracy value provided for this model.</string>
 </resources>
