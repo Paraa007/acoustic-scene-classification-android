@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Outline circle with checkmark.
+    Source: design-previews/minimal/v2/dark.html SCREEN 1 (line 731-734).
+    Stroke colour resolves through @color/accent_green so dark + light variants pick up the
+    right shade automatically. If you need a non-accent variant, copy this file and swap
+    the colour reference rather than overriding from the layout via app:tint.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
-    android:viewportHeight="24"
-    android:tint="@color/accent_green">
+    android:viewportHeight="24">
     <path
-        android:strokeColor="@android:color/white"
+        android:strokeColor="@color/accent_green"
         android:strokeWidth="1.8"
         android:fillColor="@android:color/transparent"
         android:pathData="M12,3 m-9,0 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
     <path
-        android:strokeColor="@android:color/white"
+        android:strokeColor="@color/accent_green"
         android:strokeWidth="1.8"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"

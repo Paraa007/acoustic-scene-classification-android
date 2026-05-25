@@ -415,4 +415,62 @@
     <string name="test_acc_label">Test acc</string>
     <string name="test_acc_missing">Test acc missing</string>
     <string name="test_acc_missing_hint">No accuracy value provided for this model.</string>
+
+    <!-- v2 Session Results -->
+    <string name="results_session_ended">Session ended</string>
+    <string name="results_meta_minutes">MINUTES</string>
+    <string name="results_meta_recordings">RECORDINGS</string>
+    <string name="results_meta_pauses">PAUSES</string>
+    <string name="results_section_model_reports">Model Reports</string>
+    <string name="results_most_frequent">MOST FREQUENT</string>
+    <string name="results_avg_volume">AVG VOLUME</string>
+    <string name="results_cycles_count">%1$d cycles</string>
+
+    <!-- v2 History -->
+    <string name="history_total_chip">%1$d total</string>
+    <string name="history_recordings_label">RECORDINGS</string>
+    <string name="history_active_badge">ACTIVE</string>
+    <string name="history_chip_model_one">🧠 <![CDATA[<b>1</b>]]> model</string>
+    <string name="history_chip_models_n">🧠 <![CDATA[<b>%1$d</b>]]> models</string>
+    <string name="history_chip_methods_n">%1$d methods</string>
+    <string name="history_stat_recordings">recordings</string>
+    <string name="history_stat_min">min</string>
+    <string name="history_stat_h">h</string>
+    <string name="history_stat_min_pause">min pause</string>
+
+    <!-- v2 Session Detail -->
+    <string name="detail_eyebrow">Session details</string>
+    <string name="detail_meta_start">START</string>
+    <string name="detail_meta_end">END</string>
+    <string name="detail_meta_duration">DURATION</string>
+    <string name="detail_meta_recordings">RECORDINGS</string>
+    <string name="detail_meta_pauses">PAUSES</string>
+    <string name="detail_meta_models">MODELS</string>
+    <string name="detail_meta_config">CONFIG</string>
+    <string name="detail_meta_battery">BATTERY</string>
+    <string name="detail_section_predictions">Model Predictions</string>
+    <string name="detail_most_heard_label">Most heard</string>
+    <string name="detail_export_csv">Export CSV</string>
+    <string name="detail_close">Close</string>
+    <string name="detail_delete">Delete session</string>
+
+    <!-- v2 Settings -->
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_active_dark">Dark is active</string>
+    <string name="settings_theme_active_light">Light is active</string>
+    <string name="settings_classes_value">9</string>
+
+    <!-- v2 Evaluation -->
+    <string name="eval_eyebrow">Ground Truth</string>
+    <string name="eval_title_v2">Rate the environment</string>
+    <string name="eval_subtitle">The recording just finished — which environment was it actually?</string>
+    <string name="eval_predicted">Model predicted</string>
+    <string name="eval_auto_skips">AUTO-SKIPS</string>
+    <string name="eval_section_select">Select the actual scene</string>
+    <string name="eval_other_label">Other — write a note</string>
+    <string name="eval_note_label">Your note</string>
+    <string name="eval_note_hint">Describe the environment</string>
+    <string name="eval_note_counter">%1$d / %2$d</string>
+    <string name="eval_send">Send</string>
 </resources>

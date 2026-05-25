@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Outline padlock — accent-tinted variant for slide 02 hero block.
+    Source: design-previews/minimal/v2/dark.html SCREEN 2 (line 807-810).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.8"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M7,11 L17,11 A2,2 0 0 1 19,13 L19,18 A2,2 0 0 1 17,20 L7,20 A2,2 0 0 1 5,18 L5,13 A2,2 0 0 1 7,11 Z" />
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M8,11 L8,8 A4,4 0 1 1 16,8 L16,11" />
+    <path
+        android:fillColor="@color/accent_green"
+        android:pathData="M12,15.5 m-1.4,0 a1.4,1.4 0 1,0 2.8,0 a1.4,1.4 0 1,0 -2.8,0" />
+</vector>
