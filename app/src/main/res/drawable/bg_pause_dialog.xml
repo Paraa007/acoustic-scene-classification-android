@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Accent-soft tile background for the Pause picker.
+    Source: design-previews/minimal/v2/dark.html SCREEN 7 line 1754 (the
+    pause card uses accent-soft fill + accent-line border to stand out).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/accent_soft" />
+    <corners android:radius="17dp" />
+    <stroke android:width="1dp" android:color="@color/accent_line" />
+</shape>

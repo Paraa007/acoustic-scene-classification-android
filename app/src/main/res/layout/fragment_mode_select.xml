@@ -14,12 +14,20 @@
         android:paddingTop="56dp"
         android:paddingBottom="32dp">
 
-        <!-- Brand mark -->
-        <View
+        <!-- Brand mark: 5-bar equalizer inside the rounded shell -->
+        <FrameLayout
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:layout_gravity="center_horizontal"
-            android:background="@drawable/bg_app_mark" />
+            android:background="@drawable/bg_app_mark">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_brand_mark"
+                android:importantForAccessibility="no" />
+        </FrameLayout>
 
         <TextView
             android:layout_width="wrap_content"
@@ -78,7 +86,6 @@
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_check_circle"
-                    app:tint="@color/accent_green"
                     android:importantForAccessibility="no" />
 
                 <TextView
@@ -135,7 +142,6 @@
                     android:layout_width="22dp"
                     android:layout_height="22dp"
                     android:src="@drawable/ic_lock"
-                    app:tint="@color/text_secondary"
                     android:importantForAccessibility="no" />
 
                 <TextView
