@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:orientation="vertical"
+    android:paddingHorizontal="22dp"
+    android:paddingTop="22dp"
+    android:paddingBottom="22dp">
+
+    <!-- Top chip "Test mode" -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_chip_accent_soft"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="11dp"
+        android:paddingVertical="6dp">
+
+        <View
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:layout_marginEnd="7dp"
+            android:background="@drawable/wizard_dot_active" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/test_welcome_chip"
+            android:textAllCaps="true"
+            android:textColor="@color/accent_green"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.14"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:text="@string/test_welcome_header"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/testWelcomeSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        android:lineSpacingMultiplier="1.45" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="18dp"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/testWelcomeSlotsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/testWelcomeHistoryButton"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="14dp"
+        android:text="@string/history"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        app:backgroundTint="@color/surface_dark"
+        app:strokeColor="@color/hairline"
+        app:strokeWidth="1dp"
+        app:cornerRadius="17dp"
+        app:icon="@drawable/ic_history"
+        app:iconTint="@color/text_primary"
+        app:iconGravity="textStart" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="@string/test_welcome_footer"
+        android:textAllCaps="true"
+        android:textColor="@color/text_faint"
+        android:textSize="9.5sp"
+        android:letterSpacing="0.16"
+        android:fontFamily="monospace" />
+</LinearLayout>
