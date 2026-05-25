@@ -36,6 +36,7 @@ import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.model.SessionDuration
+import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -84,11 +85,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resetWizard(
         availableModels: List<String>,
         prefill: SessionConfig? = null,
-        quickStartMode: Boolean = false
+        intent: WizardIntent = WizardIntent.StartRecording
     ) {
+        val isQuickStart = intent is WizardIntent.QuickStart
         _wizard.value = if (prefill != null) {
             WizardViewState(
-                step = if (quickStartMode) WizardStep.Summary else WizardStep.Models,
+                step = if (isQuickStart) WizardStep.Summary else WizardStep.Models,
                 availableModels = availableModels,
                 selectedModels = prefill.modelNames.filter { it in availableModels },
                 category = prefill.category,
@@ -96,10 +98,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 intervalPause = prefill.intervalPause,
                 intervalMethodsByModel = prefill.intervalMethodsByModel,
                 sessionDuration = prefill.sessionDuration,
-                quickStartMode = quickStartMode
+                intent = intent
             )
         } else {
-            WizardViewState(availableModels = availableModels)
+            WizardViewState(availableModels = availableModels, intent = intent)
         }
     }
 
@@ -806,7 +808,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 config.intervalMethodsByModel.takeIf { it.isNotEmpty() }
             } else null,
             sessionDurationPlanned = config.sessionDuration,
-            perSecondVolumes = outcome.perSecondVolumes
+            perSecondVolumes = outcome.perSecondVolumes,
+            sessionMode = config.mode
         )
         predictionRepository.addPrediction(record)
         updateStatistics()
@@ -1063,7 +1066,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else null,
             sessionDurationPlanned = config?.sessionDuration,
             longIntervalMinutes = config?.intervalPause?.pauseMinutes,
-            pauseAutoResumeMin = pauseStartedAutoResumeMin
+            pauseAutoResumeMin = pauseStartedAutoResumeMin,
+            sessionMode = config?.mode
         )
         predictionRepository.addPrediction(record)
     }
