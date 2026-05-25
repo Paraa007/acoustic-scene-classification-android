@@ -2,8 +2,44 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/welcomeFragment">
+    app:startDestination="@id/modeSelectFragment">
 
+    <!-- Entry point — picks Test vs Config mode. Runs on every app start. -->
+    <fragment
+        android:id="@+id/modeSelectFragment"
+        android:name="com.fzi.acousticscene.ui.ModeSelectFragment"
+        android:label="ModeSelect">
+        <action
+            android:id="@+id/action_mode_to_password"
+            app:destination="@id/passwordFragment" />
+        <action
+            android:id="@+id/action_mode_to_test_welcome"
+            app:destination="@id/testWelcomeFragment" />
+    </fragment>
+
+    <!-- Developer-access gate for Configuration mode. -->
+    <fragment
+        android:id="@+id/passwordFragment"
+        android:name="com.fzi.acousticscene.ui.PasswordFragment"
+        android:label="Password">
+        <action
+            android:id="@+id/action_password_to_welcome"
+            app:destination="@id/welcomeFragment"
+            app:popUpTo="@id/modeSelectFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- Test mode home — list of quickstart slots. -->
+    <fragment
+        android:id="@+id/testWelcomeFragment"
+        android:name="com.fzi.acousticscene.ui.TestWelcomeFragment"
+        android:label="TestWelcome">
+        <action
+            android:id="@+id/action_test_welcome_to_live"
+            app:destination="@id/liveRecordingFragment" />
+    </fragment>
+
+    <!-- Configuration mode home — 5 buttons including Configure test mode. -->
     <fragment
         android:id="@+id/welcomeFragment"
         android:name="com.fzi.acousticscene.ui.WelcomeFragment"
@@ -34,8 +70,8 @@
         <action
             android:id="@+id/action_live_to_results"
             app:destination="@id/resultsSummaryFragment"
-            app:popUpTo="@id/welcomeFragment"
-            app:popUpToInclusive="false" />
+            app:popUpTo="@id/liveRecordingFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
