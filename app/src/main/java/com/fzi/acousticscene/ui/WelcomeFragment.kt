@@ -3,6 +3,7 @@ package com.fzi.acousticscene.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -10,16 +11,20 @@ import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.LastConfigStore
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.WizardIntent
 import com.google.android.material.button.MaterialButton
 
 /**
- * Home page. Lists the four entry points into the app:
- * - Start new session — opens the wizard fresh
- * - Quick Start — shown only when a saved last config exists and is still executable
- *   1:1 against the models currently available. Skips the wizard entirely and lands
- *   on the read-only Summary; one tap on Start kicks off the session
- * - History
- * - Settings
+ * Configuration mode home — the developer's hub. Hosts five buttons:
+ *
+ * 1. Start new session — wizard with [WizardIntent.StartRecording] intent
+ * 2. Quick Start (visible only when a saved last config is still executable)
+ * 3. History
+ * 4. Settings
+ * 5. Configure test mode — wizard with [WizardIntent.SaveAsSlot] intent
+ *
+ * Buttons 1, 2 and 5 all run the same wizard; the intent decides the Summary
+ * CTA and exit behaviour.
  */
 class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
 
@@ -32,6 +37,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
         val btnQuickStart = view.findViewById<MaterialButton>(R.id.btnQuickStart)
         val btnHistory = view.findViewById<MaterialButton>(R.id.btnHistory)
         val btnSettings = view.findViewById<MaterialButton>(R.id.btnSettings)
+        val btnConfigureTestMode = view.findViewById<LinearLayout>(R.id.btnConfigureTestMode)
 
         btnNewSession.setOnClickListener {
             val available = listAvailableModels()
@@ -39,7 +45,11 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
                 Toast.makeText(requireContext(), R.string.welcome_no_models, Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
-            viewModel.resetWizard(availableModels = available, prefill = null)
+            viewModel.resetWizard(
+                availableModels = available,
+                prefill = null,
+                intent = WizardIntent.StartRecording
+            )
             findNavController().navigate(R.id.action_welcome_to_wizard)
         }
 
@@ -51,7 +61,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
                 viewModel.resetWizard(
                     availableModels = available,
                     prefill = lastConfig,
-                    quickStartMode = true
+                    intent = WizardIntent.QuickStart
                 )
                 findNavController().navigate(R.id.action_welcome_to_wizard)
             }
@@ -65,6 +75,20 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
 
         btnSettings.setOnClickListener {
             findNavController().navigate(R.id.action_welcome_to_settings)
+        }
+
+        btnConfigureTestMode.setOnClickListener {
+            val avail = listAvailableModels()
+            if (avail.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.welcome_no_models, Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            viewModel.resetWizard(
+                availableModels = avail,
+                prefill = null,
+                intent = WizardIntent.SaveAsSlot
+            )
+            findNavController().navigate(R.id.action_welcome_to_wizard)
         }
     }
 
