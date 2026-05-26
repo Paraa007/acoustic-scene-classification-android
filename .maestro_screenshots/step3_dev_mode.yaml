@@ -1,7 +1,0 @@
-appId: com.fzi.acousticscene
----
-- tapOn:
-    text: "Development M.*"
-- waitForAnimationToEnd:
-    timeout: 5000
-- takeScreenshot: /Users/paraaafifi/Arbeit_code/the_App/.maestro_screenshots/03_after_dev_tap
