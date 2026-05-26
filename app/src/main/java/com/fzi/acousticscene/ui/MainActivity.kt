@@ -87,10 +87,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun stopClassificationService() {
-        val intent = Intent(this, ClassificationService::class.java).apply {
-            action = ClassificationService.ACTION_STOP
-        }
-        startService(intent)
+        // Use stopService() rather than startService(ACTION_STOP): on Android 12+
+        // a foreground-service start from the background throws
+        // ForegroundServiceStartNotAllowedException. stopService() reliably
+        // triggers ClassificationService.onDestroy(), which already runs the
+        // full teardown (WakeLock release, alarm cancel, stopForeground).
+        val intent = Intent(this, ClassificationService::class.java)
+        stopService(intent)
     }
 
     private fun checkBatteryOptimization() {
