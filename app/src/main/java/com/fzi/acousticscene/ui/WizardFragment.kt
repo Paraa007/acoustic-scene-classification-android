@@ -1,9 +1,14 @@
 package com.fzi.acousticscene.ui
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
@@ -12,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -58,6 +64,25 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     private lateinit var contentRoot: LinearLayout
     private lateinit var primaryButton: MaterialButton
     private lateinit var backButton: FrameLayout
+
+    // Single source of truth for RECORD_AUDIO. The launcher is registered once
+    // per fragment instance (must happen before the fragment hits STARTED).
+    private val recordAudioPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                startRecordingSession()
+            } else if (!shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
+                // Second denial (or "Don't ask again"): system will no longer
+                // surface the prompt, so point the user at app settings.
+                showPermissionSettingsDialog()
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    R.string.permission_record_audio_denied_toast,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -107,12 +132,66 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         }
         when (state.intent) {
             is WizardIntent.StartRecording, is WizardIntent.QuickStart -> {
-                val config = state.toSessionConfig()
-                viewModel.applySessionConfig(config)
-                findNavController().navigate(R.id.action_wizard_to_live)
+                ensureRecordAudioThenStart()
             }
             is WizardIntent.SaveAsSlot -> handleSaveAsSlot(state.toSessionConfig())
         }
+    }
+
+    /**
+     * Permission gate for the recording flow. RECORD_AUDIO is a dangerous
+     * permission and must be granted at runtime on every supported SDK (min 26).
+     * Without the grant, AudioRecord delivers silent buffers and Android 14+
+     * blocks the microphone foreground-service type.
+     */
+    private fun ensureRecordAudioThenStart() {
+        val ctx = requireContext()
+        val granted = ContextCompat.checkSelfPermission(
+            ctx, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            startRecordingSession()
+            return
+        }
+        if (shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
+            // User declined once but the system will still show the prompt —
+            // explain why we need it, then re-trigger the system dialog.
+            ModernDialogHelper.showConfirmDialog(
+                context = ctx,
+                title = getString(R.string.permission_record_audio_title),
+                message = getString(R.string.permission_record_audio_rationale),
+                confirmText = getString(R.string.permission_record_audio_grant),
+                cancelText = getString(R.string.cancel),
+                onConfirm = {
+                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            )
+            return
+        }
+        recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    private fun startRecordingSession() {
+        val state = viewModel.wizard.value
+        val config = state.toSessionConfig()
+        viewModel.applySessionConfig(config)
+        findNavController().navigate(R.id.action_wizard_to_live)
+    }
+
+    private fun showPermissionSettingsDialog() {
+        ModernDialogHelper.showConfirmDialog(
+            context = requireContext(),
+            title = getString(R.string.permission_record_audio_title),
+            message = getString(R.string.permission_record_audio_settings_message),
+            confirmText = getString(R.string.permission_record_audio_open_settings),
+            cancelText = getString(R.string.cancel),
+            onConfirm = {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", requireContext().packageName, null)
+                }
+                startActivity(intent)
+            }
+        )
     }
 
     private fun handleSaveAsSlot(config: SessionConfig) {
