@@ -1,13 +1,13 @@
 <resources>
     <string name="app_name">Acoustic Scene Classification</string>
-    <string name="app_name_full_display">Acoustic Scene Classification</string>
+    <string name="app_name_full_display">Acoustic Scene Classification · FZI</string>
 
     <!-- Main UI -->
     <string name="start_recording">Start Recording</string>
     <string name="stop_recording">Stop Recording</string>
     <string name="mode_standard">Standard (10s)</string>
     <string name="mode_fast">Fast (1s)</string>
-    <string name="mode_long">every 30min</string>
+    <string name="mode_long">Every 30 min</string>
     <string name="mode_avg">Avg (10s, 10×1s)</string>
     <string name="category_continuous">Continuous</string>
     <string name="category_interval">Interval</string>
@@ -28,7 +28,7 @@
 
     <!-- Scene Labels (9 Classes - DCASE 2025) -->
     <string name="scene_transit_vehicles">Transit - Vehicles/Outdoor</string>
-    <string name="scene_urban_waiting">Outdoor-Urban &amp; Transit Buildings/Waiting Areas</string>
+    <string name="scene_urban_waiting">Outdoor - Urban &amp; Transit Buildings/Waiting Areas</string>
     <string name="scene_nature">Outdoor - Nature</string>
     <string name="scene_social">Indoor - Social Environment</string>
     <string name="scene_work">Indoor - Work Environment</string>
@@ -372,7 +372,6 @@
     <string name="mode_select_config_title">Configuration mode</string>
     <string name="mode_select_config_chip">Locked</string>
     <string name="mode_select_config_desc">For developers</string>
-    <string name="brand_eyebrow">FZI Karlsruhe</string>
 
     <!-- Password Gate -->
     <string name="password_title">Developer access</string>
