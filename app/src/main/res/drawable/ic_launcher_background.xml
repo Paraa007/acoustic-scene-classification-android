@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher background : flat charcoal-navy tile.
+  Matches design preview v4 / candidate 05 (FZI Monogram + Bar, renamed ASC).
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Schwarzer Hintergrund -->
     <path
-        android:fillColor="#000000"
-        android:pathData="M0,0h108v108h-108z" />
+        android:fillColor="#1f2933"
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
 </vector>
