@@ -30,6 +30,7 @@ import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.model.SessionDuration
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
+import com.fzi.acousticscene.util.BatteryOptimizationHelper
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
@@ -108,8 +109,13 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         when (state.intent) {
             is WizardIntent.StartRecording, is WizardIntent.QuickStart -> {
                 val config = state.toSessionConfig()
-                viewModel.applySessionConfig(config)
-                findNavController().navigate(R.id.action_wizard_to_live)
+                // Remind the user about the battery-optimization exemption if
+                // they skipped it on first launch. The recording still starts
+                // either way — Android only throttles once Doze kicks in.
+                BatteryOptimizationHelper.promptIfMissingBeforeRecording(requireActivity()) {
+                    viewModel.applySessionConfig(config)
+                    findNavController().navigate(R.id.action_wizard_to_live)
+                }
             }
             is WizardIntent.SaveAsSlot -> handleSaveAsSlot(state.toSessionConfig())
         }

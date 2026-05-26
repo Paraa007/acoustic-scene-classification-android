@@ -157,8 +157,12 @@
     <string name="delete">Delete</string>
 
     <!-- Battery Optimization -->
-    <string name="battery_optimization_title">Important: Battery Optimization</string>
-    <string name="battery_optimization_message">Background recordings need battery optimization disabled for this app.\n\nOtherwise Android will throttle the app after a while and recordings will have gaps.\n\nChange the setting now?</string>
+    <string name="battery_optimization_title">Background recording needs extra battery permission</string>
+    <string name="battery_optimization_message">This app records audio with the screen off. Android will pause that work after a few minutes unless the app is allowed to ignore battery optimization.\n\nGranting it uses more battery, but recordings stay complete.</string>
+    <string name="battery_optimization_open_settings">Open settings</string>
+    <string name="battery_optimization_skip">Skip</string>
+    <string name="battery_optimization_continue_anyway">Start anyway</string>
+    <!-- Legacy keys kept for any older call sites still referencing them. -->
     <string name="yes_disable">Yes, Disable</string>
     <string name="later">Later</string>
     <string name="battery_warning">Without this setting, recordings can have gaps</string>

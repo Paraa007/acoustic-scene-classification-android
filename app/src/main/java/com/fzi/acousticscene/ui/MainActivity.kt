@@ -1,23 +1,19 @@
 package com.fzi.acousticscene.ui
 
-import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import android.os.PowerManager
-import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.service.ClassificationService
+import com.fzi.acousticscene.util.BatteryOptimizationHelper
 import com.fzi.acousticscene.util.ThemeHelper
 
 /**
@@ -61,7 +57,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         bindClassificationService()
-        checkBatteryOptimization()
+        // Show the battery-optimization intro once per install. Re-checks on
+        // each recording start happen via BatteryOptimizationHelper, so we no
+        // longer interrupt every launch with the same dialog.
+        BatteryOptimizationHelper.maybeShowFirstRunDialog(this)
     }
 
     override fun onDestroy() {
@@ -93,49 +92,4 @@ class MainActivity : AppCompatActivity() {
         startService(intent)
     }
 
-    private fun checkBatteryOptimization() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                showBatteryOptimizationDialog()
-            }
-        }
-    }
-
-    private fun showBatteryOptimizationDialog() {
-        ModernDialogHelper.showConfirmDialog(
-            context = this,
-            title = getString(R.string.battery_optimization_title),
-            message = getString(R.string.battery_optimization_message),
-            confirmText = getString(R.string.yes_disable),
-            cancelText = getString(R.string.later),
-            onConfirm = { requestBatteryOptimizationExemption() },
-            onCancel = {
-                Toast.makeText(this, getString(R.string.battery_warning), Toast.LENGTH_LONG).show()
-            }
-        )
-    }
-
-    @SuppressLint("BatteryLife")
-    private fun requestBatteryOptimizationExemption() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:$packageName")
-                }
-                startActivity(intent)
-            } catch (_: Exception) {
-                try {
-                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                    Toast.makeText(
-                        this,
-                        getString(R.string.battery_search_app, getString(R.string.app_name)),
-                        Toast.LENGTH_LONG
-                    ).show()
-                } catch (_: Exception) {
-                    Toast.makeText(this, getString(R.string.battery_manual_disable), Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
 }
