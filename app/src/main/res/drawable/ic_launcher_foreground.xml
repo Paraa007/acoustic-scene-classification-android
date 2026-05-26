@@ -1,19 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher foreground for the Acoustic Scene Classification app.
+  Composition (108x108 viewport, safe zone 18..90 on both axes):
+    - FZI wordmark in bone-grey, letters built as filled geometric paths
+      (chunky monospace stencil), each ~11 wide and ~17 tall, sitting at
+      y in [34, 51]. Total wordmark width 39, centred horizontally.
+    - Slate hairline divider at y=55.5 from x=38 to x=70.
+    - Five equalizer bars beneath the hairline, common baseline at y=73,
+      heights [6,9,12,9,6]. Centre bar in bone-grey for emphasis, the
+      others in slate-grey.
+  The whole glyph cluster spans x in [34.5, 73.5] and y in [34, 73] — 39 wide,
+  39 tall, visually centred around (54, 53.5) and fully inside the safe zone.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- FZI Text - groß, weiß, um X-Achse gespiegelt, nach rechts und unten verschoben -->
-    <group
-        android:translateX="70"
-        android:translateY="62"
-        android:scaleX="1.2"
-        android:scaleY="-1.2">
-        
-        <!-- Weißer "FZI" Text -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M -3.894,0 L 0,0 L 0,15.516 L -3.894,15.516 L -3.894,0 z M -5.609,15.516 L -18.011,15.516 L -18.011,12.097 L -12.114,12.097 L -19.227,0 L -6.374,0 L -6.374,3.42 L -12.676,3.42 L -5.609,15.516 z M -19.963,12.097 L -19.963,15.516 L -28.561,15.516 L -28.561,0 L -24.667,0 L -24.667,6.095 L -20.39,6.095 L -20.39,9.514 L -24.667,9.514 L -24.667,12.097 L -19.963,12.097" />
-    </group>
+
+    <!-- FZI wordmark -->
+    <!-- Letter F : x in [34.5, 45.5], y in [34, 51] -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M34.5,34 L45.5,34 L45.5,37 L37.5,37 L37.5,42 L43.5,42 L43.5,45 L37.5,45 L37.5,51 L34.5,51 Z" />
+
+    <!-- Letter Z : x in [48.5, 59.5], y in [34, 51] -->
+    <!-- Top bar -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M48.5,34 L59.5,34 L59.5,37 L48.5,37 Z" />
+    <!-- Diagonal stroke (parallelogram) -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M56,37 L59.5,37 L52,48 L48.5,48 Z" />
+    <!-- Bottom bar -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M48.5,48 L59.5,48 L59.5,51 L48.5,51 Z" />
+
+    <!-- Letter I : x in [62.5, 73.5], y in [34, 51] -->
+    <!-- Top serif -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M62.5,34 L73.5,34 L73.5,37 L62.5,37 Z" />
+    <!-- Vertical bar -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M66.5,37 L69.5,37 L69.5,48 L66.5,48 Z" />
+    <!-- Bottom serif -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M62.5,48 L73.5,48 L73.5,51 L62.5,51 Z" />
+
+    <!-- Hairline divider in slate, y in [54.9, 56.1] -->
+    <path
+        android:fillColor="#3a4754"
+        android:pathData="M38,54.9 L70,54.9 L70,56.1 L38,56.1 Z" />
+
+    <!-- Equalizer row: five bars, baseline y=73, width 3, gap 3.
+         Centred horizontally: 5*3 + 4*3 = 27 wide, starts at x=40.5. -->
+    <!-- Bar 1 : h=6,  y in [67, 73] -->
+    <path
+        android:fillColor="#9aa6ad"
+        android:pathData="M40.5,67 L43.5,67 L43.5,73 L40.5,73 Z" />
+    <!-- Bar 2 : h=9,  y in [64, 73] -->
+    <path
+        android:fillColor="#9aa6ad"
+        android:pathData="M46.5,64 L49.5,64 L49.5,73 L46.5,73 Z" />
+    <!-- Bar 3 (middle, accent) : h=12, y in [61, 73] -->
+    <path
+        android:fillColor="#dad6cb"
+        android:pathData="M52.5,61 L55.5,61 L55.5,73 L52.5,73 Z" />
+    <!-- Bar 4 : h=9,  y in [64, 73] -->
+    <path
+        android:fillColor="#9aa6ad"
+        android:pathData="M58.5,64 L61.5,64 L61.5,73 L58.5,73 Z" />
+    <!-- Bar 5 : h=6,  y in [67, 73] -->
+    <path
+        android:fillColor="#9aa6ad"
+        android:pathData="M64.5,67 L67.5,67 L67.5,73 L64.5,73 Z" />
 </vector>
