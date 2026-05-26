@@ -1,7 +1,0 @@
-appId: com.fzi.acousticscene
----
-- tapOn: "History"
-- waitForAnimationToEnd:
-    timeout: 3000
-- takeScreenshot: /Users/paraaafifi/Arbeit_code/the_App/.maestro_screenshots/09_history
-- assertVisible: "Standard"
