@@ -8,4 +8,5 @@
 <full-backup-content>
     <exclude domain="sharedpref" path="predictions_prefs.xml"/>
     <exclude domain="sharedpref" path="last_config_prefs.xml"/>
+    <exclude domain="sharedpref" path="quickstart_slots_v2.xml"/>
 </full-backup-content>
