@@ -17,6 +17,7 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.ui.MainActivity
 import com.fzi.acousticscene.R
 import kotlinx.coroutines.CoroutineScope
@@ -58,10 +59,23 @@ class ClassificationService : Service() {
 
         const val ACTION_START = "com.fzi.acousticscene.START_CLASSIFICATION"
         const val ACTION_STOP = "com.fzi.acousticscene.STOP_CLASSIFICATION"
+        // The recording engine lives inside the service now — these actions let the UI
+        // drive the loop without ever touching the engine directly. The actual
+        // SessionConfig + pause-timer values are handed over via
+        // [RecordingEngineHolder] (same process, no need to marshal into the Intent).
+        const val ACTION_APPLY_CONFIG = "com.fzi.acousticscene.APPLY_CONFIG"
+        const val ACTION_PAUSE = "com.fzi.acousticscene.PAUSE_CLASSIFICATION"
+        const val ACTION_RESUME = "com.fzi.acousticscene.RESUME_CLASSIFICATION"
+        const val ACTION_CLEAR_RESULTS = "com.fzi.acousticscene.CLEAR_RESULTS"
     }
 
     private val binder = LocalBinder()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // The recording loop lives on [RecordingEngineHolder] (process scope) so it
+    // outlives stop/start cycles. The service drives it via intents.
+    private val recordingEngine: RecordingEngine
+        get() = RecordingEngineHolder.ensureEngine(applicationContext)
 
     @Volatile
     private var isRunning = false
@@ -129,14 +143,48 @@ class ClassificationService : Service() {
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_APPLY_CONFIG -> {
+                Log.d(TAG, "Apply-config command received")
+                // Promote to foreground immediately — Android requires startForeground()
+                // within 5 s of startForegroundService. Notification text updates once
+                // the loop actually begins recording.
+                ensureForegroundStarted()
+                val config = RecordingEngineHolder.pendingConfig
+                if (config == null) {
+                    Log.w(TAG, "ACTION_APPLY_CONFIG with no pending config")
+                } else {
+                    RecordingEngineHolder.pendingConfig = null
+                    recordingEngine.applyConfig(config)
+                }
+            }
             ACTION_START -> {
                 Log.d(TAG, "Start command received")
-                if (!isRunning) {
-                    startForegroundClassification()
+                ensureForegroundStarted()
+                recordingEngine.start()
+            }
+            ACTION_PAUSE -> {
+                Log.d(TAG, "Pause command received")
+                val ms = RecordingEngineHolder.pendingPauseAutoResumeMs
+                RecordingEngineHolder.pendingPauseAutoResumeMs = null
+                recordingEngine.pause(ms)
+            }
+            ACTION_RESUME -> {
+                Log.d(TAG, "Resume command received")
+                recordingEngine.resume()
+            }
+            ACTION_CLEAR_RESULTS -> {
+                Log.d(TAG, "Clear-results command received")
+                RecordingEngineHolder.engineOrNull()?.clearResults()
+                // If the engine wasn't even live, just stomp the state directly so the
+                // UI snaps back to a clean slate.
+                if (RecordingEngineHolder.engineOrNull() == null) {
+                    RecordingEngineHolder.mutableUiState.value =
+                        com.fzi.acousticscene.ui.UiState()
                 }
             }
             ACTION_STOP -> {
                 Log.d(TAG, "Stop command received")
+                RecordingEngineHolder.engineOrNull()?.stop()
                 stopForegroundClassification()
             }
         }
@@ -145,6 +193,17 @@ class ClassificationService : Service() {
         // Recording-State mehr, würde aber Notification + WakeLock-Pfad anlegen
         // (Zombie-Recording). Der User startet die Session bewusst neu vom UI.
         return START_NOT_STICKY
+    }
+
+    /**
+     * Idempotent foreground-start. Called whenever an action arrives that should
+     * be backed by a foreground service (apply-config, start). Doing this here
+     * — instead of only from start() — covers the case where the UI applies a
+     * config and we sit on the model-loading screen before [ACTION_START] lands.
+     */
+    private fun ensureForegroundStarted() {
+        if (isRunning) return
+        startForegroundClassification()
     }
     
     override fun onBind(intent: Intent?): IBinder {
@@ -168,6 +227,11 @@ class ClassificationService : Service() {
         // Sicherheit: WakeLock freigeben auch wenn stopForegroundClassification nicht aufgerufen wurde
         releaseWakeLock()
         stopForegroundClassification()
+        // The recording engine lives on RecordingEngineHolder (process scope) — we
+        // intentionally do NOT release it here. The point of moving the loop into
+        // the service was to keep recordings alive across activity destruction;
+        // if Android tears the service down mid-session we'd rather keep the
+        // engine's state intact for the next bind than wipe it.
         serviceScope.cancel()
     }
     
