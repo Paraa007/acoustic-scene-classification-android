@@ -1,59 +1,227 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/background_dark"
-    android:padding="16dp">
+    android:fitsSystemWindows="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text="@string/results_summary_title"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_marginBottom="16dp" />
-
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <LinearLayout
-            android:id="@+id/resultsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="16dp" />
-    </ScrollView>
+            android:paddingHorizontal="16dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="12dp">
 
+            <!-- Header: eyebrow chip -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="6dp">
+
+                <View
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:background="@drawable/ic_eyebrow_check" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/results_session_ended"
+                    android:textAllCaps="true"
+                    android:textSize="9.5sp"
+                    android:textColor="@color/accent_green"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.14"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Meta tiles row: minutes · recordings · pauses -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="6dp"
+                android:layout_marginTop="15dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_tile"
+                    android:padding="13dp">
+
+                    <TextView
+                        android:id="@+id/resultsMinutes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="-0.02"
+                        tools:text="24" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/results_meta_minutes"
+                        android:textSize="8sp"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.06" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="9dp"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_tile"
+                    android:padding="13dp">
+
+                    <TextView
+                        android:id="@+id/resultsRecordings"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="-0.02"
+                        tools:text="142" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/results_meta_recordings"
+                        android:textSize="8sp"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.06" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="9dp"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_tile"
+                    android:padding="13dp">
+
+                    <TextView
+                        android:id="@+id/resultsPauses"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="-0.02"
+                        tools:text="0" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/results_meta_pauses"
+                        android:textSize="8sp"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.06" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Section divider: MODEL REPORTS -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="6dp"
+                android:layout_marginTop="17dp"
+                android:layout_marginBottom="9dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/results_section_model_reports"
+                    android:textAllCaps="true"
+                    android:textSize="9.5sp"
+                    android:textColor="@color/text_faint"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.16" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="9dp"
+                    android:background="@color/hairline" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/resultsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="6dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Bottom action bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:paddingHorizontal="22dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="14dp"
+        android:background="@color/background_dark">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/resultsBackHomeButton"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="50dp"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="10dp"
             android:text="@string/results_back_home"
-            app:cornerRadius="14dp" />
+            android:textColor="@color/text_primary"
+            android:textAllCaps="false"
+            app:backgroundTint="@color/surface_variant"
+            app:strokeColor="@color/border_subtle"
+            app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/resultsOpenHistoryButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_height="50dp"
+            android:layout_weight="1.15"
             android:text="@string/results_open_history"
-            app:cornerRadius="14dp" />
+            android:textAllCaps="false"
+            android:textColor="@color/accent_ink"
+            app:backgroundTint="@color/accent_green"
+            app:cornerRadius="12dp" />
     </LinearLayout>
 
 </LinearLayout>

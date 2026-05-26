@@ -1,18 +1,22 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Base application theme. Light by default; dark variant lives in values-night. -->
     <style name="Base.Theme.AcousticSceneClassifier" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorSecondary">@color/accent_green_light</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="colorError">@color/error</item>
         <item name="colorOnError">@color/on_error</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
     <style name="Theme.AcousticSceneClassifier" parent="Base.Theme.AcousticSceneClassifier" />
 
-    <!-- Modern Dialog Theme -->
+    <!-- Modern dialog theme -->
     <style name="ModernDialog" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
@@ -21,7 +25,6 @@
         <item name="android:windowMinWidthMinor">90%</item>
     </style>
 
-    <!-- Modern Dialog Button Styles -->
     <style name="ModernDialogButton.Confirm" parent="Widget.Material3.Button">
         <item name="android:textColor">@color/on_primary</item>
         <item name="backgroundTint">@color/accent_green</item>

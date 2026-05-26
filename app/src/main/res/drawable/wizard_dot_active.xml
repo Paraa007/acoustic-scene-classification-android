@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Active wizard step bar — accent fill, rounded ends.
+    Source: design-previews/minimal/v2/dark.html, line 1101.
+-->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="@color/text_primary" />
-    <size
-        android:width="8dp"
-        android:height="8dp" />
+    android:shape="rectangle">
+    <solid android:color="@color/accent_green" />
+    <corners android:radius="3dp" />
 </shape>

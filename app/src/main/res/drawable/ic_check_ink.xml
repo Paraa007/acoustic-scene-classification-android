@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Checkmark used inside selected check-dots and Summary radio circles. Stroke
+    in accent-ink so it reads on top of the green accent fill.
+    Source: design-previews/minimal/v2/dark.html, line 1131 (path d="M2.5 7L5 9.5l5.5-6").
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="12dp"
+    android:viewportWidth="13"
+    android:viewportHeight="13">
+    <path
+        android:strokeColor="@color/accent_ink"
+        android:strokeWidth="2.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M2.5,7 L5,9.5 L10.5,3.5" />
+</vector>

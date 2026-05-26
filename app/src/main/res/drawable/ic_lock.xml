@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Outline padlock.
+    Source: design-previews/minimal/v2/dark.html SCREEN 1 (line 744-748).
+    Stroke colour resolves through @color/text_secondary so dark + light variants stay correct.
+    For an accent-coloured lock (slide 02 hero), see ic_lock_accent.xml.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Body: rect x=5 y=11 w=14 h=9 rx=2 -->
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="1.7"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M7,11 L17,11 A2,2 0 0 1 19,13 L19,18 A2,2 0 0 1 17,20 L7,20 A2,2 0 0 1 5,18 L5,13 A2,2 0 0 1 7,11 Z" />
+    <!-- Shackle: M8 11V8a4 4 0 1 1 8 0v3 -->
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M8,11 L8,8 A4,4 0 1 1 16,8 L16,11" />
+    <!-- Keyhole dot: cx=12 cy=15.5 r=1.3 -->
+    <path
+        android:fillColor="@color/text_secondary"
+        android:pathData="M12,15.5 m-1.3,0 a1.3,1.3 0 1,0 2.6,0 a1.3,1.3 0 1,0 -2.6,0" />
+</vector>

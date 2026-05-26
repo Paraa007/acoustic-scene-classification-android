@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:padding="11dp"
+    android:layout_margin="1dp"
+    android:background="@color/surface_dark">
+
+    <TextView
+        android:id="@+id/cellLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="8sp"
+        android:fontFamily="monospace"
+        android:textColor="@color/text_faint"
+        android:letterSpacing="0.06"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/cellValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textSize="11.5sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:textColor="@color/text_primary" />
+
+    <TextView
+        android:id="@+id/cellSub"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:textSize="9sp"
+        android:textColor="@color/text_faint"
+        android:visibility="gone" />
+</LinearLayout>

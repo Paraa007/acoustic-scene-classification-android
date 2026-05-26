@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/background_dark">
 
-    <!-- Normal Toolbar: back arrow + title, flat like Wizard/Settings -->
+    <!-- Normal Toolbar: back + title + total chip -->
     <LinearLayout
         android:id="@+id/normalToolbar"
         android:layout_width="match_parent"
@@ -15,30 +16,140 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="20dp"
+        android:paddingBottom="6dp">
 
+        <!-- Mockup icon-btn: 38dp surface tile with 11dp radius and hairline border -->
         <ImageButton
             android:id="@+id/btnBack"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:padding="10dp"
             android:src="@drawable/ic_arrow_back"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/bg_icon_btn"
             android:contentDescription="@string/back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/history_title"
+            android:textSize="23sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginStart="11dp" />
+
+        <!-- Mockup chip on the right of the title: monospace count + total label -->
+        <TextView
+            android:id="@+id/totalChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="6dp"
+            android:fontFamily="monospace"
+            android:textSize="10.5sp"
+            android:textColor="@color/text_secondary"
+            android:background="@drawable/bg_meta_pill" />
+
+    </LinearLayout>
+
+    <!-- Summary strip: total recordings -->
+    <LinearLayout
+        android:id="@+id/summaryStrip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="22dp"
+        android:layout_marginTop="13dp"
+        android:layout_marginBottom="15dp"
+        android:background="@drawable/bg_tile"
+        android:padding="14dp">
+
+        <TextView
+            android:id="@+id/totalRecordingsText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:textColor="@color/text_primary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/history_title"
-            android:textSize="24sp"
-            android:textStyle="bold"
+            android:layout_marginTop="3dp"
+            android:text="@string/history_recordings_label"
+            android:textSize="8sp"
+            android:fontFamily="monospace"
+            android:textColor="@color/text_secondary"
+            android:letterSpacing="0.06" />
+    </LinearLayout>
+
+    <!-- Filter chip row: visible only when History is launched without a mode
+         filter (i.e. from Config Welcome). Three chips: All / Config / Test.
+         Default selection is the "All" chip. -->
+    <LinearLayout
+        android:id="@+id/filterChipRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="22dp"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/filterChipAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/history_filter_all"
+            android:textAllCaps="true"
+            android:textSize="10.5sp"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.14"
             android:textColor="@color/text_primary"
-            android:layout_marginStart="8dp" />
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_chip_accent_soft"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/filterChipConfig"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/history_filter_config"
+            android:textAllCaps="true"
+            android:textSize="10.5sp"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.14"
+            android:textColor="@color/text_secondary"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_history_chip"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/filterChipTest"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/history_filter_test"
+            android:textAllCaps="true"
+            android:textSize="10.5sp"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.14"
+            android:textColor="@color/text_secondary"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:background="@drawable/bg_history_chip"
+            android:clickable="true"
+            android:focusable="true" />
 
     </LinearLayout>
 
-    <!-- Selection-Mode Toolbar: kept distinct via surface_variant tint as a mode signal -->
+    <!-- Selection-Mode Toolbar -->
     <LinearLayout
         android:id="@+id/selectionToolbar"
         android:layout_width="match_parent"
@@ -111,7 +222,8 @@
             android:id="@+id/historyRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="16dp"
+            android:paddingHorizontal="22dp"
+            android:paddingBottom="16dp"
             android:clipToPadding="false" />
 
         <TextView
@@ -119,7 +231,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/no_history"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textColor="@color/text_secondary"
             android:layout_gravity="center"
             android:visibility="gone" />

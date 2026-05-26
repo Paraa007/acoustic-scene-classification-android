@@ -1,0 +1,27 @@
+[
+  {
+    "model_filename": "dcase2025_10s_04_06_64bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9385
+  },
+  {
+    "model_filename": "dcase2025_10s_04_19_94bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9078
+  },
+  {
+    "model_filename": "dcase2025_10s_04_28_64bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9222
+  },
+  {
+    "model_filename": "dcase2025_10s_04_29_32bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9295
+  },
+  {
+    "model_filename": "dcase2025_1s_04_06_128bt.pt",
+    "training_seconds": 1,
+    "test_accuracy": null
+  }
+]
