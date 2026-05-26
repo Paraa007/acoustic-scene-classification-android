@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pause icon: two vertical bars.
+    Source: design-previews/minimal/v2/dark.html SCREEN 7 (line 1824).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="15"
+    android:viewportHeight="15">
+    <path
+        android:fillColor="@color/text_primary"
+        android:pathData="M4.2,2.5 L5.3,2.5 A1.2,1.2 0 0 1 6.5,3.7 L6.5,11.3 A1.2,1.2 0 0 1 5.3,12.5 L4.2,12.5 A1.2,1.2 0 0 1 3,11.3 L3,3.7 A1.2,1.2 0 0 1 4.2,2.5 Z" />
+    <path
+        android:fillColor="@color/text_primary"
+        android:pathData="M9.7,2.5 L10.8,2.5 A1.2,1.2 0 0 1 12,3.7 L12,11.3 A1.2,1.2 0 0 1 10.8,12.5 L9.7,12.5 A1.2,1.2 0 0 1 8.5,11.3 L8.5,3.7 A1.2,1.2 0 0 1 9.7,2.5 Z" />
+</vector>

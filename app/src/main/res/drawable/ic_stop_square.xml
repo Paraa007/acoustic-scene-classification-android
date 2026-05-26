@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Stop icon: filled rounded square in leisure-red (matches the mockup colour).
+    Source: design-previews/minimal/v2/dark.html SCREEN 7 (line 1828).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="14"
+    android:viewportHeight="14">
+    <path
+        android:fillColor="@color/leisure_sport"
+        android:pathData="M4.5,2.5 L9.5,2.5 A2,2 0 0 1 11.5,4.5 L11.5,9.5 A2,2 0 0 1 9.5,11.5 L4.5,11.5 A2,2 0 0 1 2.5,9.5 L2.5,4.5 A2,2 0 0 1 4.5,2.5 Z" />
+</vector>

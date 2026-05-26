@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Small rounded square used as the "cycle" legend marker on the
+    stopwatch tile. The Cycle ring deliberately reads in a different hue
+    from the Session ring (accent_green) so the two concentric arcs are
+    easy to tell apart, so the dot tracks that palette token too.
+    Source: dark.html SCREEN 7 (line 1624).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/transit_vehicles" />
+    <corners android:radius="2.5dp" />
+</shape>

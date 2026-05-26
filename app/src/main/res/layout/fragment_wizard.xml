@@ -3,60 +3,102 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/background_dark"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:paddingHorizontal="22dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="22dp">
 
+    <!-- Wizard chrome: back icon-btn + eyebrow + step caption -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <ImageButton
+        <FrameLayout
             android:id="@+id/wizardBack"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="10dp"
-            android:src="@drawable/ic_arrow_back"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/wizard_back" />
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_icon_btn"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:contentDescription="@string/wizard_back">
 
-        <TextView
-            android:id="@+id/wizardSectionLabel"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:gravity="center_vertical|start"
-            android:visibility="gone" />
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/text_primary"
+                android:importantForAccessibility="no" />
+        </FrameLayout>
 
         <LinearLayout
-            android:id="@+id/wizardStepDots"
+            android:id="@+id/wizardStepHeaderColumn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="end|center_vertical" />
+            android:layout_marginStart="11dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/wizardSectionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAllCaps="true"
+                android:textColor="@color/text_faint"
+                android:textSize="9.5sp"
+                android:letterSpacing="0.14"
+                android:fontFamily="monospace"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/wizardStepLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
+
+    <!-- 4-segment progress bar -->
+    <LinearLayout
+        android:id="@+id/wizardStepDots"
+        android:layout_width="match_parent"
+        android:layout_height="5dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="6dp"
+        android:orientation="horizontal" />
 
     <TextView
         android:id="@+id/wizardHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="22sp"
-        android:textStyle="bold"
+        android:layout_marginTop="14dp"
         android:textColor="@color/text_primary"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="20dp" />
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:lineSpacingMultiplier="1.18" />
+
+    <TextView
+        android:id="@+id/wizardSubheader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:lineSpacingMultiplier="1.4"
+        android:visibility="gone" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:layout_marginTop="14dp"
         android:fillViewport="true">
 
         <LinearLayout
@@ -70,12 +112,19 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/wizardPrimary"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
         android:text="@string/wizard_next"
-        android:textSize="16sp"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
-        android:layout_marginTop="12dp"
-        app:cornerRadius="14dp" />
+        android:textAllCaps="false"
+        android:textColor="@color/accent_ink"
+        android:textSize="14.5sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/accent_green"
+        app:cornerRadius="12dp"
+        app:icon="@drawable/ic_chevron_right_ink"
+        app:iconGravity="end"
+        app:iconPadding="9dp"
+        app:iconSize="16dp"
+        app:iconTint="@color/accent_ink" />
 
 </LinearLayout>

@@ -19,7 +19,9 @@ import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
+import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -262,6 +264,28 @@ object ModernDialogHelper {
         // Session name as dialog title
         dialog.findViewById<TextView>(R.id.dialogTitle).text = sessionName
 
+        // Close chevron (back arrow icon in the header) — dismisses the dialog.
+        dialog.findViewById<android.widget.ImageButton>(R.id.dialogCloseButton).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // Mode badge (TEST MODE / CONFIG MODE). Reads off the first record's
+        // sessionMode tag. Legacy records (sessionMode == null) hide the badge
+        // — those were saved before the tag landed and we don't want to lie
+        // about the entry point.
+        val modeBadge = dialog.findViewById<TextView>(R.id.detailModeBadge)
+        when (packageRecords.firstOrNull()?.sessionMode) {
+            SessionMode.TEST -> {
+                modeBadge.text = context.getString(R.string.detail_mode_test)
+                modeBadge.visibility = View.VISIBLE
+            }
+            SessionMode.CONFIG -> {
+                modeBadge.text = context.getString(R.string.detail_mode_config)
+                modeBadge.visibility = View.VISIBLE
+            }
+            null -> modeBadge.visibility = View.GONE
+        }
+
         // Rename button
         val btnRename = dialog.findViewById<MaterialButton>(R.id.btnRename)
         if (onRename != null) {
@@ -274,8 +298,6 @@ object ModernDialogHelper {
             btnRename.visibility = View.GONE
         }
 
-        // Datum-Format leserlich (z.B. "16. Mai 2026 · 10:30") statt der alten ISO-Form.
-        val dateFormat = SimpleDateFormat("d. MMMM yyyy · HH:mm", Locale.getDefault())
         // Pause-Records sind synthetisch — Model/Mode/Avg-Detection orientiert sich
         // ausschließlich an echten Aufnahmen, sonst zeigt der Header bei einer Session,
         // die mit einer Pause endet, einen Pause-Placeholder statt des Modus.
@@ -284,60 +306,89 @@ object ModernDialogHelper {
         val lastRecord = realRecords.lastOrNull() ?: packageRecords.lastOrNull()
         val sourceRecords = realRecords.ifEmpty { packageRecords }
 
-        // Start / End (Label + Wert untereinander, größere Schrift)
-        dialog.findViewById<TextView>(R.id.startTimeText).text =
-            firstRecord?.let { dateFormat.format(Date(it.timestamp)) } ?: "N/A"
-        dialog.findViewById<TextView>(R.id.endTimeText).text =
-            lastRecord?.let { dateFormat.format(Date(it.timestamp)) } ?: "N/A"
-
-        // Modell-Liste: pro Modell eine fette Zeile mit Brain-Icon (wie in der Tile)
-        val modelListLayout = dialog.findViewById<LinearLayout>(R.id.dialogModelListLayout)
-        modelListLayout.removeAllViews()
-        HistoryActivity.extractModelNames(sourceRecords).forEach { name ->
-            val tv = TextView(context).apply {
-                text = "🧠 ${name.stripModelSuffix()}"
-                textSize = 14f
-                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-            }
-            modelListLayout.addView(tv)
+        // v2 meta grid: 8 cells. Each include's root view has a distinct id; we
+        // scope findViewById to that root so the shared inner ids resolve.
+        val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val dayFmt = SimpleDateFormat("MMM d", Locale.getDefault())
+        fun relativeDay(ts: Long): String {
+            val now = System.currentTimeMillis()
+            val nowCal = java.util.Calendar.getInstance().apply { timeInMillis = now }
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = ts }
+            val sameDay = cal.get(java.util.Calendar.YEAR) == nowCal.get(java.util.Calendar.YEAR) &&
+                cal.get(java.util.Calendar.DAY_OF_YEAR) == nowCal.get(java.util.Calendar.DAY_OF_YEAR)
+            if (sameDay) return "today"
+            nowCal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            val yesterday = cal.get(java.util.Calendar.YEAR) == nowCal.get(java.util.Calendar.YEAR) &&
+                cal.get(java.util.Calendar.DAY_OF_YEAR) == nowCal.get(java.util.Calendar.DAY_OF_YEAR)
+            if (yesterday) return "yesterday"
+            return dayFmt.format(Date(ts))
         }
 
-        // Stats-Block (Recordings + Duration + Pause), fett
-        val durationMs = (lastRecord?.timestamp ?: 0L) - (firstRecord?.timestamp ?: 0L)
-        val pauseSec = packageRecords
-            .filter { it.isPause }
-            .sumOf { it.pauseDurationSec ?: 0L }
-        dialog.findViewById<TextView>(R.id.dialogRecordingsText).text =
-            "${context.getString(R.string.recordings)}: ${realRecords.size}"
-        dialog.findViewById<TextView>(R.id.dialogDurationText).text =
-            "${context.getString(R.string.duration)}: ${HistoryActivity.formatDuration(durationMs)}"
-        dialog.findViewById<TextView>(R.id.dialogPauseText).text =
-            "${context.getString(R.string.pause)}: ${HistoryActivity.formatPauseDuration(pauseSec)}"
+        val startTs = firstRecord?.timestamp
+        val endTs = lastRecord?.timestamp
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaStart),
+            context.getString(R.string.detail_meta_start),
+            startTs?.let { timeFmt.format(Date(it)) } ?: "—",
+            startTs?.let { relativeDay(it) }
+        )
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaEnd),
+            context.getString(R.string.detail_meta_end),
+            endTs?.let { timeFmt.format(Date(it)) } ?: "—",
+            endTs?.let { relativeDay(it) }
+        )
 
-        // Konfiguration (kompakt, secondary)
-        dialog.findViewById<TextView>(R.id.dialogConfigText).text =
-            HistoryActivity.pathLabel(sourceRecords)
+        val durationMs = (endTs ?: 0L) - (startTs ?: 0L)
+        val pauseSec = packageRecords.filter { it.isPause }.sumOf { it.pauseDurationSec ?: 0L }
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaDuration),
+            context.getString(R.string.detail_meta_duration),
+            HistoryActivity.formatDuration(durationMs)
+        )
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaRecordings),
+            context.getString(R.string.detail_meta_recordings),
+            realRecords.size.toString()
+        )
 
-        // Battery Drain: ± Differenz, rot bei Drain, grün bei Gain, grau bei N/A
-        val batteryText = dialog.findViewById<TextView>(R.id.dialogBatteryText)
-        val drainLabel = context.getString(R.string.battery_drain)
+        val pauseCount = packageRecords.count { it.isPause }
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaPauses),
+            context.getString(R.string.detail_meta_pauses),
+            pauseCount.toString()
+        )
+
+        val modelNames = HistoryActivity.extractModelNames(sourceRecords)
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaModels),
+            context.getString(R.string.detail_meta_models),
+            modelNames.size.toString()
+        )
+
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaConfig),
+            context.getString(R.string.detail_meta_config),
+            HistoryActivity.pathLabel(sourceRecords).ifBlank { "—" }
+        )
+
         val startBattery = firstRecord?.batteryLevel ?: -1
         val endBattery = lastRecord?.batteryLevel ?: -1
-        if (startBattery >= 0 && endBattery >= 0) {
+        val batteryDisplay = if (startBattery >= 0 && endBattery >= 0) {
             val diff = endBattery - startBattery
             val sign = if (diff > 0) "+" else if (diff < 0) "" else "±"
-            batteryText.text = "$drainLabel: $sign$diff%"
-            val colorRes = when {
-                diff < 0 -> R.color.status_error
-                diff > 0 -> R.color.accent_green_light
-                else -> R.color.text_secondary
-            }
-            batteryText.setTextColor(ContextCompat.getColor(context, colorRes))
+            "$sign$diff%"
         } else {
-            batteryText.text = "$drainLabel: N/A"
-            batteryText.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            "—"
         }
+        bindMetaCell(
+            dialog.findViewById(R.id.detailMetaBattery),
+            context.getString(R.string.detail_meta_battery),
+            batteryDisplay
+        )
+
+        // Most-heard highlight tile — uses the top class from the real records
+        renderMostHeardHighlight(context, dialog, realRecords)
 
         // Fill model distribution container with progress bars.
         // Wichtig: nur echte Records im Nenner — sonst werden die Prozente durch
@@ -553,6 +604,59 @@ object ModernDialogHelper {
 
         dialog.show()
         return dialog
+    }
+
+    /**
+     * Fills one of the 8 meta-grid cells in the v2 session detail dialog. The cell
+     * is an `<include>` whose root keeps its own id while the inner labels/values
+     * share scoped ids — calling `findViewById` on the included root resolves
+     * within that subtree so all 8 cells stay independent.
+     */
+    private fun bindMetaCell(
+        root: LinearLayout?,
+        label: String,
+        value: String,
+        sub: String? = null
+    ) {
+        if (root == null) return
+        root.findViewById<TextView>(R.id.cellLabel).text = label
+        root.findViewById<TextView>(R.id.cellValue).text = value
+        val subView = root.findViewById<TextView>(R.id.cellSub)
+        if (sub.isNullOrBlank()) {
+            subView.visibility = View.GONE
+        } else {
+            subView.visibility = View.VISIBLE
+            subView.text = sub
+        }
+    }
+
+    /**
+     * Renders the v2 "Most heard" tile under the model distributions. The class
+     * picked is the most-frequent SceneClass across the realRecords; if no class
+     * dominates (empty session) the tile stays hidden.
+     */
+    private fun renderMostHeardHighlight(
+        context: Context,
+        dialog: Dialog,
+        realRecords: List<PredictionRecord>
+    ) {
+        val tile = dialog.findViewById<LinearLayout>(R.id.detailMostHeard)
+        if (realRecords.isEmpty()) {
+            tile.visibility = View.GONE
+            return
+        }
+        val top = realRecords.groupingBy { it.sceneClass }
+            .eachCount()
+            .maxByOrNull { it.value }?.key
+        if (top == null) {
+            tile.visibility = View.GONE
+            return
+        }
+        tile.visibility = View.VISIBLE
+        dialog.findViewById<TextView>(R.id.detailMostHeardEmoji).text = top.emoji
+        val nameView = dialog.findViewById<TextView>(R.id.detailMostHeardName)
+        nameView.text = top.labelShort
+        nameView.setTextColor(SceneClassColors.color(context, top))
     }
 
     private fun renderPausesSection(

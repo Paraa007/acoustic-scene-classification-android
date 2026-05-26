@@ -21,16 +21,19 @@ import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
+import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
+import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.ThemeHelper
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,6 +54,11 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var btnBack: ImageButton
     private lateinit var adapter: PackageAdapter
 
+    // v2 header chips
+    private lateinit var totalChip: TextView
+    private lateinit var summaryStrip: LinearLayout
+    private lateinit var totalRecordingsText: TextView
+
     // Selection Mode UI
     private lateinit var normalToolbar: LinearLayout
     private lateinit var selectionToolbar: LinearLayout
@@ -60,6 +68,12 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var btnExportSelected: MaterialButton
     private lateinit var btnDeleteSelected: MaterialButton
 
+    // Filter chip row (Config-mode launch only)
+    private lateinit var filterChipRow: LinearLayout
+    private lateinit var filterChipAll: TextView
+    private lateinit var filterChipConfig: TextView
+    private lateinit var filterChipTest: TextView
+
     /** All session start times sorted chronologically (oldest first) */
     private var allSessionStartTimes: List<Long> = emptyList()
 
@@ -68,6 +82,19 @@ class HistoryActivity : AppCompatActivity() {
 
     /** Selection mode state */
     private var isSelectionMode = false
+
+    /**
+     * Active filter from the chip row. `null` = All (no filter, the default).
+     * Persisted across config changes via [onSaveInstanceState].
+     * Only used when the chip row is visible (i.e. no intent-level filter).
+     */
+    private var activeChipFilter: SessionMode? = null
+
+    /**
+     * `true` when the intent forced a mode filter (Test welcome) — in that case
+     * the chip row stays hidden and [activeChipFilter] is ignored.
+     */
+    private var intentFilterLocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Apply saved theme before super.onCreate()
@@ -94,6 +121,9 @@ class HistoryActivity : AppCompatActivity() {
         emptyStateText = findViewById(R.id.emptyStateText)
         btnBack = findViewById(R.id.btnBack)
         normalToolbar = findViewById(R.id.normalToolbar)
+        totalChip = findViewById(R.id.totalChip)
+        summaryStrip = findViewById(R.id.summaryStrip)
+        totalRecordingsText = findViewById(R.id.totalRecordingsText)
 
         // Selection toolbar views
         selectionToolbar = findViewById(R.id.selectionToolbar)
@@ -102,6 +132,12 @@ class HistoryActivity : AppCompatActivity() {
         btnSelectAll = findViewById(R.id.btnSelectAll)
         btnExportSelected = findViewById(R.id.btnExportSelected)
         btnDeleteSelected = findViewById(R.id.btnDeleteSelected)
+
+        // Filter chip row
+        filterChipRow = findViewById(R.id.filterChipRow)
+        filterChipAll = findViewById(R.id.filterChipAll)
+        filterChipConfig = findViewById(R.id.filterChipConfig)
+        filterChipTest = findViewById(R.id.filterChipTest)
 
         // Material 3 Back Button
         btnBack.setOnClickListener {
@@ -114,6 +150,30 @@ class HistoryActivity : AppCompatActivity() {
         btnExportSelected.setOnClickListener { exportSelected() }
         btnDeleteSelected.setOnClickListener { deleteSelected() }
 
+        // Decide whether the intent forced a mode filter. If it did (TEST from
+        // TestWelcomeFragment), the chip row stays hidden and the user has no
+        // way to broaden the view. Otherwise (Config Welcome), the chip row is
+        // visible and starts on "All".
+        val intentFilterRaw = intent?.getStringExtra(EXTRA_MODE_FILTER)
+        val parsedIntentFilter = intentFilterRaw?.let {
+            runCatching { SessionMode.valueOf(it) }.getOrNull()
+        }
+        intentFilterLocked = parsedIntentFilter != null
+
+        if (intentFilterLocked) {
+            filterChipRow.visibility = View.GONE
+        } else {
+            filterChipRow.visibility = View.VISIBLE
+            // Restore chip selection across rotations.
+            activeChipFilter = savedInstanceState?.getString(STATE_CHIP_FILTER)?.let {
+                runCatching { SessionMode.valueOf(it) }.getOrNull()
+            }
+            applyChipSelectionVisual()
+            filterChipAll.setOnClickListener { onChipFilterChanged(null) }
+            filterChipConfig.setOnClickListener { onChipFilterChanged(SessionMode.CONFIG) }
+            filterChipTest.setOnClickListener { onChipFilterChanged(SessionMode.TEST) }
+        }
+
         // RecyclerView Setup
         adapter = PackageAdapter(
             repository = repository,
@@ -124,6 +184,43 @@ class HistoryActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
+        loadHistory()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Only meaningful when the chip row is in play.
+        if (!intentFilterLocked) {
+            activeChipFilter?.let { outState.putString(STATE_CHIP_FILTER, it.name) }
+        }
+    }
+
+    /**
+     * Repaints the three filter chips so the active one uses the accent-soft
+     * background + primary text colour while the others fall back to the
+     * hairline border + secondary text.
+     */
+    private fun applyChipSelectionVisual() {
+        val selectedBg = R.drawable.bg_chip_accent_soft
+        val idleBg = R.drawable.bg_history_chip
+        val selectedTextColor = getColor(R.color.text_primary)
+        val idleTextColor = getColor(R.color.text_secondary)
+
+        val pairs = listOf(
+            filterChipAll to (activeChipFilter == null),
+            filterChipConfig to (activeChipFilter == SessionMode.CONFIG),
+            filterChipTest to (activeChipFilter == SessionMode.TEST),
+        )
+        pairs.forEach { (chip, isSelected) ->
+            chip.setBackgroundResource(if (isSelected) selectedBg else idleBg)
+            chip.setTextColor(if (isSelected) selectedTextColor else idleTextColor)
+        }
+    }
+
+    private fun onChipFilterChanged(newFilter: SessionMode?) {
+        if (activeChipFilter == newFilter) return
+        activeChipFilter = newFilter
+        applyChipSelectionVisual()
         loadHistory()
     }
 
@@ -219,12 +316,19 @@ class HistoryActivity : AppCompatActivity() {
     // --- Existing functionality ---
 
     private fun loadHistory() {
-        val predictions = repository.getAllPredictions().sortedBy { it.timestamp }
+        val rawPredictions = repository.getAllPredictions().sortedBy { it.timestamp }
+        val predictions = applyModeFilter(rawPredictions)
         val packages = groupIntoPackages(predictions)
 
         // Alle Session-Startzeiten chronologisch sammeln
         allSessionStartTimes = packages.map { it.first().sessionStartTime }.sorted()
         allPackages = packages.reversed() // Neueste zuerst
+
+        // v2 header: "23 total" chip + summary recordings count
+        totalChip.text = getString(R.string.history_total_chip, packages.size)
+        val totalRecordings = packages.sumOf { it.realOnly().size }
+        totalRecordingsText.text = String.format(Locale.US, "%,d", totalRecordings)
+        summaryStrip.visibility = if (packages.isEmpty()) View.GONE else View.VISIBLE
 
         adapter.submitList(allPackages, allSessionStartTimes)
 
@@ -234,6 +338,33 @@ class HistoryActivity : AppCompatActivity() {
         } else {
             emptyStateText.visibility = View.GONE
             recyclerView.visibility = View.VISIBLE
+        }
+    }
+
+    /**
+     * Filters predictions down to the active mode. Resolution order:
+     *  1. Intent extra (TestWelcome locks the activity to TEST-only).
+     *  2. Chip-row selection from Config Welcome (`activeChipFilter`).
+     *  3. No filter (== All).
+     *
+     * TEST keeps only records with `sessionMode == TEST`; CONFIG keeps
+     * `sessionMode == CONFIG` plus legacy null records (saved before the tag
+     * existed — those have always been a developer flow).
+     */
+    private fun applyModeFilter(predictions: List<PredictionRecord>): List<PredictionRecord> {
+        val target: SessionMode? = if (intentFilterLocked) {
+            intent?.getStringExtra(EXTRA_MODE_FILTER)?.let {
+                runCatching { SessionMode.valueOf(it) }.getOrNull()
+            }
+        } else {
+            activeChipFilter
+        }
+        return when (target) {
+            null -> predictions
+            SessionMode.TEST -> predictions.filter { it.sessionMode == SessionMode.TEST }
+            SessionMode.CONFIG -> predictions.filter {
+                it.sessionMode == SessionMode.CONFIG || it.sessionMode == null
+            }
         }
     }
 
@@ -474,14 +605,13 @@ class HistoryActivity : AppCompatActivity() {
         override fun getItemCount(): Int = packages.size
 
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val packageCard: MaterialCardView = itemView.findViewById(R.id.packageCard)
+            private val packageCard: LinearLayout = itemView.findViewById(R.id.packageCard)
             private val sessionNameText: TextView = itemView.findViewById(R.id.sessionNameText)
-            private val modelListLayout: LinearLayout = itemView.findViewById(R.id.modelListLayout)
-            private val recordingsText: TextView = itemView.findViewById(R.id.recordingsText)
-            private val durationText: TextView = itemView.findViewById(R.id.durationText)
-            private val pauseText: TextView = itemView.findViewById(R.id.pauseText)
-            private val configText: TextView = itemView.findViewById(R.id.configText)
-            private val batteryConsumptionText: TextView = itemView.findViewById(R.id.batteryConsumptionText)
+            private val sessionTimestampText: TextView = itemView.findViewById(R.id.sessionTimestampText)
+            private val activeBadgeContainer: LinearLayout = itemView.findViewById(R.id.activeBadgeContainer)
+            private val minibarContainer: LinearLayout = itemView.findViewById(R.id.minibarContainer)
+            private val chipRowContainer: LinearLayout = itemView.findViewById(R.id.chipRowContainer)
+            private val statsRow: LinearLayout = itemView.findViewById(R.id.statsRow)
             private val selectionCheckbox: CheckBox = itemView.findViewById(R.id.selectionCheckbox)
 
             fun bind(packageRecords: List<PredictionRecord>) {
@@ -489,86 +619,242 @@ class HistoryActivity : AppCompatActivity() {
                 val sessionStartTime = packageRecords.first().sessionStartTime
                 val displayName = repository.resolveSessionDisplayName(sessionStartTime, allSessionStartTimes)
                 sessionNameText.text = displayName
+                sessionTimestampText.text = formatRelativeTimestamp(sessionStartTime)
 
-                // Pause synthetic records inflate counts and don't represent actual
-                // recordings, so they're filtered out of the headline numbers and the
-                // config-label derivation.
+                // Pause synthetic records inflate counts and don't represent actual recordings,
+                // so the v2 minibar + chip row drive off the real subset only.
                 val recordingRecords = packageRecords.realOnly()
                 val sourceRecords = recordingRecords.ifEmpty { packageRecords }
 
-                // Modell-Liste dynamisch befüllen (eine Zeile pro Modell, ohne .pt-Endung)
-                modelListLayout.removeAllViews()
-                val modelNames = extractModelNames(sourceRecords)
-                modelNames.forEach { name ->
-                    val tv = TextView(ctx).apply {
-                        text = "🧠 ${name.stripModelSuffix()}"
-                        textSize = 14f
-                        setTextColor(ctx.getColor(R.color.text_primary))
-                        setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    }
-                    modelListLayout.addView(tv)
-                }
+                // ACTIVE badge — set if this session is the registered running one
+                val isActive = ActiveSessionRegistry.activeSessionStartTimes().contains(sessionStartTime)
+                activeBadgeContainer.visibility = if (isActive) View.VISIBLE else View.GONE
+                packageCard.background = ctx.getDrawable(
+                    if (isActive) R.drawable.bg_tile_accent else R.drawable.bg_tile
+                )
 
-                // Stats: Recordings + Duration + Pause in eigenen Zeilen, fett
-                val durationMs = packageRecords.last().timestamp - packageRecords.first().timestamp
-                val pauseSec = packageRecords
-                    .filter { it.isPause }
-                    .sumOf { it.pauseDurationSec ?: 0L }
-                recordingsText.text = "${ctx.getString(R.string.recordings)}: ${recordingRecords.size}"
-                durationText.text = "${ctx.getString(R.string.duration)}: ${formatDuration(durationMs)}"
-                pauseText.text = "${ctx.getString(R.string.pause)}: ${formatPauseDuration(pauseSec)}"
+                // Minibar — proportional class distribution
+                buildMinibar(ctx, minibarContainer, recordingRecords)
 
-                // Konfiguration kompakt (nur Pfad-Teil, ohne Modell-Doppelung)
-                configText.text = pathLabel(sourceRecords)
+                // Chip row — models / mode / methods
+                buildChipRow(ctx, chipRowContainer, sourceRecords)
 
-                // Battery: ± Differenz, rot bei Drain, grün bei Gain, grau bei N/A
-                val firstRecord = recordingRecords.firstOrNull() ?: packageRecords.first()
-                val lastRecord = recordingRecords.lastOrNull() ?: packageRecords.last()
-                val startBattery = firstRecord.batteryLevel
-                val endBattery = lastRecord.batteryLevel
+                // Stats row — bignum + label cluster
+                buildStatsRow(ctx, statsRow, recordingRecords, packageRecords)
 
-                val drainLabel = ctx.getString(R.string.battery_drain)
-                if (startBattery >= 0 && endBattery >= 0) {
-                    val diff = endBattery - startBattery  // positiv = Gain (geladen), negativ = Drain
-                    val sign = if (diff > 0) "+" else if (diff < 0) "" else "±"
-                    batteryConsumptionText.text = "$drainLabel: $sign$diff%"
-                    val colorRes = when {
-                        diff < 0 -> R.color.status_error
-                        diff > 0 -> R.color.accent_green_light
-                        else -> R.color.text_secondary
-                    }
-                    batteryConsumptionText.setTextColor(ctx.getColor(colorRes))
-                } else {
-                    batteryConsumptionText.text = "$drainLabel: N/A"
-                    batteryConsumptionText.setTextColor(ctx.getColor(R.color.text_secondary))
-                }
-
-                // Selection mode UI
+                // Selection state
                 val isSelected = selectedSessions.contains(sessionStartTime)
                 selectionCheckbox.visibility = if (selectionMode) View.VISIBLE else View.GONE
                 selectionCheckbox.isChecked = isSelected
-                packageCard.isChecked = isSelected
-                packageCard.strokeWidth = if (isSelected) 2 else 0
-                packageCard.strokeColor = if (isSelected) {
-                    ctx.getColor(R.color.accent_green_light)
-                } else {
-                    0
-                }
 
-                // Click handlers
-                itemView.setOnClickListener {
-                    onPackageClick(packageRecords)
-                }
-
-                itemView.setOnLongClickListener {
+                packageCard.setOnClickListener { onPackageClick(packageRecords) }
+                packageCard.setOnLongClickListener {
                     onPackageLongClick(packageRecords)
                     true
                 }
+            }
+
+            private fun buildMinibar(
+                ctx: android.content.Context,
+                container: LinearLayout,
+                recordingRecords: List<PredictionRecord>
+            ) {
+                container.removeAllViews()
+                val density = ctx.resources.displayMetrics.density
+                val gapPx = (2 * density).toInt()
+                val byClass = recordingRecords.groupingBy { it.sceneClass }.eachCount()
+                val total = byClass.values.sum().coerceAtLeast(1)
+                val entries = byClass.entries.sortedByDescending { it.value }
+                // Mockup minibar style: thin 2dp gap between segments + hairline
+                // base color so an empty bar still reads as a track.
+                entries.forEachIndexed { index, (scene, count) ->
+                    val pct = count.toFloat() / total.toFloat()
+                    container.addView(View(ctx).apply {
+                        setBackgroundColor(SceneClassColors.color(ctx, scene))
+                        val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, pct)
+                        if (index < entries.size - 1) lp.marginEnd = gapPx
+                        layoutParams = lp
+                    })
+                }
+            }
+
+            private fun buildChipRow(
+                ctx: android.content.Context,
+                container: LinearLayout,
+                sourceRecords: List<PredictionRecord>
+            ) {
+                container.removeAllViews()
+                if (sourceRecords.isEmpty()) return
+                val first = sourceRecords.first()
+
+                val models = extractModelNames(sourceRecords)
+                container.addView(chip(ctx, modelsChipLabel(models.size)))
+
+                val modeChipLabel = if (first.recordingMode == RecordingMode.LONG) {
+                    val interval = first.longIntervalMinutes
+                    val txt = interval?.let { mins ->
+                        if (mins >= 60 && mins % 60 == 0) "Interval ${mins / 60}h"
+                        else "Interval ${mins}min"
+                    } ?: "Interval"
+                    txt
+                } else {
+                    "Continuous"
+                }
+                container.addView(chip(ctx, modeChipLabel))
+
+                val methodCount = sourceRecords
+                    .mapNotNull { it.longSubResults }
+                    .flatten()
+                    .map { it.subMode }
+                    .toSet()
+                    .size
+                if (methodCount >= 2) {
+                    container.addView(chip(ctx, ctx.getString(R.string.history_chip_methods_n, methodCount)))
+                } else {
+                    val singleMethodLabel = when {
+                        first.recordingMode == RecordingMode.STANDARD -> "Standard 10s"
+                        first.recordingMode == RecordingMode.FAST -> "Fast 1s"
+                        first.recordingMode == RecordingMode.AVERAGE -> "Avg"
+                        else -> null
+                    }
+                    if (singleMethodLabel != null) container.addView(chip(ctx, singleMethodLabel))
+                }
+            }
+
+            private fun modelsChipLabel(count: Int): CharSequence {
+                val res = itemView.resources
+                return if (count == 1) {
+                    androidx.core.text.HtmlCompat.fromHtml(
+                        res.getString(R.string.history_chip_model_one),
+                        androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY
+                    )
+                } else {
+                    androidx.core.text.HtmlCompat.fromHtml(
+                        res.getString(R.string.history_chip_models_n, count),
+                        androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY
+                    )
+                }
+            }
+
+            private fun chip(ctx: android.content.Context, text: CharSequence): TextView {
+                val density = ctx.resources.displayMetrics.density
+                return TextView(ctx).apply {
+                    this.text = text
+                    textSize = 10.5f
+                    setTextColor(ctx.getColor(R.color.text_secondary))
+                    // bg_history_chip uses surface_variant + hairline border so the
+                    // chip cluster reads as a distinct group inside the tile.
+                    background = ctx.getDrawable(R.drawable.bg_history_chip)
+                    setPadding(
+                        (9 * density).toInt(),
+                        (4 * density).toInt(),
+                        (9 * density).toInt(),
+                        (4 * density).toInt()
+                    )
+                    val lp = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    lp.marginEnd = (6 * density).toInt()
+                    layoutParams = lp
+                }
+            }
+
+            private fun buildStatsRow(
+                ctx: android.content.Context,
+                container: LinearLayout,
+                recordingRecords: List<PredictionRecord>,
+                allRecords: List<PredictionRecord>
+            ) {
+                container.removeAllViews()
+                val density = ctx.resources.displayMetrics.density
+
+                container.addView(statCluster(ctx, recordingRecords.size.toString(), ctx.getString(R.string.history_stat_recordings)))
+
+                val firstReal = recordingRecords.firstOrNull()
+                val lastReal = recordingRecords.lastOrNull()
+                if (firstReal != null && lastReal != null) {
+                    val durMin = ((lastReal.timestamp - firstReal.timestamp) / 60_000L).toInt()
+                    val durHours = durMin / 60
+                    if (durHours >= 1) {
+                        addSpacing(container, (16 * density).toInt())
+                        container.addView(statCluster(ctx, durHours.toString(), ctx.getString(R.string.history_stat_h)))
+                    } else {
+                        addSpacing(container, (16 * density).toInt())
+                        container.addView(statCluster(ctx, durMin.coerceAtLeast(1).toString(), ctx.getString(R.string.history_stat_min)))
+                    }
+                }
+
+                val pauseSec = allRecords.filter { it.isPause }.sumOf { it.pauseDurationSec ?: 0L }
+                if (pauseSec > 0L) {
+                    val pauseMin = (pauseSec / 60L).coerceAtLeast(1L)
+                    addSpacing(container, (16 * density).toInt())
+                    container.addView(statCluster(ctx, pauseMin.toString(), ctx.getString(R.string.history_stat_min_pause)))
+                }
+            }
+
+            private fun statCluster(ctx: android.content.Context, big: String, label: String): LinearLayout {
+                val density = ctx.resources.displayMetrics.density
+                return LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.BOTTOM
+                    addView(TextView(ctx).apply {
+                        text = big
+                        textSize = 14f
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                        setTextColor(ctx.getColor(R.color.text_primary))
+                        typeface = android.graphics.Typeface.MONOSPACE
+                    })
+                    addView(TextView(ctx).apply {
+                        text = label
+                        textSize = 9f
+                        setTextColor(ctx.getColor(R.color.text_faint))
+                        val lp = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        lp.marginStart = (5 * density).toInt()
+                        layoutParams = lp
+                    })
+                }
+            }
+
+            private fun addSpacing(parent: LinearLayout, widthPx: Int) {
+                parent.addView(View(parent.context).apply {
+                    layoutParams = LinearLayout.LayoutParams(widthPx, 1)
+                })
+            }
+
+            private fun formatRelativeTimestamp(ts: Long): String {
+                val now = System.currentTimeMillis()
+                val cal = java.util.Calendar.getInstance().apply { timeInMillis = ts }
+                val nowCal = java.util.Calendar.getInstance().apply { timeInMillis = now }
+                val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ts))
+                val sameDay = cal.get(java.util.Calendar.YEAR) == nowCal.get(java.util.Calendar.YEAR) &&
+                    cal.get(java.util.Calendar.DAY_OF_YEAR) == nowCal.get(java.util.Calendar.DAY_OF_YEAR)
+                if (sameDay) return "today $timeFmt"
+                nowCal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+                val yesterday = cal.get(java.util.Calendar.YEAR) == nowCal.get(java.util.Calendar.YEAR) &&
+                    cal.get(java.util.Calendar.DAY_OF_YEAR) == nowCal.get(java.util.Calendar.DAY_OF_YEAR)
+                if (yesterday) return "yesterday $timeFmt"
+                val daysAgo = ((now - ts) / (24L * 60L * 60L * 1000L)).toInt().coerceAtLeast(2)
+                return "$daysAgo days ago"
             }
         }
     }
 
     companion object {
+        /**
+         * Intent extra used by Test Welcome / Config Welcome to restrict the
+         * history to sessions launched in a given [SessionMode]. Accepted
+         * values: SessionMode enum names. Anything else (including absence)
+         * means "show all sessions".
+         */
+        const val EXTRA_MODE_FILTER = "history_mode_filter"
+
+        /** Bundle key for the chip-row filter selection (Config-mode launches). */
+        private const val STATE_CHIP_FILTER = "history_chip_filter"
+
         /**
          * Extracts the distinct list of model names actually used in this session.
          * Falls back to the primary modelName when no multi-model record is found.

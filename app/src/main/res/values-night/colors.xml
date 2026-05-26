@@ -1,62 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark Theme - Primary Colors -->
-    <color name="background_dark">#0D0D0D</color>   <!-- Near black -->
-    <color name="surface_dark">#1A1A1A</color>       <!-- Dark grey for Cards -->
-    <color name="surface_variant">#2A2A2A</color>    <!-- Slightly lighter for variants -->
+    <!-- ============================================================
+         v2 Minimal · DARK palette
+         Source of truth: design-previews/minimal/v2/dark.html
+         Calm slate, no glow.
+         ============================================================ -->
 
-    <!-- Accent Colors (Green) -->
-    <color name="accent_green">#1B5E20</color>       <!-- Dark Green for Buttons -->
-    <color name="accent_green_dark">#0D3E14</color>  <!-- Even darker Green -->
-    <color name="accent_green_light">#4CAF50</color> <!-- Light Green -->
+    <!-- Surfaces & background -->
+    <color name="background_dark">#0A0A0C</color>
+    <color name="surface_dark">#15161A</color>
+    <color name="surface_variant">#1E1F23</color>
+    <color name="hairline">#2D2F34</color>
+    <color name="border_subtle">#36383D</color>
 
-    <!-- Accent Colors (Blue for Dev Mode) -->
-    <color name="accent_blue">#2196F3</color>        <!-- Blue for Dev Mode -->
-    <color name="accent_blue_dark">#1565C0</color>   <!-- Darker Blue -->
-    <color name="accent_blue_light">#64B5F6</color>  <!-- Light Blue -->
+    <!-- Accent (forest green, muted for dark bg — no glow) -->
+    <color name="accent_green">#4F6859</color>
+    <color name="accent_green_dark">#3B4F44</color>
+    <color name="accent_green_light">#62786A</color>
+    <color name="accent_soft">#161F1A</color>
+    <color name="accent_line">#324339</color>
+    <color name="accent_ink">#0E1813</color>
 
-    <!-- Living Room color (9th class) -->
-    <color name="living_room">#795548</color>        <!-- Brown - Wohnbereich -->
+    <!-- Test-acc-missing red (dark) -->
+    <color name="accent_red">#D6584F</color>
+    <color name="accent_red_soft">#3A1F1D</color>
 
-    <!-- Text Colors -->
-    <color name="text_primary">#FFFFFF</color>       <!-- White -->
-    <color name="text_secondary">#B0B0B0</color>    <!-- Light grey -->
-    <color name="text_disabled">#666666</color>      <!-- Grey -->
+    <!-- Dev/info blue stays available -->
+    <color name="accent_blue">#4F6859</color>
+    <color name="accent_blue_dark">#3B4F44</color>
+    <color name="accent_blue_light">#62786A</color>
 
-    <!-- Status Colors -->
-    <color name="status_success">#1B5E20</color>     <!-- Dark Green -->
-    <color name="status_warning">#FFA000</color>     <!-- Orange -->
-    <color name="status_error">#D32F2F</color>       <!-- Red -->
-    <color name="status_info">#2196F3</color>        <!-- Blue -->
+    <!-- Text -->
+    <color name="text_primary">#E9E9EA</color>
+    <color name="text_secondary">#9A9CA1</color>
+    <color name="text_disabled">#66686D</color>
+    <color name="text_faint">#66686D</color>
 
-    <!-- Scene Classification Colors (9 Classes - DCASE 2025) -->
-    <color name="transit_vehicles">#2196F3</color>   <!-- Blue - Transit/Fahrzeuge -->
-    <color name="urban_waiting">#FFC107</color>      <!-- Yellow - Urban/Wartezonen -->
-    <color name="nature">#4CAF50</color>             <!-- Green - Natur -->
-    <color name="social">#E91E63</color>             <!-- Pink - Sozial -->
-    <color name="work">#9C27B0</color>               <!-- Purple - Arbeit -->
-    <color name="commercial">#FF9800</color>         <!-- Orange - Kommerziell -->
-    <color name="leisure_sport">#F44336</color>      <!-- Red - Freizeit/Sport -->
-    <color name="culture_quiet">#673AB7</color>      <!-- Deep Purple - Kultur/Ruhig -->
+    <!-- Status -->
+    <color name="status_success">#4F6859</color>
+    <color name="status_warning">#CE9D70</color>
+    <color name="status_error">#D6584F</color>
+    <color name="status_info">#6E97B6</color>
 
-    <!-- UI Colors (Dark Theme) -->
-    <color name="primary">#1B5E20</color>             <!-- Dark Green as Primary -->
-    <color name="primary_dark">#0D3E14</color>       <!-- Even darker Green -->
-    <color name="accent">#1B5E20</color>              <!-- Dark Green as Accent -->
-    <color name="background">#0D0D0D</color>          <!-- Dark Background -->
-    <color name="surface">#1A1A1A</color>             <!-- Dark Surface -->
-    <color name="error">#D32F2F</color>               <!-- Red for errors -->
-    <color name="on_primary">#FFFFFF</color>          <!-- White on Green -->
-    <color name="on_background">#FFFFFF</color>       <!-- White on Dark Background -->
-    <color name="on_surface">#FFFFFF</color>         <!-- White on Dark Surface -->
-    <color name="on_error">#FFFFFF</color>           <!-- White on Red -->
+    <!-- Living Room (9th class) -->
+    <color name="living_room">#AB9379</color>
 
-    <!-- Status Colors -->
-    <color name="status_idle">#666666</color>         <!-- Grey -->
-    <color name="status_recording">#D32F2F</color>   <!-- Red for Recording -->
-    <color name="status_processing">#FFA000</color>  <!-- Orange for Processing -->
+    <!-- 9 scene classes — muted data palette, lifted for dark bg -->
+    <color name="transit_vehicles">#6E97B6</color>
+    <color name="urban_waiting">#CFB263</color>
+    <color name="nature">#6FA081</color>
+    <color name="social">#C98AA4</color>
+    <color name="work">#9A8EB7</color>
+    <color name="commercial">#CE9D70</color>
+    <color name="leisure_sport">#C98179</color>
+    <color name="culture_quiet">#9095BB</color>
 
-    <!-- Dialog Colors -->
-    <color name="dialog_surface">#1E1E1E</color>     <!-- Dark Grey for Dialogs -->
-    <color name="dialog_surface_light">#2A2A2A</color> <!-- Lighter surface for items -->
+    <!-- Material aliases -->
+    <color name="primary">#4F6859</color>
+    <color name="primary_dark">#3B4F44</color>
+    <color name="accent">#4F6859</color>
+    <color name="background">#0A0A0C</color>
+    <color name="surface">#15161A</color>
+    <color name="error">#D6584F</color>
+    <color name="on_primary">#0E1813</color>
+    <color name="on_background">#E9E9EA</color>
+    <color name="on_surface">#E9E9EA</color>
+    <color name="on_error">#FFFFFF</color>
+
+    <!-- Status indicator (live recording state) -->
+    <color name="status_idle">#66686D</color>
+    <color name="status_recording">#C98179</color>
+    <color name="status_processing">#CE9D70</color>
+
+    <!-- Dialogs -->
+    <color name="dialog_surface">#15161A</color>
+    <color name="dialog_surface_light">#1E1F23</color>
 </resources>

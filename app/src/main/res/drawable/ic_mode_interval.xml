@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Two solid dots with a smaller faded dot between — illustrates the gap in
+    interval recording (record, pause, record).
+    Source: design-previews/minimal/v2/dark.html, lines 1300-1302.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="22"
+    android:viewportHeight="22">
+    <path
+        android:fillColor="@color/text_secondary"
+        android:pathData="M4,11 m -2.4,0 a 2.4,2.4 0 1,0 4.8,0 a 2.4,2.4 0 1,0 -4.8,0" />
+    <path
+        android:fillColor="@color/text_secondary"
+        android:fillAlpha="0.55"
+        android:pathData="M11,11 m -1.4,0 a 1.4,1.4 0 1,0 2.8,0 a 1.4,1.4 0 1,0 -2.8,0" />
+    <path
+        android:fillColor="@color/text_secondary"
+        android:pathData="M18,11 m -2.4,0 a 2.4,2.4 0 1,0 4.8,0 a 2.4,2.4 0 1,0 -4.8,0" />
+</vector>

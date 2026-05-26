@@ -5,12 +5,17 @@ import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.model.SessionDuration
+import com.fzi.acousticscene.model.SessionMode
+import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
 
 /**
  * In-flight wizard answers. Persisted to no storage — kept only on the
  * [MainViewModel] until the user reaches the summary and confirms, at which
  * point the resolved [SessionConfig] takes over and the wizard state is reset.
+ *
+ * [intent] tells the Summary which CTA to render and what to do after — see
+ * [WizardIntent] for the three branches.
  */
 data class WizardViewState(
     val step: WizardStep = WizardStep.Models,
@@ -21,13 +26,14 @@ data class WizardViewState(
     val intervalPause: LongInterval? = null,
     val intervalMethodsByModel: Map<String, Set<LongSubMode>> = emptyMap(),
     val sessionDuration: SessionDuration = SessionDuration.DEFAULT,
-    /**
-     * True when the wizard was entered via the Quick Start shortcut on the welcome
-     * page. Renders the Summary read-only: step dots hidden, summary rows not
-     * tappable, back arrow leaves the wizard instead of walking through steps.
-     */
-    val quickStartMode: Boolean = false
+    val intent: WizardIntent = WizardIntent.StartRecording
 ) {
+    /** True when the wizard was entered via Quick Start — Summary is read-only. */
+    val quickStartMode: Boolean get() = intent is WizardIntent.QuickStart
+
+    /** True when the wizard exits by saving a quickstart slot instead of launching a session. */
+    val saveAsSlotMode: Boolean get() = intent is WizardIntent.SaveAsSlot
+
     /** Branch-aware ordered list of steps for the current category choice. */
     fun stepOrder(): List<WizardStep> = when (category) {
         RecordingCategory.INTERVAL -> WizardStep.intervalSteps()
@@ -55,7 +61,8 @@ data class WizardViewState(
             continuousMethodsByModel = continuousMethodsByModel,
             intervalPause = intervalPause,
             intervalMethodsByModel = intervalMethodsByModel,
-            sessionDuration = sessionDuration
+            sessionDuration = sessionDuration,
+            mode = if (saveAsSlotMode) SessionMode.TEST else SessionMode.CONFIG
         )
     }
 }

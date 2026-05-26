@@ -1,144 +1,373 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:fitsSystemWindows="true">
 
-    <com.google.android.material.card.MaterialCardView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        app:cardBackgroundColor="@color/dialog_surface"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="8dp"
-        app:strokeWidth="0dp">
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="22dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="20dp">
 
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:fillViewport="true">
+            <!-- Back row: chevron + "Back" label, both tap targets behave as one
+                 button. Mirrors the Welcome screens so the user always has a
+                 visible way out of the evaluation surface. -->
+            <LinearLayout
+                android:id="@+id/evaluationBackRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="6dp"
+                android:paddingEnd="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="@string/back">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@color/text_secondary"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="24dp">
+                    android:layout_marginStart="6dp"
+                    android:text="@string/back"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
 
-                    <!-- Header: Title + Timer -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="16dp">
+            <!-- Header: eyebrow + title + subtitle -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/eval_eyebrow"
+                android:textAllCaps="true"
+                android:textSize="9.5sp"
+                android:textColor="@color/text_faint"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.14"
+                android:textStyle="bold" />
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/evaluation_title"
-                            android:textColor="@color/text_primary"
-                            android:textSize="20sp"
-                            android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/eval_title_v2"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
 
-                        <TextView
-                            android:id="@+id/timerText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/status_error"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <!-- Model Prediction Display -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:background="@color/surface_variant"
-                        android:padding="12dp"
-                        android:layout_marginBottom="20dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/model_label"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/modelPredictionText"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="12dp"
-                            android:textColor="@color/accent_green_light"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <!-- Question -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/evaluation_question"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- Scene Class Selection -->
-                    <RadioGroup
-                        android:id="@+id/sceneClassRadioGroup"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginBottom="20dp" />
-
-                </LinearLayout>
-            </ScrollView>
-
-            <!-- Sticky buttons row — always visible, even with keyboard open -->
-            <View
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/surface_variant" />
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/eval_subtitle"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:lineSpacingMultiplier="1.4" />
 
+            <!-- Prediction tile + countdown tile -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="end"
-                android:padding="16dp">
+                android:layout_marginTop="15dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSkip"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:text="@string/evaluation_skip"
-                    android:textColor="@color/text_secondary" />
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_tile"
+                    android:padding="13dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSubmit"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="wrap_content"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/eval_predicted"
+                        android:textAllCaps="true"
+                        android:textSize="9.5sp"
+                        android:textColor="@color/text_faint"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.15"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:id="@+id/predictedEmoji"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="17sp"
+                            tools:text="🌲" />
+
+                        <TextView
+                            android:id="@+id/predictedName"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="7dp"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            tools:text="Nature" />
+
+                        <TextView
+                            android:id="@+id/predictedPct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"
+                            android:textColor="@color/text_primary"
+                            tools:text="84%" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="5dp"
+                        android:layout_marginTop="9dp"
+                        android:background="@drawable/bg_dist_track" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="@string/evaluation_submit"
-                    android:textColor="@color/on_primary"
-                    app:backgroundTint="@color/accent_green" />
+                    android:layout_weight="1"
+                    android:layout_marginStart="9dp"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_tile"
+                    android:padding="13dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/eval_auto_skips"
+                        android:textAllCaps="true"
+                        android:textSize="9.5sp"
+                        android:textColor="@color/text_faint"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.15"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/timerText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"
+                        android:textColor="@color/text_primary"
+                        tools:text="4:32" />
+                </LinearLayout>
             </LinearLayout>
+
+            <!-- Section: Select the actual scene -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="17dp"
+                android:layout_marginBottom="9dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/eval_section_select"
+                    android:textAllCaps="true"
+                    android:textSize="9.5sp"
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.15"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="9dp"
+                    android:background="@color/hairline" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/sceneClassContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- "Other — write a note" toggle -->
+            <LinearLayout
+                android:id="@+id/otherOption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_tile"
+                android:padding="13dp"
+                android:layout_marginTop="7dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_eyebrow_dot" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="11dp"
+                    android:text="✎"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="11dp"
+                    android:text="@string/eval_other_label"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <View
+                    android:id="@+id/otherCircle"
+                    android:layout_width="19dp"
+                    android:layout_height="19dp"
+                    android:background="@drawable/bg_radio_circle_unselected" />
+            </LinearLayout>
+
+            <!-- Expanding note tile (visible when Other is active) -->
+            <LinearLayout
+                android:id="@+id/noteTile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_tile"
+                android:padding="13dp"
+                android:layout_marginTop="7dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/eval_note_label"
+                    android:textAllCaps="true"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_faint"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.12"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/noteInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="7dp"
+                    android:minHeight="64dp"
+                    android:background="@drawable/bg_password_field"
+                    android:padding="11dp"
+                    android:gravity="top|start"
+                    android:hint="@string/eval_note_hint"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_faint"
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:maxLength="240" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="7dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/eval_note_visibility_hint"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_faint" />
+
+                    <TextView
+                        android:id="@+id/noteCounter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_secondary"
+                        tools:text="0 / 240" />
+                </LinearLayout>
+            </LinearLayout>
+
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Sticky bottom action bar -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/hairline" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="22dp"
+        android:paddingVertical="14dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSkip"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="10dp"
+            android:text="@string/evaluation_skip"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            app:strokeColor="@color/border_subtle"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSubmit"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1.3"
+            android:text="@string/eval_send"
+            android:textAllCaps="false"
+            android:textColor="@color/accent_ink"
+            app:backgroundTint="@color/accent_green"
+            app:cornerRadius="14dp" />
+    </LinearLayout>
+
 </LinearLayout>

@@ -109,7 +109,14 @@ data class PredictionRecord(
     val pauseAutoResumeMin: Int? = null,
     // Per-second RMS volume mean across the 10 s frame (length 10). For 1 s-long
     // FAST cycles only s1 carries data, s2..s10 = 0.
-    val perSecondVolumes: FloatArray? = null
+    val perSecondVolumes: FloatArray? = null,
+    /**
+     * Which app entry point launched this record's session. TEST = tester ran
+     * a quickstart slot; CONFIG = developer ran the wizard. Null on legacy
+     * records persisted before the mode tag landed (treated as CONFIG by the
+     * History filter).
+     */
+    val sessionMode: SessionMode? = null
 ) {
     /**
      * Formatierter Zeitstempel für Anzeige

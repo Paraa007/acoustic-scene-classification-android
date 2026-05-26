@@ -1,147 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/packageCard"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    android:clickable="true"
-    android:focusable="true"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="0dp"
-    app:strokeWidth="0dp"
-    app:cardBackgroundColor="@color/surface_dark">
+    android:layout_marginBottom="10dp">
 
+    <!-- Outer tile -->
     <LinearLayout
+        android:id="@+id/packageCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:orientation="vertical"
+        android:background="@drawable/bg_tile"
+        android:padding="14dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
 
-        <!-- Text Content -->
+        <!-- Title + timestamp (left) + ACTIVE badge (right) -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="horizontal">
 
-            <!-- Session Name + Active Badge Row -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/sessionNameText"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textSize="18sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="@color/text_primary"
+                    tools:text="Morning commute" />
+
+                <TextView
+                    android:id="@+id/sessionTimestampText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:textSize="9.5sp"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/text_faint"
+                    tools:text="today 08:14" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/activeBadgeContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:background="@drawable/bg_active_badge"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:background="@drawable/dot_accent_green" />
 
                 <TextView
                     android:id="@+id/activeBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:textSize="11sp"
+                    android:layout_marginStart="5dp"
+                    android:text="@string/history_active_badge"
+                    android:textSize="8.5sp"
                     android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:text="@string/active_session_badge"
-                    android:textColor="@color/on_primary"
-                    android:background="@color/status_recording"
-                    android:visibility="gone" />
-
-                <!-- legacy: replaced by modelListLayout, kept hidden -->
-                <TextView
-                    android:id="@+id/modeBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone" />
+                    android:fontFamily="monospace"
+                    android:textColor="@color/accent_green"
+                    android:letterSpacing="0.06" />
             </LinearLayout>
-
-            <!-- Modell-Liste (dynamisch befüllt) -->
-            <LinearLayout
-                android:id="@+id/modelListLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="12dp" />
-
-            <!-- Recordings -->
-            <TextView
-                android:id="@+id/recordingsText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-
-            <!-- Duration -->
-            <TextView
-                android:id="@+id/durationText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-
-            <!-- Pause (Summe) -->
-            <TextView
-                android:id="@+id/pauseText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-
-            <!-- Konfiguration (kompakt) -->
-            <TextView
-                android:id="@+id/configText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
-
-            <!-- Battery-Verbrauch -->
-            <TextView
-                android:id="@+id/batteryConsumptionText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_secondary" />
-
-            <!-- legacy id kept so existing findViewById calls don't crash -->
-            <TextView
-                android:id="@+id/countAndDurationText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:visibility="gone" />
-
         </LinearLayout>
 
-        <!-- Selection Checkbox (hidden by default) -->
-        <com.google.android.material.checkbox.MaterialCheckBox
-            android:id="@+id/selectionCheckbox"
-            android:layout_width="wrap_content"
+        <!-- Mini distribution bar. clipToOutline ensures the colored segments
+             added programmatically stay inside the 3dp rounded track corners. -->
+        <LinearLayout
+            android:id="@+id/minibarContainer"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_minibar_track"
+            android:clipToOutline="true" />
+
+        <!-- Chips row: models / mode / methods -->
+        <LinearLayout
+            android:id="@+id/chipRowContainer"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:clickable="false"
-            android:focusable="false"
-            android:visibility="gone"
-            app:buttonTint="@color/accent_green_light" />
+            android:orientation="horizontal" />
+
+        <!-- Divider + stats row -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/hairline"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:id="@+id/statsRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+
+        <!-- Legacy hidden views (kept so any leftover findViewById doesn't crash) -->
+        <TextView android:id="@+id/modeBadge" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+        <LinearLayout android:id="@+id/modelListLayout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+        <TextView android:id="@+id/recordingsText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+        <TextView android:id="@+id/durationText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+        <TextView android:id="@+id/pauseText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+        <TextView android:id="@+id/configText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+        <TextView android:id="@+id/batteryConsumptionText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+        <TextView android:id="@+id/countAndDurationText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
 
     </LinearLayout>
 
-</com.google.android.material.card.MaterialCardView>
+    <!-- Selection checkbox overlay -->
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/selectionCheckbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone"
+        app:buttonTint="@color/accent_green" />
+
+</FrameLayout>

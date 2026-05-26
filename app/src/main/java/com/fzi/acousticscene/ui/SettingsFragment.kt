@@ -1,20 +1,24 @@
 package com.fzi.acousticscene.ui
 
+import android.app.Dialog
 import android.content.res.AssetManager
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.EditText
-import android.widget.ImageView
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import android.app.Dialog
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -22,16 +26,19 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.ModelInfo
 import com.fzi.acousticscene.model.ModelInfoRegistry
+import com.fzi.acousticscene.model.ModelMetadataRegistry
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
+import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.ThemeHelper
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.materialswitch.MaterialSwitch
 
 /**
- * SettingsFragment - App settings including dark mode toggle and model management
+ * v2 minimal Settings: segmented Light/Dark theme toggle, Models list as tile
+ * rows (mono filename + clip-length badge + chevron + edit/info entry points),
+ * About + 2-column Scene Legend grid.
  */
 class SettingsFragment : Fragment() {
 
@@ -48,47 +55,88 @@ class SettingsFragment : Fragment() {
         view.findViewById<ImageButton>(R.id.settingsBack).setOnClickListener {
             findNavController().popBackStack()
         }
+        // Hardware back mirrors the chevron so the user can't get stuck on Settings.
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    findNavController().popBackStack()
+                }
+            }
+        )
         setupThemeToggle(view)
         setupModelList(view)
         setupSceneLegend(view)
     }
 
     private fun setupThemeToggle(view: View) {
-        val themeSwitch: MaterialSwitch = view.findViewById(R.id.themeSwitch)
-        val iconLight: ImageView = view.findViewById(R.id.iconLightMode)
-        val iconDark: ImageView = view.findViewById(R.id.iconDarkMode)
-        val themeLabel: TextView = view.findViewById(R.id.themeLabel)
+        val ctx = requireContext()
+        val lightOpt: LinearLayout = view.findViewById(R.id.themeLightOption)
+        val darkOpt: LinearLayout = view.findViewById(R.id.themeDarkOption)
+        val lightLabel: TextView = view.findViewById(R.id.themeLightLabel)
+        val darkLabel: TextView = view.findViewById(R.id.themeDarkLabel)
+        val status: TextView = view.findViewById(R.id.themeStatus)
 
-        val isDark = ThemeHelper.isDarkMode(requireContext())
-        themeSwitch.isChecked = isDark
-        updateThemeIcons(iconLight, iconDark, isDark)
-        themeLabel.text = if (isDark) getString(R.string.dark_mode) else getString(R.string.light_mode)
+        fun render(isDark: Boolean) {
+            // Active pill: accent_green bg + accent_ink text; inactive: transparent bg + faint text.
+            lightOpt.background = if (!isDark)
+                ContextCompat.getDrawable(ctx, R.drawable.bg_segmented_active) else null
+            darkOpt.background = if (isDark)
+                ContextCompat.getDrawable(ctx, R.drawable.bg_segmented_active) else null
+            lightLabel.setTextColor(ContextCompat.getColor(
+                ctx,
+                if (!isDark) R.color.accent_ink else R.color.text_faint
+            ))
+            darkLabel.setTextColor(ContextCompat.getColor(
+                ctx,
+                if (isDark) R.color.accent_ink else R.color.text_faint
+            ))
+            status.text = getString(
+                if (isDark) R.string.settings_theme_active_dark
+                else R.string.settings_theme_active_light
+            )
+        }
 
-        themeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            updateThemeIcons(iconLight, iconDark, isChecked)
-            themeLabel.text = if (isChecked) getString(R.string.dark_mode) else getString(R.string.light_mode)
-            ThemeHelper.setDarkMode(requireContext(), isChecked)
+        render(ThemeHelper.isDarkMode(ctx))
+
+        lightOpt.setOnClickListener {
+            if (ThemeHelper.isDarkMode(ctx)) {
+                render(false)
+                ThemeHelper.setDarkMode(ctx, false)
+            }
+        }
+        darkOpt.setOnClickListener {
+            if (!ThemeHelper.isDarkMode(ctx)) {
+                render(true)
+                ThemeHelper.setDarkMode(ctx, true)
+            }
         }
     }
 
-    private fun updateThemeIcons(iconLight: ImageView, iconDark: ImageView, isDarkMode: Boolean) {
-        iconLight.alpha = if (isDarkMode) 0.4f else 1.0f
-        iconDark.alpha = if (isDarkMode) 1.0f else 0.4f
-    }
-
     private fun setupModelList(view: View) {
+        val ctx = requireContext()
         val devModelsContainer: LinearLayout = view.findViewById(R.id.devModelsContainer)
-        val bestModel = ModelInfoRegistry.bestTestAccuracyModel()
 
         val models = listModelsInDir(ModelConfig.DEV_MODELS_DIR)
         devModelsContainer.removeAllViews()
         if (models.isEmpty()) {
             devModelsContainer.addView(createEmptyLabel())
-        } else {
-            models.forEach { fileName ->
-                devModelsContainer.addView(
-                    createModelRow(fileName, ModelConfig.DEV_MODELS_DIR, devModelsContainer, fileName == bestModel)
-                )
+            return
+        }
+        models.forEachIndexed { idx, fileName ->
+            devModelsContainer.addView(
+                createModelRow(fileName, ModelConfig.DEV_MODELS_DIR, devModelsContainer)
+            )
+            if (idx != models.lastIndex) {
+                devModelsContainer.addView(View(ctx).apply {
+                    setBackgroundColor(ContextCompat.getColor(ctx, R.color.hairline))
+                    val lp = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
+                    )
+                    lp.marginStart = dp(9)
+                    lp.marginEnd = dp(9)
+                    layoutParams = lp
+                })
             }
         }
     }
@@ -103,12 +151,6 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    /**
-     * Uncompressed size of an asset in bytes. `.pt` files are delivered through
-     * the APK asset channel (may be compressed), so we read through the stream
-     * to get the real decompressed size instead of relying on `openFd().length`.
-     * Returns -1 on failure.
-     */
     private fun assetSizeBytes(path: String): Long {
         return try {
             requireContext().assets.open(path).use { input ->
@@ -139,97 +181,217 @@ class SettingsFragment : Fragment() {
     private fun createEmptyLabel(): TextView {
         return TextView(requireContext()).apply {
             text = "—"
-            textSize = 14f
+            textSize = 13f
             setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
-            setPadding(0, 4, 0, 4)
+            setPadding(dp(9), dp(11), dp(9), dp(11))
         }
     }
 
-    private fun createModelRow(fileName: String, dir: String, parentContainer: LinearLayout, isBest: Boolean = false): View {
+    /**
+     * v2 model row: monospace filename + clip-length badge (1s / 10s) + chevron.
+     * Below it sits a compact test-accuracy line — present when metadata carries
+     * a value, otherwise a red "TEST ACC MISSING" badge with the same dashed-track
+     * red treatment as the wizard's Select-Models step.
+     *
+     * Tap opens the info dialog (existing behavior); long-press opens the rename
+     * dialog. The whole card is the touch target.
+     */
+    private fun createModelRow(fileName: String, dir: String, parentContainer: LinearLayout): View {
         val ctx = requireContext()
         val displayName = ModelDisplayNameHelper.getDisplayName(ctx, fileName)
-        val numClasses = ModelConfig.getClassCountForModel(fileName)
-        val sizeStr = formatFileSize(assetSizeBytes("$dir/$fileName"))
+        val testAccuracy = ModelMetadataRegistry.get(ctx, fileName)?.testAccuracy
+
+        // Vertical container — top row stays "filename + badge + chevron",
+        // bottom row carries the test-acc info.
+        val card = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(9), dp(11), dp(9), dp(11))
+            isClickable = true
+            isFocusable = true
+            background = ContextCompat.getDrawable(
+                ctx,
+                android.R.color.transparent
+            )
+        }
 
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(0, 12, 0, 12)
+            gravity = Gravity.CENTER_VERTICAL
         }
 
-        val textContainer = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
+        val nameView = TextView(ctx).apply {
+            text = fileName.stripModelSuffix()
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            maxLines = 1
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
+        row.addView(nameView)
 
-        val nameText = TextView(ctx).apply {
-            text = displayName
-            textSize = 15f
-            setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-        }
-
-        val detailText = TextView(ctx).apply {
-            text = if (ModelDisplayNameHelper.hasCustomDisplayName(ctx, fileName)) {
-                "${fileName.stripModelSuffix()} · $numClasses Classes · $sizeStr"
-            } else {
-                "$numClasses Classes · $sizeStr"
-            }
-            textSize = 12f
-            setTextColor(ContextCompat.getColor(ctx, R.color.accent_blue))
-        }
-
-        textContainer.addView(nameText)
-        textContainer.addView(detailText)
-
-        val infoButton = ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_info)
-            layoutParams = LinearLayout.LayoutParams(
-                (32 * resources.displayMetrics.density).toInt(),
-                (32 * resources.displayMetrics.density).toInt()
-            ).apply { marginEnd = (4 * resources.displayMetrics.density).toInt() }
-            setPadding(
-                (4 * resources.displayMetrics.density).toInt(),
-                (4 * resources.displayMetrics.density).toInt(),
-                (4 * resources.displayMetrics.density).toInt(),
-                (4 * resources.displayMetrics.density).toInt()
-            )
-            isClickable = true
-            isFocusable = true
-            contentDescription = getString(R.string.model_info_title)
-            if (isBest) {
-                imageTintList = android.content.res.ColorStateList.valueOf(
-                    ContextCompat.getColor(ctx, R.color.accent_green)
+        val clipLen = clipLengthBadgeText(fileName)
+        if (clipLen != null) {
+            row.addView(TextView(ctx).apply {
+                text = clipLen
+                textSize = 9f
+                typeface = Typeface.MONOSPACE
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                background = ContextCompat.getDrawable(ctx, R.drawable.bg_meta_pill)
+                setPadding(dp(7), dp(3), dp(7), dp(3))
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-            }
-            setOnClickListener {
-                showModelInfoDialog(fileName, displayName)
-            }
+                lp.marginEnd = dp(7)
+                layoutParams = lp
+            })
         }
 
-        val editButton = ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_edit)
-            layoutParams = LinearLayout.LayoutParams(
-                (32 * resources.displayMetrics.density).toInt(),
-                (32 * resources.displayMetrics.density).toInt()
+        row.addView(ImageView(ctx).apply {
+            setImageResource(R.drawable.ic_arrow_back)
+            rotation = 180f
+            setColorFilter(ContextCompat.getColor(ctx, R.color.text_faint))
+            layoutParams = LinearLayout.LayoutParams(dp(13), dp(13))
+        })
+
+        card.addView(row)
+        card.addView(buildTestAccBlock(ctx, testAccuracy))
+
+        card.setOnClickListener {
+            showModelInfoDialog(fileName, displayName)
+        }
+        card.setOnLongClickListener {
+            showRenameDialog(fileName, nameView, parentContainer)
+            true
+        }
+        return card
+    }
+
+    /**
+     * Test-accuracy sub-block under each model row. Mirrors the wizard's
+     * Select-Models step: present accuracy as label + green percentage + filled
+     * progress track; missing accuracy as a red badge + red hint line + dashed
+     * red empty track.
+     */
+    private fun buildTestAccBlock(
+        ctx: android.content.Context,
+        testAccuracy: Double?
+    ): View {
+        val block = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            setPadding(
-                (4 * resources.displayMetrics.density).toInt(),
-                (4 * resources.displayMetrics.density).toInt(),
-                (4 * resources.displayMetrics.density).toInt(),
-                (4 * resources.displayMetrics.density).toInt()
-            )
-            isClickable = true
-            isFocusable = true
-            contentDescription = getString(R.string.rename_model)
-            setOnClickListener {
-                showRenameDialog(fileName, nameText, detailText, parentContainer)
-            }
+            lp.topMargin = dp(8)
+            layoutParams = lp
         }
 
-        row.addView(textContainer)
-        row.addView(infoButton)
-        row.addView(editButton)
-        return row
+        val accent = ContextCompat.getColor(ctx, R.color.accent_green)
+        val accentRed = ContextCompat.getColor(ctx, R.color.accent_red)
+
+        if (testAccuracy != null) {
+            val labelRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            labelRow.addView(TextView(ctx).apply {
+                text = getString(R.string.test_acc_label)
+                textSize = 10f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            labelRow.addView(TextView(ctx).apply {
+                text = "%.1f%%".format(testAccuracy * 100)
+                textSize = 11f
+                typeface = Typeface.MONOSPACE
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(accent)
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.marginStart = dp(6)
+                layoutParams = lp
+            })
+            block.addView(labelRow)
+
+            // Filled progress track
+            val track = LinearLayout(ctx).apply {
+                background = pillShape(
+                    ContextCompat.getColor(ctx, R.color.surface_variant),
+                    dp(3).toFloat()
+                )
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(5)
+                )
+                lp.topMargin = dp(6)
+                layoutParams = lp
+            }
+            val pct = testAccuracy.toFloat().coerceIn(0f, 1f)
+            track.addView(View(ctx).apply {
+                background = pillShape(accent, dp(3).toFloat())
+                layoutParams = LinearLayout.LayoutParams(0, dp(5), pct)
+            })
+            track.addView(View(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(0, dp(5), 1f - pct)
+            })
+            block.addView(track)
+        } else {
+            block.addView(TextView(ctx).apply {
+                text = getString(R.string.test_acc_missing)
+                isAllCaps = true
+                textSize = 10f
+                letterSpacing = 0.04f
+                setTextColor(accentRed)
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            block.addView(TextView(ctx).apply {
+                text = getString(R.string.test_acc_missing_hint)
+                textSize = 10.5f
+                setTextColor(accentRed)
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.topMargin = dp(2)
+                layoutParams = lp
+            })
+            // Empty dashed track in red
+            block.addView(View(ctx).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(ContextCompat.getColor(ctx, R.color.surface_variant))
+                    cornerRadius = dp(3).toFloat()
+                    setStroke(dp(1), accentRed, dp(4).toFloat(), dp(3).toFloat())
+                }
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(5)
+                )
+                lp.topMargin = dp(8)
+                layoutParams = lp
+            })
+        }
+        return block
+    }
+
+    private fun pillShape(color: Int, radius: Float): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius
+            setColor(color)
+        }
+    }
+
+    private fun clipLengthBadgeText(fileName: String): String? = when {
+        fileName.contains("_1s_") || fileName.contains("_1s.") -> "1s"
+        fileName.contains("_10s_") || fileName.contains("_10s.") -> "10s"
+        else -> null
     }
 
     private fun showModelInfoDialog(fileName: String, displayName: String) {
@@ -240,47 +402,49 @@ class SettingsFragment : Fragment() {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        val dp = resources.displayMetrics.density
+        val dpF = resources.displayMetrics.density
 
         val card = MaterialCardView(ctx).apply {
             layoutParams = ViewGroup.MarginLayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                val m = (24 * dp).toInt()
+                val m = (24 * dpF).toInt()
                 setMargins(m, m, m, m)
             }
             setCardBackgroundColor(ContextCompat.getColor(ctx, R.color.dialog_surface))
-            radius = 28 * dp
-            cardElevation = 8 * dp
+            radius = 22 * dpF
+            cardElevation = 8 * dpF
+            strokeWidth = (1 * dpF).toInt()
+            strokeColor = ContextCompat.getColor(ctx, R.color.border_subtle)
         }
 
         val outer = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            val pad = (24 * dp).toInt()
+            val pad = (22 * dpF).toInt()
             setPadding(pad, pad, pad, pad)
         }
 
         val titleRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
         }
 
         val title = TextView(ctx).apply {
             text = getString(R.string.model_info_title)
-            textSize = 20f
+            textSize = 18f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTypeface(null, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
         val topCloseBtn = ImageView(ctx).apply {
             setImageResource(R.drawable.ic_close)
             layoutParams = LinearLayout.LayoutParams(
-                (32 * dp).toInt(),
-                (32 * dp).toInt()
+                (32 * dpF).toInt(),
+                (32 * dpF).toInt()
             )
-            val p = (4 * dp).toInt()
+            val p = (4 * dpF).toInt()
             setPadding(p, p, p, p)
             isClickable = true
             isFocusable = true
@@ -291,22 +455,15 @@ class SettingsFragment : Fragment() {
         titleRow.addView(title)
         titleRow.addView(topCloseBtn)
 
-        val nameLabel = TextView(ctx).apply {
-            text = displayName
-            textSize = 14f
-            setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            setPadding(0, (4 * dp).toInt(), 0, 0)
-        }
-
         val fileLabel = TextView(ctx).apply {
             text = fileName.stripModelSuffix()
-            textSize = 12f
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
             setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
-            setPadding(0, (2 * dp).toInt(), 0, (12 * dp).toInt())
+            setPadding(0, (6 * dpF).toInt(), 0, (12 * dpF).toInt())
         }
 
         outer.addView(titleRow)
-        outer.addView(nameLabel)
         outer.addView(fileLabel)
 
         val scroll = androidx.core.widget.NestedScrollView(ctx).apply {
@@ -324,9 +481,9 @@ class SettingsFragment : Fragment() {
         if (info == null) {
             scrollContent.addView(TextView(ctx).apply {
                 text = getString(R.string.model_info_no_data)
-                textSize = 14f
+                textSize = 13f
                 setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
-                setPadding(0, (8 * dp).toInt(), 0, (8 * dp).toInt())
+                setPadding(0, (8 * dpF).toInt(), 0, (8 * dpF).toInt())
             })
         } else {
             renderModelInfoSections(ctx, scrollContent, info)
@@ -336,8 +493,8 @@ class SettingsFragment : Fragment() {
 
         val buttonRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.END
-            setPadding(0, (16 * dp).toInt(), 0, 0)
+            gravity = Gravity.END
+            setPadding(0, (16 * dpF).toInt(), 0, 0)
         }
 
         val closeBtn = MaterialButton(ctx, null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
@@ -359,9 +516,8 @@ class SettingsFragment : Fragment() {
         parent: LinearLayout,
         info: ModelInfo
     ) {
-        val dp = resources.displayMetrics.density
+        val dpF = resources.displayMetrics.density
 
-        // Hyperparameters
         parent.addView(sectionHeader(ctx, getString(R.string.model_info_section_hyperparams)))
         info.runId?.let {
             parent.addView(metricRow(ctx, getString(R.string.model_info_run_id), it.toString()))
@@ -372,72 +528,71 @@ class SettingsFragment : Fragment() {
         parent.addView(metricRow(ctx, getString(R.string.model_info_dropout), formatFloat(info.dropout, 2)))
         parent.addView(metricRow(ctx, getString(R.string.model_info_label_smoothing), formatFloat(info.labelSmoothing, 2)))
 
-        // Test metrics
         parent.addView(sectionHeader(ctx, getString(R.string.model_info_section_test)))
         parent.addView(metricRow(ctx, getString(R.string.model_info_val_accuracy), formatPct(info.valAccuracy)))
         parent.addView(metricRow(ctx, getString(R.string.model_info_test_accuracy), formatPct(info.testAccuracy)))
 
-        // Augmentations
         info.augmentations?.takeIf { it.isNotEmpty() }?.let { augs ->
             parent.addView(sectionHeader(ctx, getString(R.string.model_info_section_augmentations)))
             parent.addView(TextView(ctx).apply {
                 text = augs.joinToString(" · ")
-                textSize = 13f
+                textSize = 12f
                 setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-                setPadding(0, (4 * dp).toInt(), 0, (4 * dp).toInt())
+                setPadding(0, (4 * dpF).toInt(), 0, (4 * dpF).toInt())
             })
         }
 
-        // Training
         parent.addView(sectionHeader(ctx, getString(R.string.model_info_section_training)))
         parent.addView(metricRow(ctx, getString(R.string.model_info_best_epoch), "${info.bestEpoch} / ${info.totalEpochs}"))
         parent.addView(metricRow(ctx, getString(R.string.model_info_train_val_gap), formatSignedPct(info.trainValGap)))
         parent.addView(metricRow(ctx, getString(R.string.model_info_val_test_diff), formatSignedPct(info.valTestDiff)))
 
-        // Per-class F1 with bars
         parent.addView(sectionHeader(ctx, getString(R.string.model_info_section_per_class_f1)))
         SceneClass.entries.forEach { scene ->
             val f1 = info.perClassF1.getOrNull(scene.index) ?: return@forEach
             parent.addView(perClassF1Row(ctx, scene, f1))
         }
 
-        // Bottom padding so the last row doesn't hug the dialog edge
         parent.addView(View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (4 * dp).toInt()
+                (4 * dpF).toInt()
             )
         })
     }
 
     private fun sectionHeader(ctx: android.content.Context, text: String): TextView {
-        val dp = resources.displayMetrics.density
+        val dpF = resources.displayMetrics.density
         return TextView(ctx).apply {
             this.text = text
-            textSize = 14f
-            setTextColor(ContextCompat.getColor(ctx, R.color.accent_blue))
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, (16 * dp).toInt(), 0, (6 * dp).toInt())
+            textSize = 9.5f
+            typeface = Typeface.MONOSPACE
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_faint))
+            setTypeface(typeface, Typeface.BOLD)
+            letterSpacing = 0.15f
+            isAllCaps = true
+            setPadding(0, (16 * dpF).toInt(), 0, (6 * dpF).toInt())
         }
     }
 
     private fun metricRow(ctx: android.content.Context, label: String, value: String): View {
-        val dp = resources.displayMetrics.density
+        val dpF = resources.displayMetrics.density
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(0, (4 * dp).toInt(), 0, (4 * dp).toInt())
+            setPadding(0, (4 * dpF).toInt(), 0, (4 * dpF).toInt())
         }
         val labelView = TextView(ctx).apply {
             this.text = label
-            textSize = 13f
+            textSize = 12f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val valueView = TextView(ctx).apply {
             this.text = value
-            textSize = 13f
+            textSize = 12f
+            typeface = Typeface.MONOSPACE
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTypeface(typeface, Typeface.BOLD)
         }
         row.addView(labelView)
         row.addView(valueView)
@@ -445,33 +600,34 @@ class SettingsFragment : Fragment() {
     }
 
     private fun perClassF1Row(ctx: android.content.Context, scene: SceneClass, f1: Double): View {
-        val dp = resources.displayMetrics.density
+        val dpF = resources.displayMetrics.density
         val container = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, (6 * dp).toInt(), 0, (6 * dp).toInt())
+            setPadding(0, (6 * dpF).toInt(), 0, (6 * dpF).toInt())
         }
         val header = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
         }
         val emoji = TextView(ctx).apply {
             text = scene.emoji
-            textSize = 16f
+            textSize = 14f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { marginEnd = (8 * dp).toInt() }
+            ).apply { marginEnd = (8 * dpF).toInt() }
         }
         val label = TextView(ctx).apply {
             text = scene.labelShort
-            textSize = 13f
+            textSize = 12f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val value = TextView(ctx).apply {
             text = formatPct(f1)
-            textSize = 13f
-            setTypeface(null, android.graphics.Typeface.BOLD)
+            textSize = 12f
+            typeface = Typeface.MONOSPACE
+            setTypeface(typeface, Typeface.BOLD)
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
         }
         header.addView(emoji)
@@ -483,8 +639,8 @@ class SettingsFragment : Fragment() {
             progress = (f1 * 100).toInt().coerceIn(0, 10000)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (6 * dp).toInt()
-            ).apply { topMargin = (4 * dp).toInt() }
+                (6 * dpF).toInt()
+            ).apply { topMargin = (4 * dpF).toInt() }
             progressTintList = android.content.res.ColorStateList.valueOf(
                 ContextCompat.getColor(ctx, R.color.accent_green)
             )
@@ -500,7 +656,6 @@ class SettingsFragment : Fragment() {
         if (v >= 0) String.format(java.util.Locale.US, "+%.2f%%", v) else String.format(java.util.Locale.US, "%.2f%%", v)
 
     private fun formatFloat(v: Double, decimals: Int): String {
-        // Trim trailing zeros for readability while keeping precision.
         val raw = String.format(java.util.Locale.US, "%.${decimals}f", v)
         return if ('.' in raw) raw.trimEnd('0').trimEnd('.') else raw
     }
@@ -508,69 +663,71 @@ class SettingsFragment : Fragment() {
     private fun showRenameDialog(
         fileName: String,
         nameText: TextView,
-        detailText: TextView,
         parentContainer: LinearLayout
     ) {
         val ctx = context ?: return
         val currentDisplayName = ModelDisplayNameHelper.getDisplayName(ctx, fileName)
+        val dpF = resources.displayMetrics.density
 
         val dialog = Dialog(ctx, R.style.ModernDialog)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        // Build dialog content programmatically
         val card = MaterialCardView(ctx).apply {
             layoutParams = ViewGroup.MarginLayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                val margin = (24 * resources.displayMetrics.density).toInt()
+                val margin = (24 * dpF).toInt()
                 setMargins(margin, margin, margin, margin)
             }
             setCardBackgroundColor(ContextCompat.getColor(ctx, R.color.dialog_surface))
-            radius = 28 * resources.displayMetrics.density
-            cardElevation = 8 * resources.displayMetrics.density
+            radius = 22 * dpF
+            cardElevation = 8 * dpF
+            strokeWidth = (1 * dpF).toInt()
+            strokeColor = ContextCompat.getColor(ctx, R.color.border_subtle)
         }
 
         val content = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            val pad = (24 * resources.displayMetrics.density).toInt()
+            val pad = (22 * dpF).toInt()
             setPadding(pad, pad, pad, pad)
         }
 
         val title = TextView(ctx).apply {
             text = getString(R.string.rename_model)
-            textSize = 20f
+            textSize = 18f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTypeface(null, Typeface.BOLD)
         }
 
         val fileLabel = TextView(ctx).apply {
             text = fileName.stripModelSuffix()
-            textSize = 13f
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
             setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
-            setPadding(0, (4 * resources.displayMetrics.density).toInt(), 0, (16 * resources.displayMetrics.density).toInt())
+            setPadding(0, (4 * dpF).toInt(), 0, (16 * dpF).toInt())
         }
 
         val editText = EditText(ctx).apply {
             hint = getString(R.string.model_display_name_hint)
             setText(if (ModelDisplayNameHelper.hasCustomDisplayName(ctx, fileName)) currentDisplayName else "")
-            textSize = 16f
+            textSize = 14f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
             setHintTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
             setPadding(
-                (16 * resources.displayMetrics.density).toInt(),
-                (12 * resources.displayMetrics.density).toInt(),
-                (16 * resources.displayMetrics.density).toInt(),
-                (12 * resources.displayMetrics.density).toInt()
+                (16 * dpF).toInt(),
+                (12 * dpF).toInt(),
+                (16 * dpF).toInt(),
+                (12 * dpF).toInt()
             )
-            background = ContextCompat.getDrawable(ctx, android.R.drawable.edit_text)
+            background = ContextCompat.getDrawable(ctx, R.drawable.bg_password_field)
         }
 
         val buttonRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.END
-            val topMargin = (20 * resources.displayMetrics.density).toInt()
+            gravity = Gravity.END
+            val topMargin = (20 * dpF).toInt()
             setPadding(0, topMargin, 0, 0)
         }
 
@@ -590,11 +747,7 @@ class SettingsFragment : Fragment() {
                 } else {
                     ModelDisplayNameHelper.setDisplayName(ctx, fileName, newName)
                 }
-                // Update the row in place
-                val updatedDisplayName = ModelDisplayNameHelper.getDisplayName(ctx, fileName)
-                nameText.text = updatedDisplayName
-                val numClasses = ModelConfig.getClassCountForModel(fileName)
-                detailText.text = if (ModelDisplayNameHelper.hasCustomDisplayName(ctx, fileName)) "${fileName.stripModelSuffix()} · $numClasses Classes" else "$numClasses Classes"
+                nameText.text = fileName.stripModelSuffix()
                 Toast.makeText(ctx, R.string.model_name_saved, Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }
@@ -617,33 +770,73 @@ class SettingsFragment : Fragment() {
     private fun setupSceneLegend(view: View) {
         val ctx = requireContext()
         val container: LinearLayout = view.findViewById(R.id.sceneLegendContainer)
+        container.removeAllViews()
 
-        SceneClass.entries.forEach { scene ->
+        // 2 columns x 5 rows = 9 entries (last row has 1 entry in the right column empty).
+        val classes = SceneClass.entries
+        val rows = (classes.size + 1) / 2
+
+        for (r in 0 until rows) {
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(0, 8, 0, 8)
-            }
-
-            val emojiText = TextView(ctx).apply {
-                text = scene.emoji
-                textSize = 20f
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = (16 * resources.displayMetrics.density).toInt() }
+                )
+                if (r > 0) lp.topMargin = dp(9)
+                layoutParams = lp
             }
-
-            val labelText = TextView(ctx).apply {
-                text = scene.label
-                textSize = 14f
-                setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            val leftIdx = r * 2
+            val rightIdx = leftIdx + 1
+            row.addView(legendCell(ctx, classes[leftIdx]))
+            if (rightIdx < classes.size) {
+                row.addView(legendCell(ctx, classes[rightIdx]))
+            } else {
+                row.addView(View(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+                })
             }
-
-            row.addView(emojiText)
-            row.addView(labelText)
             container.addView(row)
         }
     }
+
+    private fun legendCell(ctx: android.content.Context, scene: SceneClass): View {
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val dot = View(ctx).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(SceneClassColors.color(ctx, scene))
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(8), dp(8))
+        }
+        row.addView(dot)
+        row.addView(TextView(ctx).apply {
+            text = scene.emoji
+            textSize = 11f
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.marginStart = dp(7)
+            layoutParams = lp
+        })
+        row.addView(TextView(ctx).apply {
+            text = scene.labelShort
+            textSize = 11f
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.marginStart = dp(7)
+            layoutParams = lp
+        })
+        return row
+    }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 }

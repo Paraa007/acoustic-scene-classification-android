@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Inner background of the Session-Detail meta grid. The wrapping `bg_tile`
+  draws the rounded white card; this drawable sits just inside and provides
+  the 1px border color that shows through the cell-to-cell gaps so the
+  grid looks like the mockup.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/border_subtle" />
+    <corners android:radius="12dp" />
+</shape>

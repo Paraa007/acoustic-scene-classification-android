@@ -7,11 +7,11 @@ package com.fzi.acousticscene.model
  * always the last page before Start.
  */
 enum class WizardStep(val headerText: String) {
-    Models("Pick one or more models."),
+    Models("Pick one or more models"),
     Category("How should the app record?"),
     IntervalPause("How often should a recording be made?"),
     SessionDuration("How long should the session run overall?"),
-    Summary("Ready to start.");
+    Summary("Ready to start");
 
     companion object {
         fun continuousSteps(): List<WizardStep> =

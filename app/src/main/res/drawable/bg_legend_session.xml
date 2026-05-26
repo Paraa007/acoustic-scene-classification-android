@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Small rounded square used as the "session" legend marker on the
+    stopwatch tile. Source: dark.html SCREEN 7 (line 1619).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/accent_green" />
+    <corners android:radius="2.5dp" />
+</shape>
