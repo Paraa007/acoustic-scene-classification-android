@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acoustic Scene Classification — Current snapshot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f2ef;
+  --surface:#ffffff;
+  --text:#1c1d1f;
+  --dim:#6a6b6e;
+  --faint:#9a9b9e;
+  --accent:#4F6859;
+  --border:#e4e3de;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:"Hanken Grotesk",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 40px;}
+
+.masthead{padding:106px 0 60px;}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:500;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin-bottom:30px;
+}
+h1{font-size:clamp(46px,7vw,80px);font-weight:700;line-height:1.0;letter-spacing:-.03em;}
+.sub{margin-top:20px;font-size:21px;font-weight:500;color:var(--dim);letter-spacing:-.01em;}
+.lede{margin-top:26px;max-width:640px;font-size:16px;line-height:1.62;color:var(--dim);}
+
+.entry{padding:60px 0;border-top:1px solid var(--border);}
+.entry-head{display:flex;gap:26px;align-items:flex-start;}
+.num{
+  font-family:"IBM Plex Mono",monospace;font-size:34px;font-weight:400;
+  color:var(--faint);width:64px;flex-shrink:0;letter-spacing:-.02em;
+}
+.entry-title-row{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
+h2{font-size:39px;font-weight:700;letter-spacing:-.028em;line-height:1;}
+.theme-tag{
+  font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:500;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--dim);
+  border:1px solid var(--border);border-radius:6px;padding:4px 9px;
+}
+.rationale{margin:20px 0 0 90px;max-width:624px;font-size:15px;line-height:1.6;color:var(--dim);}
+.specs{margin:18px 0 0 90px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;}
+.spec{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--faint);}
+.spec b{color:var(--text);font-weight:500;}
+.swatches{display:flex;gap:6px;}
+.sw{width:15px;height:15px;border-radius:4px;border:1px solid rgba(0,0,0,.10);}
+
+.frame-wrap{
+  margin-top:28px;border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;background:var(--surface);
+  box-shadow:0 22px 54px -34px rgba(0,0,0,.34);
+}
+.frame-wrap iframe{display:block;width:100%;height:1150px;border:0;}
+.entry-foot{margin-top:15px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;}
+.scroll-hint{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--faint);}
+.open-link{
+  font-size:13px;font-weight:600;color:var(--text);text-decoration:none;
+  border-bottom:1.5px solid var(--accent);padding-bottom:2px;transition:color .2s ease;
+}
+.open-link:hover{color:var(--accent);}
+
+footer{
+  border-top:1px solid var(--border);padding:52px 0 88px;
+  display:flex;justify-content:space-between;gap:32px;flex-wrap:wrap;
+}
+footer p{max-width:544px;font-size:13px;line-height:1.62;color:var(--faint);}
+footer .sig{font-family:"IBM Plex Mono",monospace;font-size:11.5px;line-height:1.7;color:var(--faint);text-align:right;}
+
+@media(max-width:720px){
+  .wrap{padding:0 22px;}
+  .masthead{padding:72px 0 50px;}
+  .num{font-size:26px;width:42px;}
+  .entry-head{gap:14px;}
+  .rationale,.specs{margin-left:0;}
+  .frame-wrap iframe{height:760px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Current snapshot · 2026-05</div>
+    <h1>Acoustic Scene Classification</h1>
+    <p class="sub">What the app looks like today.</p>
+    <p class="lede">Snapshot of the live app state after the v2/v3 polish passes. One scrollable page, 14 phone screens, dark theme only.</p>
+  </header>
+
+  <main>
+
+    <section class="entry">
+      <div class="entry-head">
+        <div class="num">01</div>
+        <div>
+          <div class="entry-title-row"><h2>Dark</h2><span class="theme-tag">Live snapshot · dark</span></div>
+        </div>
+      </div>
+      <p class="rationale">Mode picker, four-step wizard (with the slider duration step), live recording with the inline pause slider, results showing raw counts, history with filter chips and mode badges, session detail with mode badge.</p>
+      <div class="specs">
+        <div class="spec"><b>Type</b> Hanken Grotesk · IBM Plex Mono</div>
+        <div class="swatches">
+          <div class="sw" style="background:#0A0A0C"></div>
+          <div class="sw" style="background:#15161A"></div>
+          <div class="sw" style="background:#1E1F23"></div>
+          <div class="sw" style="background:#4F6859"></div>
+          <div class="sw" style="background:#62786A"></div>
+        </div>
+      </div>
+      <div class="frame-wrap"><iframe src="dark.html" loading="lazy" title="Acoustic Scene Classification — current snapshot"></iframe></div>
+      <div class="entry-foot">
+        <div class="scroll-hint">scroll inside the frame for all 14 screens</div>
+        <a class="open-link" href="dark.html" target="_blank" rel="noopener">Open fullscreen ↗</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Live-state snapshot for review. Dark only — light variant will follow once the dark passes.</p>
+    <div class="sig">Acoustic Scene Classification<br>Current snapshot · 2026</div>
+  </footer>
+
+</div>
+</body>
+</html>
