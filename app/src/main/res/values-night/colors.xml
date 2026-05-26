@@ -7,18 +7,18 @@
          ============================================================ -->
 
     <!-- Surfaces & background -->
-    <color name="background_dark">#17181B</color>
-    <color name="surface_dark">#1F2024</color>
-    <color name="surface_variant">#26282D</color>
-    <color name="hairline">#2A2C30</color>
-    <color name="border_subtle">#313338</color>
+    <color name="background_dark">#0A0A0C</color>
+    <color name="surface_dark">#15161A</color>
+    <color name="surface_variant">#1E1F23</color>
+    <color name="hairline">#2D2F34</color>
+    <color name="border_subtle">#36383D</color>
 
-    <!-- Accent (forest green lifted ~10% for dark bg) -->
-    <color name="accent_green">#5F9D80</color>
-    <color name="accent_green_dark">#4A7A65</color>
-    <color name="accent_green_light">#7BB59B</color>
-    <color name="accent_soft">#1E2D26</color>
-    <color name="accent_line">#3F6A56</color>
+    <!-- Accent (forest green, muted for dark bg — no glow) -->
+    <color name="accent_green">#4F6859</color>
+    <color name="accent_green_dark">#3B4F44</color>
+    <color name="accent_green_light">#62786A</color>
+    <color name="accent_soft">#161F1A</color>
+    <color name="accent_line">#324339</color>
     <color name="accent_ink">#0E1813</color>
 
     <!-- Test-acc-missing red (dark) -->
@@ -26,9 +26,9 @@
     <color name="accent_red_soft">#3A1F1D</color>
 
     <!-- Dev/info blue stays available -->
-    <color name="accent_blue">#5F9D80</color>
-    <color name="accent_blue_dark">#4A7A65</color>
-    <color name="accent_blue_light">#7BB59B</color>
+    <color name="accent_blue">#4F6859</color>
+    <color name="accent_blue_dark">#3B4F44</color>
+    <color name="accent_blue_light">#62786A</color>
 
     <!-- Text -->
     <color name="text_primary">#E9E9EA</color>
@@ -37,7 +37,7 @@
     <color name="text_faint">#66686D</color>
 
     <!-- Status -->
-    <color name="status_success">#5F9D80</color>
+    <color name="status_success">#4F6859</color>
     <color name="status_warning">#CE9D70</color>
     <color name="status_error">#D6584F</color>
     <color name="status_info">#6E97B6</color>
@@ -56,11 +56,11 @@
     <color name="culture_quiet">#9095BB</color>
 
     <!-- Material aliases -->
-    <color name="primary">#5F9D80</color>
-    <color name="primary_dark">#4A7A65</color>
-    <color name="accent">#5F9D80</color>
-    <color name="background">#17181B</color>
-    <color name="surface">#1F2024</color>
+    <color name="primary">#4F6859</color>
+    <color name="primary_dark">#3B4F44</color>
+    <color name="accent">#4F6859</color>
+    <color name="background">#0A0A0C</color>
+    <color name="surface">#15161A</color>
     <color name="error">#D6584F</color>
     <color name="on_primary">#0E1813</color>
     <color name="on_background">#E9E9EA</color>
@@ -73,6 +73,6 @@
     <color name="status_processing">#CE9D70</color>
 
     <!-- Dialogs -->
-    <color name="dialog_surface">#1F2024</color>
-    <color name="dialog_surface_light">#26282D</color>
+    <color name="dialog_surface">#15161A</color>
+    <color name="dialog_surface_light">#1E1F23</color>
 </resources>
