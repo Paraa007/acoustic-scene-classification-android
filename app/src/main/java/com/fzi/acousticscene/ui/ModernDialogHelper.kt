@@ -19,6 +19,7 @@ import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
@@ -266,6 +267,23 @@ object ModernDialogHelper {
         // Close chevron (back arrow icon in the header) — dismisses the dialog.
         dialog.findViewById<android.widget.ImageButton>(R.id.dialogCloseButton).setOnClickListener {
             dialog.dismiss()
+        }
+
+        // Mode badge (TEST MODE / CONFIG MODE). Reads off the first record's
+        // sessionMode tag. Legacy records (sessionMode == null) hide the badge
+        // — those were saved before the tag landed and we don't want to lie
+        // about the entry point.
+        val modeBadge = dialog.findViewById<TextView>(R.id.detailModeBadge)
+        when (packageRecords.firstOrNull()?.sessionMode) {
+            SessionMode.TEST -> {
+                modeBadge.text = context.getString(R.string.detail_mode_test)
+                modeBadge.visibility = View.VISIBLE
+            }
+            SessionMode.CONFIG -> {
+                modeBadge.text = context.getString(R.string.detail_mode_config)
+                modeBadge.visibility = View.VISIBLE
+            }
+            null -> modeBadge.visibility = View.GONE
         }
 
         // Rename button

@@ -19,8 +19,42 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="22dp"
-            android:paddingTop="20dp"
+            android:paddingTop="18dp"
             android:paddingBottom="20dp">
+
+            <!-- Back row: chevron + "Back" label, both tap targets behave as one
+                 button. Mirrors the Welcome screens so the user always has a
+                 visible way out of the evaluation surface. -->
+            <LinearLayout
+                android:id="@+id/evaluationBackRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="6dp"
+                android:paddingEnd="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="@string/back">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@color/text_secondary"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/back"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
 
             <!-- Header: eyebrow + title + subtitle -->
             <TextView
@@ -62,7 +96,7 @@
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1.4"
+                    android:layout_weight="1"
                     android:orientation="vertical"
                     android:background="@drawable/bg_tile"
                     android:padding="13dp">
@@ -121,8 +155,9 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="96dp"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:layout_marginStart="9dp"
                     android:orientation="vertical"
                     android:gravity="center_vertical"
@@ -134,18 +169,18 @@
                         android:layout_height="wrap_content"
                         android:text="@string/eval_auto_skips"
                         android:textAllCaps="true"
-                        android:textSize="8sp"
+                        android:textSize="9.5sp"
                         android:textColor="@color/text_faint"
                         android:fontFamily="monospace"
-                        android:letterSpacing="0.06"
+                        android:letterSpacing="0.15"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/timerText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textSize="18sp"
+                        android:layout_marginTop="8dp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         android:fontFamily="monospace"
                         android:textColor="@color/text_primary"
@@ -267,16 +302,31 @@
                     android:inputType="textCapSentences|textMultiLine"
                     android:maxLength="240" />
 
-                <TextView
-                    android:id="@+id/noteCounter"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="7dp"
-                    android:layout_gravity="end"
-                    android:fontFamily="monospace"
-                    android:textSize="10sp"
-                    android:textColor="@color/text_secondary"
-                    tools:text="0 / 240" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="7dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/eval_note_visibility_hint"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_faint" />
+
+                    <TextView
+                        android:id="@+id/noteCounter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_secondary"
+                        tools:text="0 / 240" />
+                </LinearLayout>
             </LinearLayout>
 
         </LinearLayout>

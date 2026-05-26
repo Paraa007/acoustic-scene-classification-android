@@ -26,6 +26,7 @@ import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.slider.Slider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -57,6 +58,21 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private lateinit var pauseResumeButton: MaterialButton
     private lateinit var stopButton: MaterialButton
     private lateinit var backButton: ImageButton
+
+    // New v2 header + tile views.
+    private lateinit var elapsedBig: TextView
+    private lateinit var elapsedSub: TextView
+    private lateinit var legendSessionPct: TextView
+    private lateinit var legendCyclePct: TextView
+    private lateinit var sectionModelsCount: TextView
+    private lateinit var volumeReadout: TextView
+
+    // Inline pause-duration picker tile views.
+    private lateinit var pausePickerCard: LinearLayout
+    private lateinit var pauseDurationDisplay: TextView
+    private lateinit var pauseSlider: Slider
+    private lateinit var pausePickerCancelButton: MaterialButton
+    private lateinit var pausePickerConfirmButton: MaterialButton
 
     // Persistent in-app evaluation card — only visible while pendingEvaluation
     // is non-null (Interval mode + foreground after a finished cycle).
@@ -97,12 +113,36 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         pauseResumeButton = view.findViewById(R.id.livePauseResumeButton)
         stopButton = view.findViewById(R.id.liveStopButton)
         backButton = view.findViewById(R.id.liveBackButton)
+        elapsedBig = view.findViewById(R.id.liveElapsedBig)
+        elapsedSub = view.findViewById(R.id.liveElapsedSub)
+        legendSessionPct = view.findViewById(R.id.liveLegendSessionPct)
+        legendCyclePct = view.findViewById(R.id.liveLegendCyclePct)
+        sectionModelsCount = view.findViewById(R.id.liveSectionModelsCount)
+        volumeReadout = view.findViewById(R.id.liveVolumeReadout)
+        pausePickerCard = view.findViewById(R.id.livePausePickerCard)
+        pauseDurationDisplay = view.findViewById(R.id.livePauseDurationDisplay)
+        pauseSlider = view.findViewById(R.id.livePauseSlider)
+        pausePickerCancelButton = view.findViewById(R.id.livePausePickerCancelButton)
+        pausePickerConfirmButton = view.findViewById(R.id.livePausePickerConfirmButton)
         evaluationCard = view.findViewById(R.id.liveEvaluationCard)
         evaluationTitle = view.findViewById(R.id.liveEvaluationTitle)
         evaluationCountdown = view.findViewById(R.id.liveEvaluationCountdown)
         evaluationOpenButton = view.findViewById(R.id.liveEvaluationOpenButton)
         evaluationSkipButton = view.findViewById(R.id.liveEvaluationSkipButton)
         evaluationSkipButton.setOnClickListener { viewModel.dismissPendingEvaluation() }
+
+        // Pause-duration slider: 0–48 steps × 15 min = 0..12 h. Default 13 (~3h 15min)
+        pauseSlider.addOnChangeListener { _, value, _ ->
+            pauseDurationDisplay.text = formatPauseDurationLabel(value.toInt())
+        }
+        pauseDurationDisplay.text = formatPauseDurationLabel(pauseSlider.value.toInt())
+        pausePickerCancelButton.setOnClickListener { hidePausePickerCard() }
+        pausePickerConfirmButton.setOnClickListener {
+            val steps = pauseSlider.value.toInt()
+            val durationMs: Long? = if (steps <= 0) null else steps * 15L * 60_000L
+            hidePausePickerCard()
+            viewModel.pauseSession(durationMs)
+        }
         evaluationOpenButton.setOnClickListener {
             val pending = viewModel.uiState.value.pendingEvaluation ?: return@setOnClickListener
             val intent = Intent(requireContext(), EvaluationActivity::class.java).apply {
@@ -122,10 +162,16 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             }
         )
         pauseResumeButton.setOnClickListener {
-            if (viewModel.uiState.value.isPaused) {
+            // Per v2 spec: tapping Pause only opens the duration picker; the
+            // session keeps running and pausePending stays false until the user
+            // hits Confirm inside the picker tile. Hitting the button again
+            // while the request is already on its way (pausePending, frame
+            // closing) acts as a Resume so the user can back out cleanly.
+            val state = viewModel.uiState.value
+            if (state.isPaused || state.pausePending) {
                 viewModel.resumeSession()
             } else {
-                showPauseDurationPicker()
+                showPausePickerCard()
             }
         }
         stopButton.setOnClickListener {
@@ -158,7 +204,13 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private fun render(state: UiState) {
         if (stopInFlight) return
         val config = state.sessionConfig ?: run {
-            findNavController().popBackStack(R.id.welcomeFragment, false)
+            // No active config — bail back to whichever home is on the stack so
+            // the user never lands on a recording screen with nothing to record.
+            val nav = findNavController()
+            if (!nav.popBackStack(R.id.welcomeFragment, false) &&
+                !nav.popBackStack(R.id.testWelcomeFragment, false)) {
+                nav.popBackStack(R.id.modeSelectFragment, false)
+            }
             return
         }
         if (!hasAutoStarted &&
@@ -176,7 +228,12 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         stopwatch.paused = state.isPaused
         stopwatch.cycleSegments = state.frameSegments
 
-        statusLabel.text = labelForState(state)
+        val statusText = labelForState(state)
+        statusLabel.text = statusText
+        // The label is gone by default in XML and only surfaces while something
+        // is worth saying (loading, error, or — the v2-spec case — a confirmed
+        // pause with its countdown ticking at the top of the screen).
+        statusLabel.visibility = if (statusText.isEmpty()) View.GONE else View.VISIBLE
         managePauseCountdown(state)
 
         configLabel.text = config.shortLabel()
@@ -334,19 +391,28 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         val strip = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(2f), 0, dp(2f))
+            // Distribute the 10 round cells across the full strip width.
+            weightSum = 10f
+            setPadding(dp(2f), dp(2f), dp(2f), dp(2f))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
         val cells = mutableListOf<View>()
+        val cellSize = dp(22f)
         for (i in 0 until 10) {
+            // Wrapper takes the weight slot, the inner circle is fixed-square so it
+            // always renders as a circle no matter the screen width.
+            val slot = android.widget.FrameLayout(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(0, cellSize, 1f)
+            }
             val cell = android.widget.FrameLayout(ctx).apply {
                 background = emptySliceBackground(ctx)
-                layoutParams = LinearLayout.LayoutParams(0, dp(22f), 1f).apply {
-                    if (i > 0) marginStart = dp(4f)
-                }
+                layoutParams = android.widget.FrameLayout.LayoutParams(
+                    cellSize,
+                    cellSize
+                ).apply { gravity = Gravity.CENTER }
             }
             val emoji = TextView(ctx).apply {
                 text = ""
@@ -359,7 +425,8 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
                 )
             }
             cell.addView(emoji)
-            strip.addView(cell)
+            slot.addView(cell)
+            strip.addView(slot)
             cells += cell
         }
 
@@ -400,13 +467,16 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         }
 
     private fun emptySliceBackground(ctx: android.content.Context): GradientDrawable {
+        // Empty slot: dashed hairline circle. The dashes must register against the
+        // light card surface, so use text_faint (darker than hairline) and widen
+        // both the stroke and the dash pattern so the dots are actually readable.
         return GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(android.graphics.Color.TRANSPARENT)
             setStroke(
-                dp(1f),
-                ContextCompat.getColor(ctx, R.color.hairline),
-                dp(2f).toFloat(),
+                dp(1.4f).coerceAtLeast(1),
+                ContextCompat.getColor(ctx, R.color.text_faint),
+                dp(2.5f).toFloat(),
                 dp(2f).toFloat()
             )
         }
@@ -421,7 +491,8 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             shape = GradientDrawable.OVAL
             setColor(fillColor)
             if (isLiveEdge) {
-                setStroke(dp(1.6f), ContextCompat.getColor(ctx, R.color.accent_green))
+                // Newest slice: accent ring marks the live edge ("now").
+                setStroke(dp(1.6f).coerceAtLeast(2), ContextCompat.getColor(ctx, R.color.accent_green))
             }
         }
     }
@@ -468,7 +539,9 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             while (isActive) {
                 val current = viewModel.uiState.value
                 if (!current.isPaused || current.userPauseDeadlineElapsedMs == null) break
-                statusLabel.text = labelForState(current)
+                val text = labelForState(current)
+                statusLabel.text = text
+                statusLabel.visibility = if (text.isEmpty()) View.GONE else View.VISIBLE
                 delay(1000L)
             }
         }
@@ -529,6 +602,31 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()
+
+    private fun hidePausePickerCard() {
+        pausePickerCard.visibility = View.GONE
+    }
+
+    private fun showPausePickerCard() {
+        pausePickerCard.visibility = View.VISIBLE
+        pauseDurationDisplay.text = formatPauseDurationLabel(pauseSlider.value.toInt())
+    }
+
+    /**
+     * Slider steps are 15-min increments from 0 up to 48 (= 12 h).
+     * 0          → "No timer"
+     * 1..3       → "X min"
+     * 4..47      → "Xh Ymin" or "Xh"
+     * 48         → "12 h"
+     */
+    private fun formatPauseDurationLabel(steps: Int): String {
+        val totalMinutes = steps * 15
+        if (totalMinutes <= 0) return getString(R.string.pause_picker_no_timer)
+        if (totalMinutes < 60) return "$totalMinutes min"
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        return if (minutes == 0) "${hours} h" else "${hours} h ${minutes} min"
+    }
 
     private data class Quadruple<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 }

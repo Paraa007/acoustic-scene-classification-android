@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -34,6 +35,18 @@ class TestWelcomeFragment : Fragment(R.layout.fragment_test_welcome) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        view.findViewById<LinearLayout>(R.id.testWelcomeBackButton).setOnClickListener {
+            findNavController().popBackStack()
+        }
+        // System back-button mirrors the chevron — same destination (Mode Select).
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    findNavController().popBackStack()
+                }
+            }
+        )
         view.findViewById<MaterialButton>(R.id.testWelcomeHistoryButton).setOnClickListener {
             val intent = Intent(requireContext(), HistoryActivity::class.java)
                 .putExtra(HistoryActivity.EXTRA_MODE_FILTER, SessionMode.TEST.name)
@@ -48,19 +61,12 @@ class TestWelcomeFragment : Fragment(R.layout.fragment_test_welcome) {
     }
 
     private fun renderSlots(view: View) {
-        val subtitle = view.findViewById<TextView>(R.id.testWelcomeSubtitle)
         val container = view.findViewById<LinearLayout>(R.id.testWelcomeSlotsContainer)
         container.removeAllViews()
 
         val repo = QuickstartRepository.getInstance(requireContext())
         val slots = repo.getAll()
         val availableModels = listAvailableModels()
-
-        subtitle.text = getString(
-            R.string.test_welcome_subtitle_used,
-            slots.size,
-            QuickstartRepository.MAX_SLOTS
-        )
 
         if (slots.isEmpty()) {
             // 0 slots → single empty-state row instead of 5 dashed rows.

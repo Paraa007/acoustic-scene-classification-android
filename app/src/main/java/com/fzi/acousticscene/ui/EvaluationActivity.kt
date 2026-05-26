@@ -63,6 +63,12 @@ class EvaluationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_evaluation)
 
+        // Back row (chevron + "Back" label) finishes the activity without
+        // submitting an evaluation — same effect as the Skip button. The
+        // hardware/system back key already does this via the default Activity
+        // handling.
+        findViewById<LinearLayout>(R.id.evaluationBackRow).setOnClickListener { finish() }
+
         predictionId = savedInstanceState?.getLong(STATE_PREDICTION_ID, -1)
             ?: intent.getLongExtra(EXTRA_PREDICTION_ID, -1)
         if (predictionId == -1L) {

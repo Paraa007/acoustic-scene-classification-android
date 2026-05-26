@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Three equal dots in a row — illustrates the continuous-recording rhythm.
+    Source: design-previews/minimal/v2/dark.html, lines 1278-1281 (Recording Mode card).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="22"
+    android:viewportHeight="22">
+    <path
+        android:fillColor="@color/accent_green_light"
+        android:pathData="M4,11 m -2.4,0 a 2.4,2.4 0 1,0 4.8,0 a 2.4,2.4 0 1,0 -4.8,0" />
+    <path
+        android:fillColor="@color/accent_green_light"
+        android:pathData="M11,11 m -2.4,0 a 2.4,2.4 0 1,0 4.8,0 a 2.4,2.4 0 1,0 -4.8,0" />
+    <path
+        android:fillColor="@color/accent_green_light"
+        android:pathData="M18,11 m -2.4,0 a 2.4,2.4 0 1,0 4.8,0 a 2.4,2.4 0 1,0 -4.8,0" />
+</vector>

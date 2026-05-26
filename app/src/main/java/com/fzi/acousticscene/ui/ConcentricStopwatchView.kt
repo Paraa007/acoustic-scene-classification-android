@@ -25,27 +25,36 @@ class ConcentricStopwatchView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    // Track paints render the inactive part of each ring. They must NOT use
+    // surface_dark — the rings tile already paints over that colour, so a
+    // surface-coloured track is invisible against its own card background. Use
+    // border_subtle so the empty rim is always readable, including the freshly-
+    // resumed instant where the cycle progress is back at 0.
     private val outerTrackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = ContextCompat.getColor(context, R.color.surface_dark)
+        color = ContextCompat.getColor(context, R.color.border_subtle)
         strokeWidth = dp(8f)
         strokeCap = Paint.Cap.ROUND
     }
     private val outerActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = ContextCompat.getColor(context, R.color.accent_blue)
+        color = ContextCompat.getColor(context, R.color.accent_green)
         strokeWidth = dp(8f)
         strokeCap = Paint.Cap.ROUND
     }
     private val innerTrackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = ContextCompat.getColor(context, R.color.surface_dark)
+        color = ContextCompat.getColor(context, R.color.border_subtle)
         strokeWidth = dp(6f)
         strokeCap = Paint.Cap.ROUND
     }
+    // Cycle ring is rendered in a deliberately different hue from Session
+    // (accent_green) so the two concentric arcs read apart at a glance. The
+    // transit_vehicles palette token doubles here as a cool blue that contrasts
+    // with the warm green session ring in both light and dark themes.
     private val innerActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = ContextCompat.getColor(context, R.color.accent_green)
+        color = ContextCompat.getColor(context, R.color.transit_vehicles)
         strokeWidth = dp(6f)
         strokeCap = Paint.Cap.ROUND
     }

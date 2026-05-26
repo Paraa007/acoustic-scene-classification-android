@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Eyebrow check mark: small white tick on a rounded green tile.
+    Source: design-previews/minimal/v2/dark.html SCREEN 8 (line 1870).
+    Used in the Session-Ended eyebrow on the Results screen.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent_green" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+    <item
+        android:gravity="center"
+        android:width="11dp"
+        android:height="11dp">
+        <vector
+            android:width="11dp"
+            android:height="11dp"
+            android:viewportWidth="11"
+            android:viewportHeight="11">
+            <path
+                android:strokeColor="@color/accent_ink"
+                android:strokeWidth="2.2"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:pathData="M2,5.5 L4.3,8 L9,3" />
+        </vector>
+    </item>
+</layer-list>

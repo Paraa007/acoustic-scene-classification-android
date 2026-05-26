@@ -22,10 +22,13 @@
         android:id="@+id/passwordFragment"
         android:name="com.fzi.acousticscene.ui.PasswordFragment"
         android:label="Password">
+        <!-- Pop only the Password screen from the back stack on success, leave
+             Mode Select underneath. From Welcome the user can press the Back
+             chevron (or system back) to return to Mode Select. -->
         <action
             android:id="@+id/action_password_to_welcome"
             app:destination="@id/welcomeFragment"
-            app:popUpTo="@id/modeSelectFragment"
+            app:popUpTo="@id/passwordFragment"
             app:popUpToInclusive="true" />
     </fragment>
 
