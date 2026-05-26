@@ -100,13 +100,29 @@ class QuickstartRepository private constructor(context: Context) {
 
     // ---- persistence ----
 
+    /**
+     * Serialised slot. v3 of this schema stores the pause interval and session
+     * duration as plain minute counts ([intervalPauseMin] / [sessionDurationMin])
+     * instead of the old enum names — the wizard now produces open numeric
+     * values from continuous sliders rather than a fixed set of presets.
+     * `schemaVersion` tells the loader whether `sessionDurationMin = null` means
+     * "manual" (v3) or "missing field, fall back to default" (legacy).
+     *
+     * The legacy fields ([intervalPause] / [sessionDuration]) stay nullable so
+     * slots saved before the migration still load — see [legacyLongIntervalMinutes]
+     * and [legacySessionDuration] for the mapping back to minutes.
+     */
     private data class Persisted(
         val index: Int,
         val modelNames: List<String>,
         val category: String,
-        val intervalPause: String?,
-        val sessionDuration: String,
-        val mode: String?
+        val intervalPauseMin: Int? = null,
+        val sessionDurationMin: Int? = null,
+        val schemaVersion: Int = 1,
+        val mode: String? = null,
+        // v2 legacy
+        val intervalPause: String? = null,
+        val sessionDuration: String? = null
     )
 
     private fun loadFromPrefs() {
@@ -125,12 +141,9 @@ class QuickstartRepository private constructor(context: Context) {
                     category = runCatching { RecordingCategory.valueOf(p.category) }
                         .getOrDefault(RecordingCategory.CONTINUOUS),
                     continuousMethodsByModel = methods,
-                    intervalPause = p.intervalPause?.let {
-                        runCatching { LongInterval.valueOf(it) }.getOrNull()
-                    },
+                    intervalPause = resolveLongInterval(p),
                     intervalMethodsByModel = methods,
-                    sessionDuration = runCatching { SessionDuration.valueOf(p.sessionDuration) }
-                        .getOrDefault(SessionDuration.DEFAULT),
+                    sessionDuration = resolveSessionDuration(p),
                     mode = p.mode?.let { runCatching { SessionMode.valueOf(it) }.getOrNull() }
                         ?: SessionMode.TEST
                 )
@@ -148,11 +161,51 @@ class QuickstartRepository private constructor(context: Context) {
                 index = slot.index,
                 modelNames = slot.config.modelNames,
                 category = slot.config.category.name,
-                intervalPause = slot.config.intervalPause?.name,
-                sessionDuration = slot.config.sessionDuration.name,
+                intervalPauseMin = slot.config.intervalPause?.pauseMinutes,
+                sessionDurationMin = slot.config.sessionDuration.totalMinutes,
+                schemaVersion = 3,
                 mode = slot.config.mode.name
             )
         }
         prefs.edit().putString(KEY, gson.toJson(payload)).apply()
+    }
+
+    private fun resolveLongInterval(p: Persisted): LongInterval? {
+        p.intervalPauseMin?.let { return LongInterval.fromMinutes(it) }
+        val legacy = p.intervalPause ?: return null
+        val min = legacyLongIntervalMinutes(legacy) ?: return null
+        return LongInterval.fromMinutes(min)
+    }
+
+    private fun resolveSessionDuration(p: Persisted): SessionDuration {
+        if (p.schemaVersion >= 3) {
+            return p.sessionDurationMin?.let { SessionDuration.fromMinutes(it) }
+                ?: SessionDuration.MANUAL
+        }
+        if (p.sessionDurationMin != null) {
+            return SessionDuration.fromMinutes(p.sessionDurationMin)
+        }
+        val legacy = p.sessionDuration ?: return SessionDuration.DEFAULT
+        return legacySessionDuration(legacy)
+    }
+
+    private fun legacyLongIntervalMinutes(name: String): Int? = when (name) {
+        "TEN_MIN" -> 10
+        "FIFTEEN_MIN" -> 15
+        "THIRTY_MIN" -> 30
+        "FORTY_FIVE_MIN" -> 45
+        "ONE_HOUR" -> 60
+        "THREE_HOURS" -> 180
+        else -> null
+    }
+
+    private fun legacySessionDuration(name: String): SessionDuration = when (name) {
+        "MIN_30" -> SessionDuration.fromMinutes(30)
+        "HOUR_1" -> SessionDuration.fromMinutes(60)
+        "HOUR_3" -> SessionDuration.fromMinutes(180)
+        "HOUR_6" -> SessionDuration.fromMinutes(360)
+        "HOUR_12" -> SessionDuration.fromMinutes(720)
+        "MANUAL" -> SessionDuration.MANUAL
+        else -> SessionDuration.DEFAULT
     }
 }
