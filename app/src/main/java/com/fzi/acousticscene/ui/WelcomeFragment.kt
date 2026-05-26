@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -32,6 +33,21 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Back row (chevron + "Back" label) returns to Mode Select. System back
+        // is mirrored via OnBackPressedCallback so the hardware key matches the
+        // visible affordance.
+        view.findViewById<LinearLayout>(R.id.welcomeBackRow).setOnClickListener {
+            findNavController().popBackStack()
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    findNavController().popBackStack()
+                }
+            }
+        )
 
         val btnNewSession = view.findViewById<MaterialButton>(R.id.btnNewSession)
         val btnQuickStart = view.findViewById<MaterialButton>(R.id.btnQuickStart)

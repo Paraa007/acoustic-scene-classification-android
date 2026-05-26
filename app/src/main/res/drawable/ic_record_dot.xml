@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Record icon: stroked circle with filled inner dot.
+    Source: design-previews/minimal/v2/dark.html SCREEN 1 dashboard variant (line 908-911):
+    outer r=8.2 stroke, inner r=3.3 fill, both in accent-ink.
+    Stroke / fill colour from @color/accent_ink so it sits on the primary CTA.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <path
+        android:strokeColor="@color/accent_ink"
+        android:strokeWidth="1.8"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M10,1.8 A8.2,8.2 0 1 1 9.99,1.8 Z" />
+    <path
+        android:fillColor="@color/accent_ink"
+        android:pathData="M10,6.7 A3.3,3.3 0 1 1 9.99,6.7 Z" />
+</vector>

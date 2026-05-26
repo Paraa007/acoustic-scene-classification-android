@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pause icon (two vertical bars) tinted in the accent green.
+    Used as the eyebrow icon inside the inline pause-duration picker tile.
+    Source: design-previews/minimal/v2/dark.html SCREEN 7 (line 1758).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="13dp"
+    android:height="13dp"
+    android:viewportWidth="14"
+    android:viewportHeight="14">
+    <path
+        android:fillColor="@color/accent_green"
+        android:pathData="M2.5,2 L5,2 A1,1 0 0 1 6,3 L6,11 A1,1 0 0 1 5,12 L2.5,12 A1,1 0 0 1 1.5,11 L1.5,3 A1,1 0 0 1 2.5,2 Z" />
+    <path
+        android:fillColor="@color/accent_green"
+        android:pathData="M9,2 L11.5,2 A1,1 0 0 1 12.5,3 L12.5,11 A1,1 0 0 1 11.5,12 L9,12 A1,1 0 0 1 8,11 L8,3 A1,1 0 0 1 9,2 Z" />
+</vector>

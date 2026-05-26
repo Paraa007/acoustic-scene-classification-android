@@ -5,6 +5,7 @@ import android.content.res.AssetManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -17,6 +18,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -24,6 +26,7 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.ModelInfo
 import com.fzi.acousticscene.model.ModelInfoRegistry
+import com.fzi.acousticscene.model.ModelMetadataRegistry
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.util.ModelDisplayNameHelper
 import com.fzi.acousticscene.util.SceneClassColors
@@ -52,6 +55,15 @@ class SettingsFragment : Fragment() {
         view.findViewById<ImageButton>(R.id.settingsBack).setOnClickListener {
             findNavController().popBackStack()
         }
+        // Hardware back mirrors the chevron so the user can't get stuck on Settings.
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    findNavController().popBackStack()
+                }
+            }
+        )
         setupThemeToggle(view)
         setupModelList(view)
         setupSceneLegend(view)
@@ -178,16 +190,22 @@ class SettingsFragment : Fragment() {
 
     /**
      * v2 model row: monospace filename + clip-length badge (1s / 10s) + chevron.
+     * Below it sits a compact test-accuracy line — present when metadata carries
+     * a value, otherwise a red "TEST ACC MISSING" badge with the same dashed-track
+     * red treatment as the wizard's Select-Models step.
+     *
      * Tap opens the info dialog (existing behavior); long-press opens the rename
-     * dialog. The whole row is the touch target.
+     * dialog. The whole card is the touch target.
      */
     private fun createModelRow(fileName: String, dir: String, parentContainer: LinearLayout, isBest: Boolean = false): View {
         val ctx = requireContext()
         val displayName = ModelDisplayNameHelper.getDisplayName(ctx, fileName)
+        val testAccuracy = ModelMetadataRegistry.get(ctx, fileName)?.testAccuracy
 
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        // Vertical container — top row stays "filename + badge + chevron",
+        // bottom row carries the test-acc info.
+        val card = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
             setPadding(dp(9), dp(11), dp(9), dp(11))
             isClickable = true
             isFocusable = true
@@ -195,6 +213,11 @@ class SettingsFragment : Fragment() {
                 ctx,
                 android.R.color.transparent
             )
+        }
+
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
 
         val nameView = TextView(ctx).apply {
@@ -245,14 +268,135 @@ class SettingsFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(dp(13), dp(13))
         })
 
-        row.setOnClickListener {
+        card.addView(row)
+        card.addView(buildTestAccBlock(ctx, testAccuracy))
+
+        card.setOnClickListener {
             showModelInfoDialog(fileName, displayName)
         }
-        row.setOnLongClickListener {
+        card.setOnLongClickListener {
             showRenameDialog(fileName, nameView, parentContainer)
             true
         }
-        return row
+        return card
+    }
+
+    /**
+     * Test-accuracy sub-block under each model row. Mirrors the wizard's
+     * Select-Models step: present accuracy as label + green percentage + filled
+     * progress track; missing accuracy as a red badge + red hint line + dashed
+     * red empty track.
+     */
+    private fun buildTestAccBlock(
+        ctx: android.content.Context,
+        testAccuracy: Double?
+    ): View {
+        val block = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.topMargin = dp(8)
+            layoutParams = lp
+        }
+
+        val accent = ContextCompat.getColor(ctx, R.color.accent_green)
+        val accentRed = ContextCompat.getColor(ctx, R.color.accent_red)
+
+        if (testAccuracy != null) {
+            val labelRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            labelRow.addView(TextView(ctx).apply {
+                text = getString(R.string.test_acc_label)
+                textSize = 10f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            labelRow.addView(TextView(ctx).apply {
+                text = "%.1f%%".format(testAccuracy * 100)
+                textSize = 11f
+                typeface = Typeface.MONOSPACE
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(accent)
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.marginStart = dp(6)
+                layoutParams = lp
+            })
+            block.addView(labelRow)
+
+            // Filled progress track
+            val track = LinearLayout(ctx).apply {
+                background = pillShape(
+                    ContextCompat.getColor(ctx, R.color.surface_variant),
+                    dp(3).toFloat()
+                )
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(5)
+                )
+                lp.topMargin = dp(6)
+                layoutParams = lp
+            }
+            val pct = testAccuracy.toFloat().coerceIn(0f, 1f)
+            track.addView(View(ctx).apply {
+                background = pillShape(accent, dp(3).toFloat())
+                layoutParams = LinearLayout.LayoutParams(0, dp(5), pct)
+            })
+            track.addView(View(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(0, dp(5), 1f - pct)
+            })
+            block.addView(track)
+        } else {
+            block.addView(TextView(ctx).apply {
+                text = getString(R.string.test_acc_missing)
+                isAllCaps = true
+                textSize = 10f
+                letterSpacing = 0.04f
+                setTextColor(accentRed)
+                setTypeface(typeface, Typeface.BOLD)
+            })
+            block.addView(TextView(ctx).apply {
+                text = getString(R.string.test_acc_missing_hint)
+                textSize = 10.5f
+                setTextColor(accentRed)
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.topMargin = dp(2)
+                layoutParams = lp
+            })
+            // Empty dashed track in red
+            block.addView(View(ctx).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(ContextCompat.getColor(ctx, R.color.surface_variant))
+                    cornerRadius = dp(3).toFloat()
+                    setStroke(dp(1), accentRed, dp(4).toFloat(), dp(3).toFloat())
+                }
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(5)
+                )
+                lp.topMargin = dp(8)
+                layoutParams = lp
+            })
+        }
+        return block
+    }
+
+    private fun pillShape(color: Int, radius: Float): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius
+            setColor(color)
+        }
     }
 
     private fun clipLengthBadgeText(fileName: String): String? = when {

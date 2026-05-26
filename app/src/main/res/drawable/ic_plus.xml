@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Plus glyph for the Configure test mode CTA on Config Welcome.
+    Source: design-previews/minimal/v2/dark.html SCREEN 1 (line 938-940).
+    Two crossing strokes in 18x18 viewport.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="17dp"
+    android:height="17dp"
+    android:viewportWidth="18"
+    android:viewportHeight="18">
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M3,9 L15,9" />
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M9,3 L9,15" />
+</vector>

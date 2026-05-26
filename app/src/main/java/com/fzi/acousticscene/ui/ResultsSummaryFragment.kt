@@ -24,7 +24,7 @@ import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 
 /**
- * v2 Session-Ended summary. Layout is fixed (eyebrow + title + 3 meta tiles + section
+ * v2 Session-Ended summary. Layout is fixed (eyebrow + 3 meta tiles + section
  * label), the per-model report tiles are inserted programmatically since their count
  * depends on the session config — one tile per (model, method) pair.
  */
@@ -43,7 +43,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
 
         view.findViewById<MaterialButton>(R.id.resultsBackHomeButton).setOnClickListener {
             viewModel.clearSessionResults()
-            findNavController().popBackStack(R.id.welcomeFragment, false)
+            popToHome()
         }
         view.findViewById<MaterialButton>(R.id.resultsOpenHistoryButton).setOnClickListener {
             startActivity(Intent(requireContext(), HistoryActivity::class.java))
@@ -54,16 +54,26 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     viewModel.clearSessionResults()
-                    findNavController().popBackStack(R.id.welcomeFragment, false)
+                    popToHome()
                 }
             }
         )
     }
 
-    private fun renderHeader(view: View, config: SessionConfig, state: UiState) {
-        val title = view.findViewById<TextView>(R.id.resultsTitle)
-        title.text = config.firstModelDisplayName()
+    /**
+     * Returns to whichever "home" the user came from: Welcome (config mode path)
+     * or Test Welcome (test mode path). Either Welcome lives in the back stack
+     * but not both — falling through to Mode Select if neither is present means
+     * the user is never stuck on the results screen.
+     */
+    private fun popToHome() {
+        val nav = findNavController()
+        if (nav.popBackStack(R.id.welcomeFragment, false)) return
+        if (nav.popBackStack(R.id.testWelcomeFragment, false)) return
+        nav.popBackStack(R.id.modeSelectFragment, false)
+    }
 
+    private fun renderHeader(view: View, config: SessionConfig, state: UiState) {
         val minutes = (state.sessionElapsedMs / 60_000L).coerceAtLeast(0L)
         view.findViewById<TextView>(R.id.resultsMinutes).text = minutes.toString()
 
@@ -86,7 +96,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
                 if (cycles == 0) continue
                 val hist = state.topClassCountByModelMethod[key].orEmpty()
                 val agg = state.aggregateResultsByModel[model]?.get(sub)
-                container.addView(buildModelTile(ctx, model, sub, cycles, hist, agg, state.sessionVolumeMean))
+                container.addView(buildModelTile(ctx, model, sub, cycles, hist, agg))
             }
         }
     }
@@ -97,8 +107,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
         sub: LongSubMode,
         cycles: Int,
         hist: Map<SceneClass, Int>,
-        agg: com.fzi.acousticscene.model.ClassificationResult?,
-        sessionVolumeMean: Float
+        agg: com.fzi.acousticscene.model.ClassificationResult?
     ): View {
         val tile = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -131,12 +140,13 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
         }
         badgeRow.addView(TextView(ctx).apply {
             text = sub.label.uppercase()
-            textSize = 9f
+            textSize = 8.5f
             typeface = Typeface.MONOSPACE
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
-            background = ContextCompat.getDrawable(ctx, R.drawable.bg_meta_pill)
-            setPadding(dp(7), dp(3), dp(7), dp(3))
+            background = ContextCompat.getDrawable(ctx, R.drawable.bg_method_badge)
+            letterSpacing = 0.04f
+            setPadding(dp(6), dp(2), dp(6), dp(2))
         })
         badgeRow.addView(TextView(ctx).apply {
             text = ctx.getString(R.string.results_cycles_count, cycles)
@@ -152,7 +162,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
         })
         tile.addView(badgeRow)
 
-        // Most-frequent + Avg-volume inner tiles
+        // Most-frequent inner tile
         val topClass = pickTopClass(hist, agg)
         val innerRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -165,14 +175,12 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
             layoutParams = lp
         }
         innerRow.addView(buildMostFrequent(ctx, topClass))
-        innerRow.addView(buildAvgVolume(ctx, sessionVolumeMean))
         tile.addView(innerRow)
 
-        // Distribution rows
-        val total = hist.values.sum().coerceAtLeast(1)
+        // Distribution rows — show raw count of times this class was predicted
+        val maxCount = hist.values.maxOrNull()?.coerceAtLeast(1) ?: 1
         hist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
-            val pct = (count.toFloat() / total.toFloat() * 100f).toInt()
-            tile.addView(buildDistRow(ctx, scene, pct))
+            tile.addView(buildDistRow(ctx, scene, count, maxCount))
         }
 
         return tile
@@ -218,35 +226,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
         return box
     }
 
-    private fun buildAvgVolume(ctx: android.content.Context, mean: Float): View {
-        val box = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            background = ContextCompat.getDrawable(ctx, R.drawable.bg_tile_inner)
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            val lp = LinearLayout.LayoutParams(dp(84), ViewGroup.LayoutParams.WRAP_CONTENT)
-            lp.marginStart = dp(8)
-            layoutParams = lp
-        }
-        box.addView(TextView(ctx).apply {
-            text = ctx.getString(R.string.results_avg_volume)
-            textSize = 8f
-            typeface = Typeface.MONOSPACE
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(ContextCompat.getColor(ctx, R.color.text_faint))
-            letterSpacing = 0.06f
-        })
-        box.addView(TextView(ctx).apply {
-            text = String.format(java.util.Locale.US, "%.2f", mean.coerceIn(0f, 1f))
-            textSize = 13f
-            typeface = Typeface.MONOSPACE
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            setPadding(0, dp(3), 0, 0)
-        })
-        return box
-    }
-
-    private fun buildDistRow(ctx: android.content.Context, scene: SceneClass, pct: Int): View {
+    private fun buildDistRow(ctx: android.content.Context, scene: SceneClass, count: Int, maxCount: Int): View {
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -254,37 +234,46 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            lp.topMargin = dp(3)
-            lp.bottomMargin = dp(3)
+            lp.topMargin = dp(4)
+            lp.bottomMargin = dp(4)
             layoutParams = lp
         }
         row.addView(TextView(ctx).apply {
             text = scene.emoji
-            textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(dp(22), ViewGroup.LayoutParams.WRAP_CONTENT)
+            textSize = 11.5f
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(dp(18), ViewGroup.LayoutParams.WRAP_CONTENT)
         })
         row.addView(TextView(ctx).apply {
             text = scene.labelShort
-            textSize = 11f
+            textSize = 10.5f
             setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
-            layoutParams = LinearLayout.LayoutParams(dp(86), ViewGroup.LayoutParams.WRAP_CONTENT)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            val lp = LinearLayout.LayoutParams(dp(82), ViewGroup.LayoutParams.WRAP_CONTENT)
+            lp.marginStart = dp(7)
+            layoutParams = lp
         })
 
-        // Track + filled bar
+        // Track + filled bar — width proportional to count / maxCount across this model
+        val safeMax = maxCount.coerceAtLeast(1)
+        val fillWeight = count.coerceAtLeast(0).toFloat()
+        val restWeight = (safeMax - count).coerceAtLeast(0).toFloat()
         val track = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             background = ContextCompat.getDrawable(ctx, R.drawable.bg_dist_track)
             val lp = LinearLayout.LayoutParams(0, dp(6), 1f)
+            lp.marginStart = dp(7)
             layoutParams = lp
         }
         val fill = View(ctx).apply {
             setBackgroundColor(SceneClassColors.color(ctx, scene))
-            val lp = LinearLayout.LayoutParams(0, dp(6), pct.coerceAtLeast(1).toFloat())
+            val lp = LinearLayout.LayoutParams(0, dp(6), fillWeight.coerceAtLeast(0.001f))
             layoutParams = lp
         }
         val rest = View(ctx).apply {
             setBackgroundColor(Color.TRANSPARENT)
-            val lp = LinearLayout.LayoutParams(0, dp(6), (100 - pct).coerceAtLeast(0).toFloat())
+            val lp = LinearLayout.LayoutParams(0, dp(6), restWeight)
             layoutParams = lp
         }
         track.addView(fill)
@@ -292,13 +281,19 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
         row.addView(track)
 
         row.addView(TextView(ctx).apply {
-            text = pct.toString()
-            textSize = 10f
+            text = count.toString()
+            textSize = 11f
             typeface = Typeface.MONOSPACE
             setTypeface(typeface, Typeface.BOLD)
-            setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            setTextColor(
+                ContextCompat.getColor(
+                    ctx,
+                    if (count <= 0) R.color.text_faint else R.color.text_primary
+                )
+            )
+            letterSpacing = -0.01f
             gravity = Gravity.END
-            val lp = LinearLayout.LayoutParams(dp(28), ViewGroup.LayoutParams.WRAP_CONTENT)
+            val lp = LinearLayout.LayoutParams(dp(26), ViewGroup.LayoutParams.WRAP_CONTENT)
             lp.marginStart = dp(8)
             layoutParams = lp
         })
@@ -323,11 +318,6 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
             RecordingCategory.INTERVAL -> config.intervalMethodsByModel[modelName].orEmpty()
         }
         return listOf(LongSubMode.STANDARD, LongSubMode.FAST, LongSubMode.AVERAGE).filter { it in active }
-    }
-
-    private fun SessionConfig.firstModelDisplayName(): String {
-        val first = modelNames.firstOrNull() ?: return getString(R.string.results_session_ended)
-        return first.stripModelSuffix()
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()

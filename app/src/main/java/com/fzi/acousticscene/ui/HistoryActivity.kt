@@ -68,6 +68,12 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var btnExportSelected: MaterialButton
     private lateinit var btnDeleteSelected: MaterialButton
 
+    // Filter chip row (Config-mode launch only)
+    private lateinit var filterChipRow: LinearLayout
+    private lateinit var filterChipAll: TextView
+    private lateinit var filterChipConfig: TextView
+    private lateinit var filterChipTest: TextView
+
     /** All session start times sorted chronologically (oldest first) */
     private var allSessionStartTimes: List<Long> = emptyList()
 
@@ -76,6 +82,19 @@ class HistoryActivity : AppCompatActivity() {
 
     /** Selection mode state */
     private var isSelectionMode = false
+
+    /**
+     * Active filter from the chip row. `null` = All (no filter, the default).
+     * Persisted across config changes via [onSaveInstanceState].
+     * Only used when the chip row is visible (i.e. no intent-level filter).
+     */
+    private var activeChipFilter: SessionMode? = null
+
+    /**
+     * `true` when the intent forced a mode filter (Test welcome) — in that case
+     * the chip row stays hidden and [activeChipFilter] is ignored.
+     */
+    private var intentFilterLocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Apply saved theme before super.onCreate()
@@ -114,6 +133,12 @@ class HistoryActivity : AppCompatActivity() {
         btnExportSelected = findViewById(R.id.btnExportSelected)
         btnDeleteSelected = findViewById(R.id.btnDeleteSelected)
 
+        // Filter chip row
+        filterChipRow = findViewById(R.id.filterChipRow)
+        filterChipAll = findViewById(R.id.filterChipAll)
+        filterChipConfig = findViewById(R.id.filterChipConfig)
+        filterChipTest = findViewById(R.id.filterChipTest)
+
         // Material 3 Back Button
         btnBack.setOnClickListener {
             finish()
@@ -125,6 +150,30 @@ class HistoryActivity : AppCompatActivity() {
         btnExportSelected.setOnClickListener { exportSelected() }
         btnDeleteSelected.setOnClickListener { deleteSelected() }
 
+        // Decide whether the intent forced a mode filter. If it did (TEST from
+        // TestWelcomeFragment), the chip row stays hidden and the user has no
+        // way to broaden the view. Otherwise (Config Welcome), the chip row is
+        // visible and starts on "All".
+        val intentFilterRaw = intent?.getStringExtra(EXTRA_MODE_FILTER)
+        val parsedIntentFilter = intentFilterRaw?.let {
+            runCatching { SessionMode.valueOf(it) }.getOrNull()
+        }
+        intentFilterLocked = parsedIntentFilter != null
+
+        if (intentFilterLocked) {
+            filterChipRow.visibility = View.GONE
+        } else {
+            filterChipRow.visibility = View.VISIBLE
+            // Restore chip selection across rotations.
+            activeChipFilter = savedInstanceState?.getString(STATE_CHIP_FILTER)?.let {
+                runCatching { SessionMode.valueOf(it) }.getOrNull()
+            }
+            applyChipSelectionVisual()
+            filterChipAll.setOnClickListener { onChipFilterChanged(null) }
+            filterChipConfig.setOnClickListener { onChipFilterChanged(SessionMode.CONFIG) }
+            filterChipTest.setOnClickListener { onChipFilterChanged(SessionMode.TEST) }
+        }
+
         // RecyclerView Setup
         adapter = PackageAdapter(
             repository = repository,
@@ -135,6 +184,43 @@ class HistoryActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
+        loadHistory()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Only meaningful when the chip row is in play.
+        if (!intentFilterLocked) {
+            activeChipFilter?.let { outState.putString(STATE_CHIP_FILTER, it.name) }
+        }
+    }
+
+    /**
+     * Repaints the three filter chips so the active one uses the accent-soft
+     * background + primary text colour while the others fall back to the
+     * hairline border + secondary text.
+     */
+    private fun applyChipSelectionVisual() {
+        val selectedBg = R.drawable.bg_chip_accent_soft
+        val idleBg = R.drawable.bg_history_chip
+        val selectedTextColor = getColor(R.color.text_primary)
+        val idleTextColor = getColor(R.color.text_secondary)
+
+        val pairs = listOf(
+            filterChipAll to (activeChipFilter == null),
+            filterChipConfig to (activeChipFilter == SessionMode.CONFIG),
+            filterChipTest to (activeChipFilter == SessionMode.TEST),
+        )
+        pairs.forEach { (chip, isSelected) ->
+            chip.setBackgroundResource(if (isSelected) selectedBg else idleBg)
+            chip.setTextColor(if (isSelected) selectedTextColor else idleTextColor)
+        }
+    }
+
+    private fun onChipFilterChanged(newFilter: SessionMode?) {
+        if (activeChipFilter == newFilter) return
+        activeChipFilter = newFilter
+        applyChipSelectionVisual()
         loadHistory()
     }
 
@@ -256,16 +342,25 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     /**
-     * Filters predictions down to the mode requested by the launcher, if any.
-     * Default (no extra / unknown value): no filter. TEST keeps only records
-     * with `sessionMode == TEST`; CONFIG keeps `sessionMode == CONFIG` plus
-     * legacy null records (those were saved before the tag existed and have
-     * always been a developer flow).
+     * Filters predictions down to the active mode. Resolution order:
+     *  1. Intent extra (TestWelcome locks the activity to TEST-only).
+     *  2. Chip-row selection from Config Welcome (`activeChipFilter`).
+     *  3. No filter (== All).
+     *
+     * TEST keeps only records with `sessionMode == TEST`; CONFIG keeps
+     * `sessionMode == CONFIG` plus legacy null records (saved before the tag
+     * existed — those have always been a developer flow).
      */
     private fun applyModeFilter(predictions: List<PredictionRecord>): List<PredictionRecord> {
-        val raw = intent?.getStringExtra(EXTRA_MODE_FILTER) ?: return predictions
-        val target = runCatching { SessionMode.valueOf(raw) }.getOrNull() ?: return predictions
+        val target: SessionMode? = if (intentFilterLocked) {
+            intent?.getStringExtra(EXTRA_MODE_FILTER)?.let {
+                runCatching { SessionMode.valueOf(it) }.getOrNull()
+            }
+        } else {
+            activeChipFilter
+        }
         return when (target) {
+            null -> predictions
             SessionMode.TEST -> predictions.filter { it.sessionMode == SessionMode.TEST }
             SessionMode.CONFIG -> predictions.filter {
                 it.sessionMode == SessionMode.CONFIG || it.sessionMode == null
@@ -565,13 +660,19 @@ class HistoryActivity : AppCompatActivity() {
                 recordingRecords: List<PredictionRecord>
             ) {
                 container.removeAllViews()
+                val density = ctx.resources.displayMetrics.density
+                val gapPx = (2 * density).toInt()
                 val byClass = recordingRecords.groupingBy { it.sceneClass }.eachCount()
                 val total = byClass.values.sum().coerceAtLeast(1)
-                byClass.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
+                val entries = byClass.entries.sortedByDescending { it.value }
+                // Mockup minibar style: thin 2dp gap between segments + hairline
+                // base color so an empty bar still reads as a track.
+                entries.forEachIndexed { index, (scene, count) ->
                     val pct = count.toFloat() / total.toFloat()
                     container.addView(View(ctx).apply {
                         setBackgroundColor(SceneClassColors.color(ctx, scene))
                         val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, pct)
+                        if (index < entries.size - 1) lp.marginEnd = gapPx
                         layoutParams = lp
                     })
                 }
@@ -641,11 +742,13 @@ class HistoryActivity : AppCompatActivity() {
                     this.text = text
                     textSize = 10.5f
                     setTextColor(ctx.getColor(R.color.text_secondary))
-                    background = ctx.getDrawable(R.drawable.bg_meta_pill)
+                    // bg_history_chip uses surface_variant + hairline border so the
+                    // chip cluster reads as a distinct group inside the tile.
+                    background = ctx.getDrawable(R.drawable.bg_history_chip)
                     setPadding(
-                        (8 * density).toInt(),
+                        (9 * density).toInt(),
                         (4 * density).toInt(),
-                        (8 * density).toInt(),
+                        (9 * density).toInt(),
                         (4 * density).toInt()
                     )
                     val lp = LinearLayout.LayoutParams(
@@ -748,6 +851,9 @@ class HistoryActivity : AppCompatActivity() {
          * means "show all sessions".
          */
         const val EXTRA_MODE_FILTER = "history_mode_filter"
+
+        /** Bundle key for the chip-row filter selection (Config-mode launches). */
+        private const val STATE_CHIP_FILTER = "history_chip_filter"
 
         /**
          * Extracts the distinct list of model names actually used in this session.

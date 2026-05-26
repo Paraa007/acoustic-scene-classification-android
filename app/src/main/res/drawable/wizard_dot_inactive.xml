@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Upcoming wizard step bar — surface fill with hairline outline, rounded.
+    Source: design-previews/minimal/v2/dark.html, line 1102-1104.
+-->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="@color/border_subtle" />
-    <size android:width="6dp" android:height="6dp" />
+    android:shape="rectangle">
+    <solid android:color="@color/surface_variant" />
+    <corners android:radius="3dp" />
+    <stroke android:width="1dp" android:color="@color/border_subtle" />
 </shape>

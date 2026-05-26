@@ -7,6 +7,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -18,8 +19,9 @@ import com.google.android.material.button.MaterialButton
  * picker. The password is `Welcome2fzi` (per v2 spec) — this is a UX gate, not
  * real auth, so we keep it in code.
  *
- * Right password → navigate to Config Welcome and pop both this fragment and
- * the mode picker off the back stack so back-button exits the app.
+ * Right password → navigate to Config Welcome and pop only this fragment off
+ * the back stack so Mode Select stays underneath. From Welcome the user can
+ * press the Back chevron (or system back) to return to Mode Select.
  * Wrong password → inline error, field clears, eye toggles back to masked.
  */
 class PasswordFragment : Fragment(R.layout.fragment_password) {
@@ -39,9 +41,18 @@ class PasswordFragment : Fragment(R.layout.fragment_password) {
         reveal = view.findViewById(R.id.passwordRevealButton)
         error = view.findViewById(R.id.passwordError)
         val unlock = view.findViewById<MaterialButton>(R.id.passwordUnlockButton)
-        val back = view.findViewById<ImageButton>(R.id.passwordBackButton)
+        val back = view.findViewById<View>(R.id.passwordBackButton)
 
         back.setOnClickListener { findNavController().popBackStack() }
+        // Hardware back mirrors the chevron — returns to Mode Select.
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    findNavController().popBackStack()
+                }
+            }
+        )
 
         // Reset the wrong-password warning the moment the user touches the input
         // again — otherwise it stays loud while they're trying to correct.
@@ -65,9 +76,9 @@ class PasswordFragment : Fragment(R.layout.fragment_password) {
     private fun trySubmit() {
         val entered = input.text?.toString().orEmpty()
         if (entered == DEV_PASSWORD) {
-            // Pop both screens (Password + ModeSelect) off the back stack so the
-            // user lands on Config Welcome with a clean back-stack — pressing
-            // back from there exits the app.
+            // Pop only this fragment off the back stack so Mode Select stays
+            // underneath Welcome — from there a Back tap returns the user to
+            // the mode picker rather than exiting the app.
             findNavController().navigate(R.id.action_password_to_welcome)
         } else {
             error.visibility = View.VISIBLE

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Lightning bolt: Quick Start button glyph.
+    Source: design-previews/minimal/v2/dark.html SCREEN 1 (line 917).
+    Path d="M8 1.5l-5 8.5h4l-1 6.5 5-8.5h-4l1-6.5z" in 18x18 viewport.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="17dp"
+    android:height="17dp"
+    android:viewportWidth="18"
+    android:viewportHeight="18">
+    <path
+        android:fillColor="@color/text_primary"
+        android:strokeColor="@color/text_primary"
+        android:strokeWidth="1"
+        android:strokeLineJoin="round"
+        android:pathData="M8,1.5 l-5,8.5 h4 l-1,6.5 l5,-8.5 h-4 l1,-6.5 z" />
+</vector>

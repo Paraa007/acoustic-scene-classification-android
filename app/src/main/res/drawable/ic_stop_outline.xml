@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Stop manually glyph: 10x10 rounded rect, stroke only.
+    Source: design-previews/minimal/v2/dark.html SCREEN 5 (line 1414-1416).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="1.7"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M7,5 L13,5 A2.5,2.5 0 0 1 15.5,7.5 L15.5,12.5 A2.5,2.5 0 0 1 13,15 L7,15 A2.5,2.5 0 0 1 4.5,12.5 L4.5,7.5 A2.5,2.5 0 0 1 7,5 Z" />
+</vector>

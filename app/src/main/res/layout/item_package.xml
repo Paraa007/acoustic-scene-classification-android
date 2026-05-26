@@ -80,7 +80,8 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Mini distribution bar -->
+        <!-- Mini distribution bar. clipToOutline ensures the colored segments
+             added programmatically stay inside the 3dp rounded track corners. -->
         <LinearLayout
             android:id="@+id/minibarContainer"
             android:layout_width="match_parent"
@@ -88,7 +89,8 @@
             android:orientation="horizontal"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="12dp"
-            android:background="@drawable/bg_minibar_track" />
+            android:background="@drawable/bg_minibar_track"
+            android:clipToOutline="true" />
 
         <!-- Chips row: models / mode / methods -->
         <LinearLayout

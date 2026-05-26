@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Left arrow used in the "Back to home" Results button.
+    Source: design-previews/minimal/v2/dark.html SCREEN 8 (line 1958).
+    Path d="M6.5 2L2 7.5l4.5 5.5M2 7.5h11".
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="15dp"
+    android:height="15dp"
+    android:viewportWidth="15"
+    android:viewportHeight="15">
+    <path
+        android:strokeColor="@color/text_primary"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M6.5,2 L2,7.5 L6.5,13" />
+    <path
+        android:strokeColor="@color/text_primary"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M2,7.5 L13,7.5" />
+</vector>

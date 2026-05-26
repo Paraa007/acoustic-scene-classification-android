@@ -76,7 +76,31 @@
                     app:rippleColor="@color/surface_variant" />
             </LinearLayout>
 
-            <!-- Meta grid: 2 columns x 4 rows -->
+            <!-- Mode badge: TEST MODE / CONFIG MODE. Mono uppercase rounded-pill
+                 mirroring the Test-/Config-Welcome chips, so the user can tell
+                 at a glance which entry point launched this session. Hidden
+                 when the session has no recorded mode (legacy records). -->
+            <TextView
+                android:id="@+id/detailModeBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip_accent_soft"
+                android:paddingHorizontal="11dp"
+                android:paddingVertical="5dp"
+                android:textSize="10sp"
+                android:textColor="@color/accent_green"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.14"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone"
+                tools:visibility="visible"
+                tools:text="@string/detail_mode_test" />
+
+            <!-- Meta grid: 2 columns x 4 rows. The outer tile is the rounded
+                 white card; the inner container fills with border_subtle so
+                 the 1dp gaps between cells read as hairline separators. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -88,38 +112,45 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaStart" />
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaEnd" />
-                </LinearLayout>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaDuration" />
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaRecordings" />
-                </LinearLayout>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaPauses" />
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaModels" />
-                </LinearLayout>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaConfig" />
-                    <include layout="@layout/_detail_meta_cell"
-                        android:id="@+id/detailMetaBattery" />
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_meta_grid_inner">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaStart" />
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaEnd" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaDuration" />
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaRecordings" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaPauses" />
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaModels" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaConfig" />
+                        <include layout="@layout/_detail_meta_cell"
+                            android:id="@+id/detailMetaBattery" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 

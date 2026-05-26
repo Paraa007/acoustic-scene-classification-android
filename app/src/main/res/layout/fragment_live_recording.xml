@@ -1,176 +1,625 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Live Recording screen, v2 minimal.
+    Source of truth: design-previews/minimal/v2/dark.html SCREEN 7 (slide 09).
+    Structure:
+      - Status header  (live dot + "Recording" + CYCLE meta pill)
+      - Rings tile     (concentric stopwatch + side text + legend)
+      - Section header (Live Predictions · N models)
+      - Scrollable list of model cards (built dynamically)
+      - Volume chart tile
+      - Inline pause-duration picker (hidden by default)
+      - Bottom action bar (Pause + Stop)
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/background_dark">
 
+    <!-- ============================================================
+         Status header: live dot + "Recording" + CYCLE pill
+         ============================================================ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="12dp">
+        android:paddingHorizontal="22dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="14dp">
 
         <ImageButton
             android:id="@+id/liveBackButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="10dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:padding="6dp"
             android:src="@drawable/ic_arrow_back"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/wizard_back" />
 
+        <View
+            android:id="@+id/liveLiveDot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/dot_accent_green" />
+
         <TextView
-            android:id="@+id/liveStatusLabel"
-            android:layout_width="0dp"
+            android:id="@+id/liveHeaderTitle"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary" />
+            android:layout_marginStart="9dp"
+            android:text="@string/live_header_title"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
     </LinearLayout>
 
-    <com.fzi.acousticscene.ui.ConcentricStopwatchView
-        android:id="@+id/liveStopwatch"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="12dp" />
+    <!-- Loading / status banner — only shown when the models are not ready -->
+    <TextView
+        android:id="@+id/liveStatusLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="22dp"
+        android:paddingBottom="6dp"
+        android:gravity="center"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="Loading models…" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true">
-
-        <LinearLayout
-            android:id="@+id/liveModelCardsContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="16dp" />
-    </ScrollView>
-
-    <com.fzi.acousticscene.ui.VolumeLineChartView
-        android:id="@+id/liveVolumeChart"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/liveEvaluationCard"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="10dp"
-        android:visibility="gone"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1dp"
-        app:strokeColor="@color/accent_blue"
-        app:cardBackgroundColor="@color/surface_dark">
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        android:paddingBottom="4dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:paddingHorizontal="22dp">
 
+            <!-- ============================================================
+                 Rings tile: concentric stopwatch + side text + legend
+                 ============================================================ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_tile"
+                android:padding="17dp">
 
-                <TextView
-                    android:id="@+id/liveEvaluationTitle"
+                <com.fzi.acousticscene.ui.ConcentricStopwatchView
+                    android:id="@+id/liveStopwatch"
+                    android:layout_width="128dp"
+                    android:layout_height="128dp" />
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary" />
+                    android:layout_marginStart="17dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/live_tile_label_elapsed_total"
+                        android:textAllCaps="true"
+                        android:textSize="9sp"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.1" />
+
+                    <TextView
+                        android:id="@+id/liveElapsedBig"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:textSize="21sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:fontFamily="monospace"
+                        tools:text="0:43:12" />
+
+                    <TextView
+                        android:id="@+id/liveElapsedSub"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="monospace"
+                        tools:text="of 3:00:00" />
+
+                    <!-- Legend: session % + cycle % -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="13dp">
+
+                        <View
+                            android:layout_width="7dp"
+                            android:layout_height="7dp"
+                            android:background="@drawable/bg_legend_session" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/live_legend_session"
+                            android:textSize="9.5sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/liveLegendSessionPct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="9.5sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"
+                            android:fontFamily="monospace"
+                            tools:text="24%" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:layout_width="7dp"
+                            android:layout_height="7dp"
+                            android:background="@drawable/bg_legend_cycle" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/live_legend_cycle"
+                            android:textSize="9.5sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/liveLegendCyclePct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="9.5sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"
+                            android:fontFamily="monospace"
+                            tools:text="70%" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ============================================================
+                 Section header: Live Predictions · N models
+                 ============================================================ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="6dp"
+                android:layout_marginTop="17dp"
+                android:layout_marginBottom="9dp">
 
                 <TextView
-                    android:id="@+id/liveEvaluationCountdown"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary" />
+                    android:text="@string/live_section_predictions"
+                    android:textAllCaps="true"
+                    android:textSize="9.5sp"
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.15"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="9dp"
+                    android:layout_marginEnd="9dp"
+                    android:background="@color/hairline" />
+
+                <TextView
+                    android:id="@+id/liveSectionModelsCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="monospace"
+                    tools:text="3 models" />
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/liveModelCardsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="10dp">
+                android:orientation="vertical" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/liveEvaluationSkipButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="@string/evaluation_skip"
-                    app:cornerRadius="12dp" />
+            <!-- ============================================================
+                 Volume chart tile
+                 ============================================================ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_tile"
+                android:padding="14dp"
+                android:layout_marginTop="3dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/liveEvaluationOpenButton"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/evaluation_inapp_action"
-                    app:cornerRadius="12dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/live_audio_level"
+                        android:textAllCaps="true"
+                        android:textSize="9sp"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.1" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="@drawable/dot_accent_green" />
+
+                    <TextView
+                        android:id="@+id/liveVolumeReadout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:fontFamily="monospace"
+                        tools:text="0.47" />
+                </LinearLayout>
+
+                <com.fzi.acousticscene.ui.VolumeLineChartView
+                    android:id="@+id/liveVolumeChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="9dp" />
             </LinearLayout>
+
+            <!-- ============================================================
+                 In-app evaluation prompt (only visible while waiting)
+                 ============================================================ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/liveEvaluationCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:visibility="gone"
+                app:cardCornerRadius="17dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/accent_line"
+                app:cardBackgroundColor="@color/accent_soft">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/liveEvaluationTitle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:id="@+id/liveEvaluationCountdown"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="@color/accent_green" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/liveEvaluationSkipButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:text="@string/evaluation_skip"
+                            android:textColor="@color/text_primary"
+                            android:textAllCaps="false"
+                            app:strokeColor="@color/border_subtle"
+                            app:cornerRadius="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/liveEvaluationOpenButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/evaluation_inapp_action"
+                            android:textColor="@color/accent_ink"
+                            android:textAllCaps="false"
+                            app:backgroundTint="@color/accent_green"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============================================================
+                 Inline Pause-duration picker.
+                 Hidden by default. Becomes visible when the user taps the
+                 Pause button at the bottom. Confirm commits the pause via
+                 the ViewModel; Cancel hides this tile without pausing.
+                 ============================================================ -->
+            <LinearLayout
+                android:id="@+id/livePausePickerCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_tile_accent"
+                android:padding="14dp"
+                android:layout_marginTop="11dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <!-- Header: PAUSED label + big duration display -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
+                        android:src="@drawable/ic_pause_bars_accent"
+                        android:contentDescription="@null" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/live_pause_picker_eyebrow"
+                        android:textAllCaps="true"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent_green"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.14" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/livePauseDurationDisplay"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="19sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:fontFamily="monospace"
+                        tools:text="3 h 15 min" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/live_pause_picker_subtitle"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_secondary" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/livePauseSlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="10dp"
+                    android:valueFrom="0"
+                    android:valueTo="48"
+                    android:value="13"
+                    android:stepSize="1"
+                    app:thumbColor="@color/accent_green"
+                    app:trackColorActive="@color/accent_green"
+                    app:trackColorInactive="@color/hairline"
+                    app:tickColorActive="@color/accent_green"
+                    app:tickColorInactive="@color/text_faint"
+                    app:haloColor="@color/accent_soft"
+                    app:labelBehavior="gone" />
+
+                <!-- Slider tick labels: 0 · 3h · 6h · 12h -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="6dp"
+                    android:layout_marginTop="2dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="start"
+                        android:text="0"
+                        android:textSize="8.5sp"
+                        android:textColor="@color/text_faint"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="3h"
+                        android:textSize="8.5sp"
+                        android:textColor="@color/text_faint"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="6h"
+                        android:textSize="8.5sp"
+                        android:textColor="@color/text_faint"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:text="12h"
+                        android:textSize="8.5sp"
+                        android:textColor="@color/text_faint"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+
+                <!-- Confirm row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/livePausePickerCancelButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="10dp"
+                        android:text="@string/cancel"
+                        android:textColor="@color/text_primary"
+                        android:textAllCaps="false"
+                        app:strokeColor="@color/border_subtle"
+                        app:cornerRadius="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/livePausePickerConfirmButton"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1.2"
+                        android:text="@string/live_pause_picker_confirm"
+                        android:textColor="@color/accent_ink"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/accent_green"
+                        app:cornerRadius="12dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Config label (kept from the prior layout — useful debug breadcrumb) -->
+            <TextView
+                android:id="@+id/liveConfigLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="10dp"
+                android:paddingBottom="2dp"
+                android:gravity="center"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:lineSpacingMultiplier="1.15" />
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </ScrollView>
 
-    <TextView
-        android:id="@+id/liveConfigLabel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="2dp"
-        android:gravity="center"
-        android:textSize="12sp"
-        android:textColor="@color/text_secondary"
-        android:lineSpacingMultiplier="1.15" />
-
+    <!-- ============================================================
+         Bottom action bar: Pause + Stop
+         ============================================================ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingHorizontal="22dp"
         android:paddingTop="6dp"
-        android:paddingBottom="16dp">
+        android:paddingBottom="14dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/livePauseResumeButton"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="50dp"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="10dp"
             android:text="@string/live_pause"
+            android:textColor="@color/text_primary"
+            android:textAllCaps="false"
+            app:icon="@drawable/ic_pause_bars"
+            app:iconTint="@color/text_primary"
+            app:iconGravity="textStart"
+            app:strokeColor="@color/border_subtle"
             app:cornerRadius="14dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/liveStopButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="50dp"
             android:layout_weight="1"
             android:text="@string/live_stop"
+            android:textColor="@color/leisure_sport"
+            android:textAllCaps="false"
+            app:icon="@drawable/ic_stop_square"
+            app:iconTint="@color/leisure_sport"
+            app:iconGravity="textStart"
+            app:strokeColor="@color/border_subtle"
             app:cornerRadius="14dp" />
     </LinearLayout>
 

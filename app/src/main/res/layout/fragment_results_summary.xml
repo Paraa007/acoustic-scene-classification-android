@@ -23,7 +23,7 @@
             android:paddingTop="20dp"
             android:paddingBottom="12dp">
 
-            <!-- Header: eyebrow chip + title -->
+            <!-- Header: eyebrow chip -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -34,7 +34,7 @@
                 <View
                     android:layout_width="18dp"
                     android:layout_height="18dp"
-                    android:background="@drawable/bg_app_mark_small" />
+                    android:background="@drawable/ic_eyebrow_check" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -48,17 +48,6 @@
                     android:letterSpacing="0.14"
                     android:textStyle="bold" />
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/resultsTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
-                android:paddingHorizontal="6dp"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                tools:text="Morning commute" />
 
             <!-- Meta tiles row: minutes · recordings · pauses -->
             <LinearLayout
@@ -84,6 +73,7 @@
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
                         android:fontFamily="monospace"
+                        android:letterSpacing="-0.02"
                         tools:text="24" />
 
                     <TextView
@@ -114,6 +104,7 @@
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
                         android:fontFamily="monospace"
+                        android:letterSpacing="-0.02"
                         tools:text="142" />
 
                     <TextView
@@ -144,6 +135,7 @@
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
                         android:fontFamily="monospace"
+                        android:letterSpacing="-0.02"
                         tools:text="0" />
 
                     <TextView
@@ -174,10 +166,9 @@
                     android:text="@string/results_section_model_reports"
                     android:textAllCaps="true"
                     android:textSize="9.5sp"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/text_faint"
                     android:fontFamily="monospace"
-                    android:letterSpacing="0.15"
-                    android:textStyle="bold" />
+                    android:letterSpacing="0.16" />
 
                 <View
                     android:layout_width="0dp"
@@ -217,8 +208,9 @@
             android:text="@string/results_back_home"
             android:textColor="@color/text_primary"
             android:textAllCaps="false"
+            app:backgroundTint="@color/surface_variant"
             app:strokeColor="@color/border_subtle"
-            app:cornerRadius="14dp" />
+            app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/resultsOpenHistoryButton"
@@ -229,7 +221,7 @@
             android:textAllCaps="false"
             android:textColor="@color/accent_ink"
             app:backgroundTint="@color/accent_green"
-            app:cornerRadius="14dp" />
+            app:cornerRadius="12dp" />
     </LinearLayout>
 
 </LinearLayout>

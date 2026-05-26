@@ -15,7 +15,7 @@
     <string name="long_interval_picker_title">Recording interval</string>
     <string name="long_interval_picker_subtitle">Pick how often to record. Tap an option to start LONG mode with that interval.</string>
     <string name="long_interval_prompt">Pick how often to record. Tap Every to choose an interval.</string>
-    <string name="long_interval_locked_running">Stop the running session before changing the interval.</string>
+    <string name="long_interval_locked_running">Stop the running session before changing the interval</string>
     <string name="recording_mode">Recording Mode</string>
     <string name="loading_model">Loading Model...</string>
     <string name="model_loaded">Model Loaded</string>
@@ -161,9 +161,9 @@
     <string name="battery_optimization_message">Background recordings need battery optimization disabled for this app.\n\nOtherwise Android will throttle the app after a while and recordings will have gaps.\n\nChange the setting now?</string>
     <string name="yes_disable">Yes, Disable</string>
     <string name="later">Later</string>
-    <string name="battery_warning">Without this setting, recordings can have gaps.</string>
-    <string name="battery_search_app">Search for \'%1$s\' and select \'Don\'t optimize\'.</string>
-    <string name="battery_manual_disable">Disable battery optimization manually in settings.</string>
+    <string name="battery_warning">Without this setting, recordings can have gaps</string>
+    <string name="battery_search_app">Search for \'%1$s\' and select \'Don\'t optimize\'</string>
+    <string name="battery_manual_disable">Disable battery optimization manually in settings</string>
 
     <!-- Dialog labels -->
     <string name="count">Count</string>
@@ -199,8 +199,8 @@
     <string name="volume_graph_waiting">Waiting for recording…</string>
 
     <!-- Time Analysis / Live Data Messages -->
-    <string name="live_analysis_late_open">Open this window before recording to see the live analysis.</string>
-    <string name="live_analysis_close_warning">Don\'t close this window while a recording is running.</string>
+    <string name="live_analysis_late_open">Open this window before recording to see the live analysis</string>
+    <string name="live_analysis_close_warning">Don\'t close this window while a recording is running</string>
 
     <!-- Session Naming -->
     <string name="session_rename">Rename Session</string>
@@ -237,7 +237,7 @@
     <string name="model_display_name_hint">Display name</string>
     <string name="model_name_saved">Model name saved</string>
     <string name="model_info_title">Model Details</string>
-    <string name="model_info_no_data">No training info recorded for this model yet.</string>
+    <string name="model_info_no_data">No training info recorded for this model yet</string>
     <string name="model_info_section_hyperparams">Hyperparameters</string>
     <string name="model_info_section_test">Test Metrics</string>
     <string name="model_info_section_training">Training</string>
@@ -328,9 +328,9 @@
     <string name="wizard_next">Next</string>
     <string name="wizard_start">Start</string>
     <string name="wizard_step_label">Step %1$d of %2$d</string>
-    <string name="wizard_models_hint">Pick at least one model.</string>
-    <string name="wizard_category_continuous_hint">Recordings run back-to-back.</string>
-    <string name="wizard_category_interval_hint">One recording, then a pause, then again.</string>
+    <string name="wizard_models_hint">Pick at least one model</string>
+    <string name="wizard_category_continuous_hint">Recordings run back-to-back</string>
+    <string name="wizard_category_interval_hint">One recording, then a pause, then again</string>
     <string name="wizard_summary_title">Summary</string>
     <string name="wizard_summary_models">Models</string>
     <string name="wizard_summary_category">Mode</string>
@@ -368,10 +368,10 @@
     <string name="mode_select_subtitle">Pick whichever fits. One runs the session, the other sets it up.</string>
     <string name="mode_select_test_title">Test mode</string>
     <string name="mode_select_test_chip">Open</string>
-    <string name="mode_select_test_desc">Runs the session that was set up for you, then shows the results.</string>
+    <string name="mode_select_test_desc">Für User</string>
     <string name="mode_select_config_title">Configuration mode</string>
     <string name="mode_select_config_chip">Locked</string>
-    <string name="mode_select_config_desc">For developers. Sets the model, recording mode and duration testers run with.</string>
+    <string name="mode_select_config_desc">Für Developer</string>
     <string name="brand_eyebrow">FZI Karlsruhe</string>
 
     <!-- Password Gate -->
@@ -391,7 +391,7 @@
     <string name="test_welcome_chip">Test mode</string>
     <string name="test_welcome_header">Quick starts</string>
     <string name="test_welcome_subtitle_used">Tap one to start a recording. %1$d of %2$d slots used</string>
-    <string name="test_welcome_empty_state">No quick starts yet — ask the developer to set one up.</string>
+    <string name="test_welcome_empty_state">No quick starts yet — ask the developer to set one up</string>
     <string name="test_welcome_slot_empty">Empty slot</string>
     <string name="test_welcome_footer">Set up by the developer</string>
     <string name="test_welcome_slot_label">Quick start %1$d</string>
@@ -414,7 +414,7 @@
     <!-- Test acc state -->
     <string name="test_acc_label">Test acc</string>
     <string name="test_acc_missing">Test acc missing</string>
-    <string name="test_acc_missing_hint">No accuracy value provided for this model.</string>
+    <string name="test_acc_missing_hint">No accuracy value provided for this model</string>
 
     <!-- v2 Session Results -->
     <string name="results_session_ended">Session ended</string>
@@ -473,4 +473,58 @@
     <string name="eval_note_hint">Describe the environment</string>
     <string name="eval_note_counter">%1$d / %2$d</string>
     <string name="eval_send">Send</string>
+
+    <!-- v2 Config Welcome (slide 03) — two-line variant of the app title. -->
+    <string name="welcome_title_two_line">Acoustic Scene\nClassification</string>
+
+    <!-- v2 Wizard · Session Duration (slide 07) — two-line label inside the
+         "Stop manually" tile in the grid. -->
+    <string name="session_duration_stop_manually_two_lines">Stop\nmanually</string>
+
+    <!-- v2 Live Recording (slide 09) — header, tile labels, inline pause picker. -->
+    <string name="live_header_title">Recording</string>
+    <string name="live_cycle_label">CYCLE</string>
+    <string name="live_tile_label_elapsed_total">Elapsed / Total</string>
+    <string name="live_legend_session">Session</string>
+    <string name="live_legend_cycle">Cycle</string>
+    <string name="live_section_predictions">Live Predictions</string>
+    <string name="live_section_models_count">%1$d models</string>
+    <string name="live_section_models_count_one">1 model</string>
+    <string name="live_audio_level">Audio Level</string>
+    <string name="live_pause_picker_eyebrow">Paused</string>
+    <string name="live_pause_picker_subtitle">How long should the pause last? (0–12 h, 15 min steps)</string>
+    <string name="live_pause_picker_confirm">Confirm pause</string>
+    <string name="live_pause_duration_unlimited">No timer</string>
+    <string name="live_pause_duration_hours_minutes">%1$d h %2$02d min</string>
+    <string name="live_pause_duration_minutes">%1$d min</string>
+
+    <!-- v2 Wizard · Summary (slide 08) -->
+    <string name="wizard_summary_runs">Runs: %1$s</string>
+    <plurals name="wizard_summary_selected_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+
+    <!-- v2 Evaluation (slide 14) - inline note hint shown next to the char counter. -->
+    <string name="eval_note_visibility_hint">Visible only on Send</string>
+
+    <!-- v2 Session Detail (slide 12) - mode badge shown at the top of the dialog
+         so the user can tell at a glance whether the session ran from Test mode
+         or Config mode. Mono uppercase pill. -->
+    <string name="detail_mode_test">TEST MODE</string>
+    <string name="detail_mode_config">CONFIG MODE</string>
+
+    <!-- History filter chip row - shown only when History is launched from the
+         Config-mode welcome. Default selection is "All". -->
+    <string name="history_filter_all">ALL</string>
+    <string name="history_filter_config">CONFIG</string>
+    <string name="history_filter_test">TEST</string>
+
+    <!-- v2 Wizard · Interval pause + Session duration slider step (slide 06b/07) -->
+    <string name="wizard_interval_pause_eyebrow">Pause length</string>
+    <string name="wizard_interval_pause_hint">Pick the gap between two recordings. 15 min steps, 0 – 6 h.</string>
+    <string name="wizard_session_duration_eyebrow">Total runtime</string>
+    <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 0 – 12 h.</string>
+    <string name="wizard_session_duration_stop_manually">Stop manually</string>
+    <string name="wizard_slider_zero">No pause</string>
 </resources>
