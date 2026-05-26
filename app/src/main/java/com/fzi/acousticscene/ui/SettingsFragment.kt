@@ -116,7 +116,6 @@ class SettingsFragment : Fragment() {
     private fun setupModelList(view: View) {
         val ctx = requireContext()
         val devModelsContainer: LinearLayout = view.findViewById(R.id.devModelsContainer)
-        val bestModel = ModelInfoRegistry.bestTestAccuracyModel()
 
         val models = listModelsInDir(ModelConfig.DEV_MODELS_DIR)
         devModelsContainer.removeAllViews()
@@ -126,7 +125,7 @@ class SettingsFragment : Fragment() {
         }
         models.forEachIndexed { idx, fileName ->
             devModelsContainer.addView(
-                createModelRow(fileName, ModelConfig.DEV_MODELS_DIR, devModelsContainer, fileName == bestModel)
+                createModelRow(fileName, ModelConfig.DEV_MODELS_DIR, devModelsContainer)
             )
             if (idx != models.lastIndex) {
                 devModelsContainer.addView(View(ctx).apply {
@@ -197,7 +196,7 @@ class SettingsFragment : Fragment() {
      * Tap opens the info dialog (existing behavior); long-press opens the rename
      * dialog. The whole card is the touch target.
      */
-    private fun createModelRow(fileName: String, dir: String, parentContainer: LinearLayout, isBest: Boolean = false): View {
+    private fun createModelRow(fileName: String, dir: String, parentContainer: LinearLayout): View {
         val ctx = requireContext()
         val displayName = ModelDisplayNameHelper.getDisplayName(ctx, fileName)
         val testAccuracy = ModelMetadataRegistry.get(ctx, fileName)?.testAccuracy
@@ -246,16 +245,6 @@ class SettingsFragment : Fragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                lp.marginEnd = dp(7)
-                layoutParams = lp
-            })
-        }
-
-        if (isBest) {
-            // Tiny green leaf indicating this is the model with the best test accuracy.
-            row.addView(View(ctx).apply {
-                background = ContextCompat.getDrawable(ctx, R.drawable.dot_accent_green)
-                val lp = LinearLayout.LayoutParams(dp(6), dp(6))
                 lp.marginEnd = dp(7)
                 layoutParams = lp
             })
