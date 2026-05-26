@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.data.RecordingEngineHolder
+import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.service.ClassificationService
 import com.fzi.acousticscene.util.ThemeHelper
 
@@ -77,13 +79,28 @@ class MainActivity : AppCompatActivity() {
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
-    /** Public so LiveRecordingFragment can ask the foreground service to start. */
-    fun startClassificationService() {
+    private fun launchServiceWithAction(action: String) {
         val intent = Intent(this, ClassificationService::class.java).apply {
-            action = ClassificationService.ACTION_START
+            this.action = action
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
+    }
+
+    /**
+     * Hands the config over to the [ClassificationService] and asks it to apply
+     * it. The service will promote itself to foreground and start loading the
+     * picked models. The config is passed via [RecordingEngineHolder] — same
+     * process, so no serialization needed.
+     */
+    fun applySessionConfigViaService(config: SessionConfig) {
+        RecordingEngineHolder.pendingConfig = config
+        launchServiceWithAction(ClassificationService.ACTION_APPLY_CONFIG)
+    }
+
+    /** Public so LiveRecordingFragment can ask the foreground service to start. */
+    fun startClassificationService() {
+        launchServiceWithAction(ClassificationService.ACTION_START)
     }
 
     fun stopClassificationService() {
@@ -94,6 +111,19 @@ class MainActivity : AppCompatActivity() {
         // full teardown (WakeLock release, alarm cancel, stopForeground).
         val intent = Intent(this, ClassificationService::class.java)
         stopService(intent)
+    }
+
+    fun pauseClassificationService(autoResumeAfterMs: Long?) {
+        RecordingEngineHolder.pendingPauseAutoResumeMs = autoResumeAfterMs
+        launchServiceWithAction(ClassificationService.ACTION_PAUSE)
+    }
+
+    fun resumeClassificationService() {
+        launchServiceWithAction(ClassificationService.ACTION_RESUME)
+    }
+
+    fun clearRecordingResults() {
+        launchServiceWithAction(ClassificationService.ACTION_CLEAR_RESULTS)
     }
 
     private fun checkBatteryOptimization() {
