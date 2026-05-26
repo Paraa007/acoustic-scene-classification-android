@@ -18,6 +18,12 @@ import com.google.gson.JsonSyntaxException
  * v2 simplification: method maps used to be persisted (back when the user could
  * tick them). Now methods are derived from each model's training duration, so
  * the persisted payload only carries the user-driven fields.
+ *
+ * v3 (slider rework): the pause interval and session duration moved from fixed
+ * enums to open value carriers. The schema now stores the minute counts
+ * directly (`intervalPauseMin`, `sessionDurationMin`). Legacy payloads that
+ * carried the old enum names (`intervalPause`, `sessionDuration` strings) are
+ * mapped back through a best-effort migration so old prefs still load.
  */
 object LastConfigStore {
     private const val PREFS = "last_config_prefs"
@@ -28,17 +34,26 @@ object LastConfigStore {
     private data class Persisted(
         val modelNames: List<String>,
         val category: String,
-        val intervalPause: String?,
-        val sessionDuration: String,
-        val mode: String? = null
+        // v3 fields
+        val intervalPauseMin: Int? = null,
+        val sessionDurationMin: Int? = null,
+        // marker so the loader can tell a v3 payload that picked Manual
+        // (sessionDurationMin = null) apart from a v2 payload that didn't
+        // carry the minute field at all.
+        val schemaVersion: Int = 1,
+        val mode: String? = null,
+        // v2 legacy fields — kept nullable for backward read.
+        val intervalPause: String? = null,
+        val sessionDuration: String? = null
     )
 
     fun save(context: Context, config: SessionConfig) {
         val payload = Persisted(
             modelNames = config.modelNames,
             category = config.category.name,
-            intervalPause = config.intervalPause?.name,
-            sessionDuration = config.sessionDuration.name,
+            intervalPauseMin = config.intervalPause?.pauseMinutes,
+            sessionDurationMin = config.sessionDuration.totalMinutes,
+            schemaVersion = 3,
             mode = config.mode.name
         )
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -55,15 +70,15 @@ object LastConfigStore {
             val methods = p.modelNames.associateWith {
                 ModelTrainingDuration.requiredMethodsForModel(it)
             }
+            val intervalPause = resolveLongInterval(p)
+            val sessionDuration = resolveSessionDuration(p)
             SessionConfig(
                 modelNames = p.modelNames,
                 category = RecordingCategory.valueOf(p.category),
                 continuousMethodsByModel = methods,
-                intervalPause = p.intervalPause?.let {
-                    runCatching { LongInterval.valueOf(it) }.getOrNull()
-                },
+                intervalPause = intervalPause,
                 intervalMethodsByModel = methods,
-                sessionDuration = SessionDuration.valueOf(p.sessionDuration),
+                sessionDuration = sessionDuration,
                 mode = p.mode?.let { runCatching { SessionMode.valueOf(it) }.getOrNull() }
                     ?: SessionMode.CONFIG
             )
@@ -81,5 +96,52 @@ object LastConfigStore {
             .edit()
             .remove(KEY)
             .apply()
+    }
+
+    /**
+     * v3 payloads carry the minute count directly. v2 payloads carry the old
+     * enum name ("TEN_MIN", "ONE_HOUR", …) — map those back to the minute
+     * count the enum used to expose so saved configs survive the migration.
+     */
+    private fun resolveLongInterval(p: Persisted): LongInterval? {
+        p.intervalPauseMin?.let { return LongInterval.fromMinutes(it) }
+        val legacy = p.intervalPause ?: return null
+        val min = legacyLongIntervalMinutes(legacy) ?: return null
+        return LongInterval.fromMinutes(min)
+    }
+
+    private fun resolveSessionDuration(p: Persisted): SessionDuration {
+        // v3: schemaVersion >= 3 tells us null means MANUAL, not "missing"
+        if (p.schemaVersion >= 3) {
+            return p.sessionDurationMin?.let { SessionDuration.fromMinutes(it) }
+                ?: SessionDuration.MANUAL
+        }
+        if (p.sessionDurationMin != null) {
+            return SessionDuration.fromMinutes(p.sessionDurationMin)
+        }
+        val legacy = p.sessionDuration ?: return SessionDuration.DEFAULT
+        return legacySessionDuration(legacy)
+    }
+
+    /** "TEN_MIN" → 10, "ONE_HOUR" → 60, "THREE_HOURS" → 180, etc. */
+    private fun legacyLongIntervalMinutes(name: String): Int? = when (name) {
+        "TEN_MIN" -> 10
+        "FIFTEEN_MIN" -> 15
+        "THIRTY_MIN" -> 30
+        "FORTY_FIVE_MIN" -> 45
+        "ONE_HOUR" -> 60
+        "THREE_HOURS" -> 180
+        else -> null
+    }
+
+    /** "MIN_30" → 30 min, "HOUR_3" → 180 min, "MANUAL" → null, etc. */
+    private fun legacySessionDuration(name: String): SessionDuration = when (name) {
+        "MIN_30" -> SessionDuration.fromMinutes(30)
+        "HOUR_1" -> SessionDuration.fromMinutes(60)
+        "HOUR_3" -> SessionDuration.fromMinutes(180)
+        "HOUR_6" -> SessionDuration.fromMinutes(360)
+        "HOUR_12" -> SessionDuration.fromMinutes(720)
+        "MANUAL" -> SessionDuration.MANUAL
+        else -> SessionDuration.DEFAULT
     }
 }
