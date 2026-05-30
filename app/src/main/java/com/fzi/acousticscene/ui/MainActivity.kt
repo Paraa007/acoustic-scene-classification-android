@@ -9,9 +9,13 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.navigation.NavController
+import androidx.navigation.fragment.NavHostFragment
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.service.ClassificationService
@@ -63,6 +67,42 @@ class MainActivity : AppCompatActivity() {
         // each recording start happen via BatteryOptimizationHelper, so we no
         // longer interrupt every launch with the same dialog.
         BatteryOptimizationHelper.maybeShowFirstRunDialog(this)
+
+        // Tapped the foreground-service notification → jump straight to the live
+        // screen and re-attach to the running session.
+        maybeRouteToLive(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        maybeRouteToLive(intent)
+    }
+
+    /**
+     * If this Intent carries [ClassificationService.EXTRA_OPEN_LIVE] and a session
+     * is actually running, navigate to the live recording screen marked as a
+     * re-entry so back returns to the hub and the session keeps running. No-ops
+     * when the extra is absent, when nothing is recording, or when we're already
+     * on the live screen.
+     */
+    private fun maybeRouteToLive(intent: Intent?) {
+        if (intent?.getBooleanExtra(ClassificationService.EXTRA_OPEN_LIVE, false) != true) return
+        // Consume the flag so a later config change / recreation doesn't re-trigger.
+        intent.removeExtra(ClassificationService.EXTRA_OPEN_LIVE)
+        if (ActiveSessionRegistry.get() == null) return
+        val navController = navControllerOrNull() ?: return
+        if (navController.currentDestination?.id == R.id.liveRecordingFragment) return
+        navController.navigate(
+            R.id.liveRecordingFragment,
+            bundleOf(LiveRecordingFragment.ARG_REENTRY to true)
+        )
+    }
+
+    private fun navControllerOrNull(): NavController? {
+        val host = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+        return host?.navController
     }
 
     override fun onDestroy() {
