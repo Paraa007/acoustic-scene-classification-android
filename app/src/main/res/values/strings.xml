@@ -169,6 +169,14 @@
     <string name="battery_search_app">Search for \'%1$s\' and select \'Don\'t optimize\'</string>
     <string name="battery_manual_disable">Disable battery optimization manually in settings</string>
 
+    <!-- Microphone permission -->
+    <string name="permission_record_audio_title">Microphone access needed</string>
+    <string name="permission_record_audio_rationale">This app records audio to classify the acoustic scene. Without microphone access there is nothing to record. The audio stays on the device and is not uploaded.</string>
+    <string name="permission_record_audio_settings_message">Microphone access is turned off. Open the app settings and grant the Microphone permission to start recording.</string>
+    <string name="permission_record_audio_grant">Grant access</string>
+    <string name="permission_record_audio_open_settings">Open settings</string>
+    <string name="permission_record_audio_denied_toast">Recording needs microphone access. Tap Start again to retry.</string>
+
     <!-- Dialog labels -->
     <string name="count">Count</string>
     <string name="distribution">Distribution</string>
@@ -394,7 +402,7 @@
     <string name="test_welcome_chip">Test mode</string>
     <string name="test_welcome_header">Quick starts</string>
     <string name="test_welcome_subtitle_used">Tap one to start a recording. %1$d of %2$d slots used</string>
-    <string name="test_welcome_empty_state">No quick starts yet — ask the developer to set one up</string>
+    <string name="test_welcome_empty_state">No quick starts yet. Ask the developer to set one up.</string>
     <string name="test_welcome_slot_empty">Empty slot</string>
     <string name="test_welcome_footer">Set up by the developer</string>
     <string name="test_welcome_slot_label">Quick start %1$d</string>
@@ -411,7 +419,7 @@
     <!-- Quickstart slot save flow -->
     <string name="quickstart_saved_to_slot">Saved to slot %1$d</string>
     <string name="quickstart_pick_slot_title">Pick a slot to overwrite</string>
-    <string name="quickstart_pick_slot_subtitle">All 5 slots are full. Pick one to overwrite — the old one is replaced.</string>
+    <string name="quickstart_pick_slot_subtitle">All 5 slots are full. Pick one to overwrite. The old one gets replaced.</string>
     <string name="wizard_save_as_quickstart">Save as Quick start</string>
 
     <!-- Test acc state -->
@@ -467,15 +475,22 @@
     <!-- v2 Evaluation -->
     <string name="eval_eyebrow">Ground Truth</string>
     <string name="eval_title_v2">Rate the environment</string>
-    <string name="eval_subtitle">The recording just finished — which environment was it actually?</string>
+    <string name="eval_subtitle">The recording just finished. Which environment was it actually?</string>
     <string name="eval_predicted">Model predicted</string>
     <string name="eval_auto_skips">AUTO-SKIPS</string>
     <string name="eval_section_select">Select the actual scene</string>
-    <string name="eval_other_label">Other — write a note</string>
+    <string name="eval_other_label">Other (write a note)</string>
     <string name="eval_note_label">Your note</string>
     <string name="eval_note_hint">Describe the environment</string>
     <string name="eval_note_counter">%1$d / %2$d</string>
     <string name="eval_send">Send</string>
+    <!-- Blind self-rating (anti-anchoring): the model guess stays hidden until the user picks. -->
+    <string name="eval_blind_prompt">A recording just finished. Tap to rate what you heard.</string>
+    <string name="eval_reveal">Reveal model guess</string>
+    <string name="eval_done">Done</string>
+    <string name="eval_match">Match</string>
+    <string name="eval_differs">Different</string>
+    <string name="eval_your_pick">Your pick</string>
 
     <!-- v2 Config Welcome (slide 03) — two-line variant of the app title. -->
     <string name="welcome_title_two_line">Acoustic Scene\nClassification</string>
@@ -495,7 +510,7 @@
     <string name="live_section_models_count_one">1 model</string>
     <string name="live_audio_level">Audio Level</string>
     <string name="live_pause_picker_eyebrow">Paused</string>
-    <string name="live_pause_picker_subtitle">How long should the pause last? (0–12 h, 15 min steps)</string>
+    <string name="live_pause_picker_subtitle">How long should the pause last? (0 to 12 h, 15 min steps)</string>
     <string name="live_pause_picker_confirm">Confirm pause</string>
     <string name="live_pause_duration_unlimited">No timer</string>
     <string name="live_pause_duration_hours_minutes">%1$d h %2$02d min</string>
@@ -525,9 +540,9 @@
 
     <!-- v2 Wizard · Interval pause + Session duration slider step (slide 06b/07) -->
     <string name="wizard_interval_pause_eyebrow">Pause length</string>
-    <string name="wizard_interval_pause_hint">Pick the gap between two recordings. 15 min steps, 0 – 6 h.</string>
+    <string name="wizard_interval_pause_hint">Pick the gap between two recordings. 15 min steps, 0 to 6 h.</string>
     <string name="wizard_session_duration_eyebrow">Total runtime</string>
-    <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 0 – 12 h.</string>
+    <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 0 to 12 h.</string>
     <string name="wizard_session_duration_stop_manually">Stop manually</string>
     <string name="wizard_slider_zero">No pause</string>
 </resources>

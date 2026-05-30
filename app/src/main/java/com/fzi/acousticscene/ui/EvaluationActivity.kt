@@ -41,6 +41,7 @@ class EvaluationActivity : AppCompatActivity() {
         private const val STATE_SELECTED_INDEX = "state_selected_index"
         private const val STATE_OTHER_ACTIVE = "state_other_active"
         private const val STATE_NOTE = "state_note"
+        private const val STATE_REVEALED = "state_revealed"
         private const val NOTE_MAX_LENGTH = 240
     }
 
@@ -50,6 +51,9 @@ class EvaluationActivity : AppCompatActivity() {
 
     private var selectedScene: SceneClass? = null
     private var otherActive: Boolean = false
+    private var modelClass: SceneClass? = null
+    private var revealed: Boolean = false
+    private var submitButton: MaterialButton? = null
 
     private val rowsByScene: MutableMap<SceneClass, RowViews> = mutableMapOf()
 
@@ -77,10 +81,11 @@ class EvaluationActivity : AppCompatActivity() {
         }
 
         val modelClassStr = intent.getStringExtra(EXTRA_MODEL_PREDICTED_CLASS)
-        val modelClass = modelClassStr?.let { name ->
+        modelClass = modelClassStr?.let { name ->
             try { SceneClass.valueOf(name) } catch (_: Exception) { null }
         }
-        renderModelPrediction(modelClass)
+        // Anti-anchoring: the predicted tile stays hidden (layout default) until
+        // the user submits their own pick. See reveal().
 
         buildSceneList()
 
@@ -92,6 +97,7 @@ class EvaluationActivity : AppCompatActivity() {
         noteCounter.text = formatCounter(0)
 
         otherOption.setOnClickListener {
+            if (revealed) return@setOnClickListener
             otherActive = !otherActive
             renderOtherSelection(otherOption, otherCircle, noteTile)
             if (otherActive) {
@@ -124,17 +130,27 @@ class EvaluationActivity : AppCompatActivity() {
             renderOtherSelection(otherOption, otherCircle, noteTile)
         }
 
-        // Submit
-        findViewById<MaterialButton>(R.id.btnSubmit).setOnClickListener {
+        // Submit / reveal. The button gates the model reveal: the first tap needs
+        // a picked class, persists it, then reveals the model guess plus a
+        // match/differ comparison. The second tap (now "Done") closes.
+        val submit = findViewById<MaterialButton>(R.id.btnSubmit)
+        submitButton = submit
+        submit.text = getString(R.string.eval_reveal)
+        submit.setOnClickListener {
+            if (revealed) {
+                finish()
+                return@setOnClickListener
+            }
             val sel = selectedScene
+            if (sel == null && !otherActive) {
+                // The whole point is to commit to a guess before seeing the
+                // model, so ignore the tap until the user picks something.
+                return@setOnClickListener
+            }
             if (sel != null) {
                 PredictionRepository.getInstance(this).updatePredictionEvaluation(predictionId, sel)
-            } else if (otherActive) {
-                // No SceneClass picked but note was written — store as "Other" placeholder via
-                // existing API call so the record carries something. Note text is not yet
-                // persisted by the repository, so silently submitting is the right behavior.
             }
-            finish()
+            reveal()
         }
 
         // Skip
@@ -160,6 +176,12 @@ class EvaluationActivity : AppCompatActivity() {
             }
             override fun onFinish() { finish() }
         }.start()
+
+        // Restore the revealed state after a rotation: re-show the model tile and
+        // stop the auto-skip timer we just started.
+        if (savedInstanceState?.getBoolean(STATE_REVEALED, false) == true) {
+            reveal()
+        }
     }
 
     private fun renderModelPrediction(scene: SceneClass?) {
@@ -170,13 +192,37 @@ class EvaluationActivity : AppCompatActivity() {
             emoji.text = scene.emoji
             name.text = scene.labelShort
             name.setTextColor(SceneClassColors.color(this, scene))
-            pct.text = "—"
+            val sel = selectedScene
+            when {
+                sel == null -> pct.text = ""
+                sel == scene -> {
+                    pct.text = getString(R.string.eval_match)
+                    pct.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
+                }
+                else -> {
+                    pct.text = getString(R.string.eval_differs)
+                    pct.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                }
+            }
         } else {
             emoji.text = ""
             name.text = "N/A"
             name.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
             pct.text = ""
         }
+    }
+
+    /**
+     * Reveals the model's guess after the user has committed to their own pick.
+     * Shows the predicted tile, sets a match/differ comparison, stops the
+     * auto-skip timer, and turns the primary button into a plain close action.
+     */
+    private fun reveal() {
+        revealed = true
+        countDownTimer?.cancel()
+        renderModelPrediction(modelClass)
+        findViewById<View>(R.id.predictedTile).visibility = View.VISIBLE
+        submitButton?.text = getString(R.string.eval_done)
     }
 
     private fun buildSceneList() {
@@ -239,6 +285,7 @@ class EvaluationActivity : AppCompatActivity() {
             rowsByScene[scene] = views
 
             row.setOnClickListener {
+                if (revealed) return@setOnClickListener
                 otherActive = false
                 renderOtherSelection(
                     findViewById(R.id.otherOption),
@@ -293,6 +340,7 @@ class EvaluationActivity : AppCompatActivity() {
         outState.putLong(STATE_DEADLINE, deadlineElapsed)
         outState.putInt(STATE_SELECTED_INDEX, selectedScene?.index ?: -1)
         outState.putBoolean(STATE_OTHER_ACTIVE, otherActive)
+        outState.putBoolean(STATE_REVEALED, revealed)
         outState.putString(STATE_NOTE, findViewById<EditText>(R.id.noteInput).text.toString())
     }
 

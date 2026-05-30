@@ -1,7 +1,0 @@
-appId: com.fzi.acousticscene
----
-- tapOn:
-    text: "dcase2025_10s_04_06.pt"
-- waitForAnimationToEnd:
-    timeout: 5000
-- takeScreenshot: /Users/paraaafifi/Arbeit_code/the_App/.maestro_screenshots/04_recording_screen
