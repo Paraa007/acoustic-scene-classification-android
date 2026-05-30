@@ -44,6 +44,10 @@ mapping.txt
 # Claude Code internal state
 .claude/
 
+# Local editor settings & local-only review notes (not app code)
+.vscode/
+_security_review/
+
 # Logs / crash dumps
 *.log
 hs_err_pid*
