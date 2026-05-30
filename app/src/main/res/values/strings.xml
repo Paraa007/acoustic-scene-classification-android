@@ -505,6 +505,7 @@
     <string name="live_tile_label_elapsed_total">Elapsed / Total</string>
     <string name="live_legend_session">Session</string>
     <string name="live_legend_cycle">Cycle</string>
+    <string name="live_legend_inference">Inference</string>
     <string name="live_section_predictions">Live Predictions</string>
     <string name="live_section_models_count">%1$d models</string>
     <string name="live_section_models_count_one">1 model</string>

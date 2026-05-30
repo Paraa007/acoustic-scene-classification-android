@@ -64,6 +64,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private lateinit var elapsedSub: TextView
     private lateinit var legendSessionPct: TextView
     private lateinit var legendCyclePct: TextView
+    private lateinit var inferenceValue: TextView
     private lateinit var sectionModelsCount: TextView
     private lateinit var volumeReadout: TextView
 
@@ -117,6 +118,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         elapsedSub = view.findViewById(R.id.liveElapsedSub)
         legendSessionPct = view.findViewById(R.id.liveLegendSessionPct)
         legendCyclePct = view.findViewById(R.id.liveLegendCyclePct)
+        inferenceValue = view.findViewById(R.id.liveInferenceValue)
         sectionModelsCount = view.findViewById(R.id.liveSectionModelsCount)
         volumeReadout = view.findViewById(R.id.liveVolumeReadout)
         pausePickerCard = view.findViewById(R.id.livePausePickerCard)
@@ -227,6 +229,8 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         stopwatch.cycleProgress = state.frameElapsedMs / 10_000f
         stopwatch.paused = state.isPaused
         stopwatch.cycleSegments = state.frameSegments
+
+        inferenceValue.text = formatInferenceLabel(state.lastCycleComputeMs, state.sessionComputeMs)
 
         val statusText = labelForState(state)
         statusLabel.text = statusText
@@ -601,6 +605,21 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         val h = totalSeconds / 3600
         return if (h > 0) String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
         else String.format(java.util.Locale.US, "%d:%02d", m, s)
+    }
+
+    /** "3.4 s · Σ 1m 05s" — this cycle's compute time plus the session running total. */
+    private fun formatInferenceLabel(lastMs: Long, totalMs: Long): String {
+        val last = if (lastMs <= 0L) "—"
+        else String.format(java.util.Locale.US, "%.1f s", lastMs / 1000.0)
+        return "$last · Σ ${formatComputeTotal(totalMs)}"
+    }
+
+    private fun formatComputeTotal(ms: Long): String {
+        val totalSec = ms / 1000.0
+        if (totalSec < 60.0) return String.format(java.util.Locale.US, "%.0f s", totalSec)
+        val m = (totalSec / 60).toInt()
+        val s = (totalSec % 60).toInt()
+        return String.format(java.util.Locale.US, "%dm %02ds", m, s)
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()

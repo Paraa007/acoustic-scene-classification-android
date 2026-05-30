@@ -154,5 +154,11 @@ data class UiState(
     val sessionElapsedMs: Long = 0L,
     // Average volume (mean) accumulated across every cycle's mean — shown on Results Summary.
     val sessionVolumeMean: Float = 0f,
-    val sessionVolumeMeanSampleCount: Int = 0
+    val sessionVolumeMeanSampleCount: Int = 0,
+    // Compute (inference) time, in ms. [lastCycleComputeMs] is the wall-clock the
+    // last cycle spent on mel + inference (i.e. the gap on top of the 10 s
+    // recording); [sessionComputeMs] is the running sum across the session. Both
+    // are surfaced on the live recording screen.
+    val lastCycleComputeMs: Long = 0L,
+    val sessionComputeMs: Long = 0L
 )
