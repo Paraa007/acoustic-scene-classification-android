@@ -483,6 +483,7 @@ object ModernDialogHelper {
                 mcContainer.addView(modelHeader)
 
                 // LONG sub-mode distributions for this model (Standard / Fast / Avg).
+                var renderedAnyDistribution = false
                 LongSubMode.entries.forEach { sub ->
                     val subRecords = recordsWithSubs.mapNotNull { rec ->
                         rec.longSubResults?.firstOrNull {
@@ -506,22 +507,16 @@ object ModernDialogHelper {
                         val percentage = if (total > 0) (count / total * 100).toInt() else 0
                         mcContainer.addView(buildModelClassRow(context, scene, count, percentage, density))
                     }
+                    renderedAnyDistribution = true
                 }
 
-                // ALL-IN-ONE distribution for this model.
-                val allInOneResults = recordsWithAllInOne.mapNotNull { rec ->
-                    rec.allInOneResults?.firstOrNull { it.modelName == modelName }
-                }
-                if (allInOneResults.isNotEmpty()) {
-                    val sectionLabel = TextView(context).apply {
-                        text = "All-in-one distribution"
-                        textSize = 12f
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-                        setPadding((10 * density).toInt(), 8, 0, 4)
+                // The all-in-one distribution is identical to Standard for these
+                // models, so we only fall back to it when a model carries no
+                // sub-mode results at all — never as a redundant second block.
+                if (!renderedAnyDistribution) {
+                    val allInOneResults = recordsWithAllInOne.mapNotNull { rec ->
+                        rec.allInOneResults?.firstOrNull { it.modelName == modelName }
                     }
-                    mcContainer.addView(sectionLabel)
-
                     val dist = allInOneResults.groupBy { it.sceneClass }.mapValues { it.value.size }
                     val total = allInOneResults.size.toFloat()
                     dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
