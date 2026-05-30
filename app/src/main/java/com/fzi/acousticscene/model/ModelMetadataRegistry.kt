@@ -36,6 +36,18 @@ object ModelMetadataRegistry {
     fun hasAccuracy(context: Context, modelFilename: String): Boolean =
         get(context, modelFilename)?.testAccuracy != null
 
+    /**
+     * Orders model filenames by recorded test accuracy, best first. Models
+     * without a test accuracy sort last; ties fall back to filename order so
+     * the list stays stable across calls.
+     */
+    fun sortByTestAccuracyDesc(context: Context, models: List<String>): List<String> =
+        models.sortedWith(
+            compareByDescending<String> {
+                get(context, it)?.testAccuracy ?: Double.NEGATIVE_INFINITY
+            }.thenBy { it }
+        )
+
     /** Drops the in-memory cache. Mostly useful in tests. */
     fun reload() { cache = null }
 

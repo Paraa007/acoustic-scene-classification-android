@@ -17,6 +17,7 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.LastConfigStore
 import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.ModelMetadataRegistry
 import com.fzi.acousticscene.model.WizardIntent
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.flow.combine
@@ -145,10 +146,10 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
 
     private fun listAvailableModels(): List<String> {
         return try {
-            requireContext().assets.list(ModelConfig.DEV_MODELS_DIR)
+            val files = requireContext().assets.list(ModelConfig.DEV_MODELS_DIR)
                 ?.filter { it.endsWith(".pt") }
-                ?.sorted()
                 ?: emptyList()
+            ModelMetadataRegistry.sortByTestAccuracyDesc(requireContext(), files)
         } catch (_: Exception) {
             emptyList()
         }
