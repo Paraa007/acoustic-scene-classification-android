@@ -140,6 +140,212 @@ object ModelInfoRegistry {
                 90.0,               // 7 Culture / Quiet
                 98.50746268656717   // 8 Living Room
             )
+        ),
+        // Grid Search 05-16 — best model per batch size (10 s, CP-Mobile).
+        "dcase2025_10s_05_16_8bt.pt" to ModelInfo(
+            fileName = "dcase2025_10s_05_16_8bt.pt",
+            runId = 26,
+            batchSize = 8,
+            learningRate = 0.002,
+            weightDecay = 0.0001,
+            dropout = 0.15,
+            labelSmoothing = 0.2,
+            valAccuracy = 95.71,
+            testAccuracy = 92.79,
+            testBalancedAccuracy = 92.48,
+            testMacroF1 = 92.59,
+            testWeightedF1 = 92.75,
+            testMacroPrecision = 92.85,
+            testMacroRecall = 92.48,
+            // testWeightedPrecision not in source report
+            testWeightedRecall = 92.79,
+            valTestDiff = -2.92,
+            bestEpoch = 84,
+            totalEpochs = 99,
+            trainValGap = -16.72,
+            perClassF1 = listOf(
+                94.10,  // 0 Transit / Vehicles
+                89.40,  // 1 Urban / Waiting
+                94.90,  // 2 Nature
+                87.00,  // 3 Social
+                96.30,  // 4 Work
+                88.50,  // 5 Commercial
+                100.00, // 6 Leisure / Sport
+                92.30,  // 7 Culture / Quiet
+                90.90   // 8 Living Room
+            ),
+            augmentations = listOf("Freq-MixStyle", "SpecAugment", "Mixup")
+        ),
+        "dcase2025_10s_05_16_16bt.pt" to ModelInfo(
+            fileName = "dcase2025_10s_05_16_16bt.pt",
+            runId = 97,
+            batchSize = 16,
+            learningRate = 0.004,
+            weightDecay = 0.0001,
+            dropout = 0.15,
+            labelSmoothing = 0.1,
+            valAccuracy = 96.61,
+            testAccuracy = 93.24,
+            testBalancedAccuracy = 92.95,
+            testMacroF1 = 93.17,
+            testWeightedF1 = 93.25,
+            testMacroPrecision = 93.61,
+            testMacroRecall = 92.95,
+            // testWeightedPrecision not in source report
+            testWeightedRecall = 93.24,
+            valTestDiff = -3.37,
+            bestEpoch = 77,
+            totalEpochs = 92,
+            trainValGap = -11.39,
+            perClassF1 = listOf(
+                92.00,  // 0 Transit / Vehicles
+                87.50,  // 1 Urban / Waiting
+                94.90,  // 2 Nature
+                89.40,  // 3 Social
+                100.00, // 4 Work
+                86.80,  // 5 Commercial
+                98.00,  // 6 Leisure / Sport
+                96.20,  // 7 Culture / Quiet
+                93.80   // 8 Living Room
+            ),
+            augmentations = listOf("Freq-MixStyle", "SpecAugment", "Mixup")
+        ),
+        "dcase2025_10s_05_16_32bt.pt" to ModelInfo(
+            fileName = "dcase2025_10s_05_16_32bt.pt",
+            runId = 101,
+            batchSize = 32,
+            learningRate = 0.004,
+            weightDecay = 0.0001,
+            dropout = 0.25,
+            labelSmoothing = 0.1,
+            valAccuracy = 95.71,
+            testAccuracy = 92.79,
+            testBalancedAccuracy = 92.41,
+            testMacroF1 = 92.41,
+            testWeightedF1 = 92.76,
+            testMacroPrecision = 92.49,
+            testMacroRecall = 92.41,
+            // testWeightedPrecision not in source report
+            testWeightedRecall = 92.79,
+            valTestDiff = -2.92,
+            bestEpoch = 88,
+            totalEpochs = 100,
+            trainValGap = -6.11,
+            perClassF1 = listOf(
+                94.10,  // 0 Transit / Vehicles
+                85.70,  // 1 Urban / Waiting
+                96.60,  // 2 Nature
+                84.40,  // 3 Social
+                98.10,  // 4 Work
+                90.20,  // 5 Commercial
+                100.00, // 6 Leisure / Sport
+                94.30,  // 7 Culture / Quiet
+                88.20   // 8 Living Room
+            ),
+            augmentations = listOf("Freq-MixStyle", "SpecAugment", "Mixup")
+        ),
+        "dcase2025_10s_05_16_64bt.pt" to ModelInfo(
+            fileName = "dcase2025_10s_05_16_64bt.pt",
+            runId = 113,
+            batchSize = 64,
+            learningRate = 0.004,
+            weightDecay = 0.0005,
+            dropout = 0.15,
+            labelSmoothing = 0.1,
+            valAccuracy = 94.36,
+            testAccuracy = 93.69,
+            testBalancedAccuracy = 93.27,
+            testMacroF1 = 93.49,
+            testWeightedF1 = 93.65,
+            testMacroPrecision = 93.92,
+            testMacroRecall = 93.27,
+            // testWeightedPrecision not in source report
+            testWeightedRecall = 93.69,
+            valTestDiff = -0.67,
+            bestEpoch = 86,
+            totalEpochs = 100,
+            trainValGap = -12.90,
+            perClassF1 = listOf(
+                94.10,  // 0 Transit / Vehicles
+                89.40,  // 1 Urban / Waiting
+                96.60,  // 2 Nature
+                84.40,  // 3 Social
+                96.30,  // 4 Work
+                92.60,  // 5 Commercial
+                100.00, // 6 Leisure / Sport
+                94.30,  // 7 Culture / Quiet
+                93.80   // 8 Living Room
+            ),
+            augmentations = listOf("Freq-MixStyle", "SpecAugment", "Mixup")
+        ),
+        "dcase2025_10s_05_16_128bt.pt" to ModelInfo(
+            fileName = "dcase2025_10s_05_16_128bt.pt",
+            runId = 139,
+            batchSize = 128,
+            learningRate = 0.005,
+            weightDecay = 0.0005,
+            dropout = 0.20,
+            labelSmoothing = 0.1,
+            valAccuracy = 91.87,
+            testAccuracy = 90.99,
+            testBalancedAccuracy = 90.79,
+            testMacroF1 = 90.73,
+            testWeightedF1 = 90.95,
+            testMacroPrecision = 90.94,
+            testMacroRecall = 90.79,
+            // testWeightedPrecision not in source report
+            testWeightedRecall = 90.99,
+            valTestDiff = -0.88,
+            bestEpoch = 96,
+            totalEpochs = 100,
+            trainValGap = 3.49,
+            perClassF1 = listOf(
+                87.50,  // 0 Transit / Vehicles
+                87.50,  // 1 Urban / Waiting
+                93.10,  // 2 Nature
+                85.10,  // 3 Social
+                94.50,  // 4 Work
+                92.30,  // 5 Commercial
+                96.00,  // 6 Leisure / Sport
+                92.30,  // 7 Culture / Quiet
+                88.20   // 8 Living Room
+            ),
+            augmentations = listOf("Freq-MixStyle", "SpecAugment", "Mixup")
+        ),
+        // 1 s model (CP-Mobile, 04-06 grid search run 129). 1 s clips drive the
+        // FAST + AVERAGE methods. Augmentations not recorded for this run.
+        "dcase2025_1s_04_06_128bt.pt" to ModelInfo(
+            fileName = "dcase2025_1s_04_06_128bt.pt",
+            runId = 129,
+            batchSize = 128,
+            learningRate = 0.001,
+            weightDecay = 0.0002,
+            dropout = 0.2,
+            labelSmoothing = 0.2,
+            valAccuracy = 94.65761511216057,
+            testAccuracy = 88.19617622610141,
+            testBalancedAccuracy = 88.47546262852426,
+            testMacroF1 = 88.60868687110961,
+            testWeightedF1 = 88.1750117800212,
+            testMacroPrecision = 89.12085389547222,
+            testMacroRecall = 88.47546262852426,
+            testWeightedPrecision = 88.53223052223885,
+            testWeightedRecall = 88.19617622610141,
+            valTestDiff = -6.461438886059156,
+            bestEpoch = 51,
+            totalEpochs = 66,
+            trainValGap = 81.47651683128402,
+            perClassF1 = listOf(
+                88.56382978723404,  // 0 Transit / Vehicles
+                81.602172437203,    // 1 Urban / Waiting
+                93.45670852610706,  // 2 Nature
+                83.46055979643766,  // 3 Social
+                94.16725228390725,  // 4 Work
+                79.85507246376812,  // 5 Commercial
+                90.08498583569406,  // 6 Leisure / Sport
+                88.82870683818551,  // 7 Culture / Quiet
+                97.45889387144993   // 8 Living Room
+            )
         )
     )
 

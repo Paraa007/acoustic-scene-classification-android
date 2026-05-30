@@ -19,7 +19,10 @@ data class ModelInfo(
     val testWeightedF1: Double,
     val testMacroPrecision: Double,
     val testMacroRecall: Double,
-    val testWeightedPrecision: Double,
+    // Null when the source report didn't include the weighted precision (the
+    // grid-search summaries only carry macro precision/recall + weighted F1).
+    // Not surfaced in the UI; kept for data completeness.
+    val testWeightedPrecision: Double? = null,
     val testWeightedRecall: Double,
     val valTestDiff: Double,
     val bestEpoch: Int,
