@@ -505,6 +505,7 @@
     <string name="live_tile_label_elapsed_total">Elapsed / Total</string>
     <string name="live_legend_session">Session</string>
     <string name="live_legend_cycle">Cycle</string>
+    <string name="live_legend_inference">Inference</string>
     <string name="live_section_predictions">Live Predictions</string>
     <string name="live_section_models_count">%1$d models</string>
     <string name="live_section_models_count_one">1 model</string>
@@ -540,9 +541,10 @@
 
     <!-- v2 Wizard · Interval pause + Session duration slider step (slide 06b/07) -->
     <string name="wizard_interval_pause_eyebrow">Pause length</string>
-    <string name="wizard_interval_pause_hint">Pick the gap between two recordings. 15 min steps, 0 to 6 h.</string>
+    <string name="wizard_interval_pause_hint">Pick the gap between two recordings. 5, 10, 15 min, then 15 min steps up to 3 h.</string>
     <string name="wizard_session_duration_eyebrow">Total runtime</string>
-    <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 0 to 12 h.</string>
+    <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 15 min to 12 h, or stop manually.</string>
     <string name="wizard_session_duration_stop_manually">Stop manually</string>
     <string name="wizard_slider_zero">No pause</string>
+    <string name="wizard_section_test_session">Test session</string>
 </resources>
