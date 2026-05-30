@@ -15,7 +15,9 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
+import com.fzi.acousticscene.model.LongSubResult
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.ModelTrainingDuration
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
@@ -405,12 +407,15 @@ object ModernDialogHelper {
                 distributionContainer.addView(itemView)
             }
 
-        // Method Comparison section — visible when any LONG record carries sub-mode results.
-        // Multi-Model Evaluation: each LongSubResult also carries a `modelName`. We group
-        // first by model, then per (model × sub-mode) show one distribution stack so the
-        // user sees how each model performs under each evaluation method.
+        // Model comparison section — a SINGLE render pass over the union of all
+        // models that carry either LONG sub-mode results or ALL-IN-ONE results.
+        // Both kinds used to render their own per-model header into this same
+        // container, so a record carrying BOTH made each model appear twice. We
+        // now emit exactly one header per model and hang both kinds of
+        // distribution underneath it.
         val recordsWithSubs = packageRecords.filter { !it.longSubResults.isNullOrEmpty() }
-        if (recordsWithSubs.isNotEmpty()) {
+        val recordsWithAllInOne = packageRecords.filter { !it.allInOneResults.isNullOrEmpty() }
+        if (recordsWithSubs.isNotEmpty() || recordsWithAllInOne.isNotEmpty()) {
             dialog.findViewById<TextView>(R.id.modelDistributionHeader).visibility = View.GONE
             distributionContainer.visibility = View.GONE
             val mcDivider = dialog.findViewById<View>(R.id.methodComparisonDivider)
@@ -419,40 +424,73 @@ object ModernDialogHelper {
             mcDivider.visibility = View.VISIBLE
             mcHeader.visibility = View.VISIBLE
             mcContainer.visibility = View.VISIBLE
+            // When all-in-one results are present the section is genuinely a model
+            // comparison; otherwise the XML default ("Method comparison") still fits.
+            if (recordsWithAllInOne.isNotEmpty()) {
+                mcHeader.text = context.getString(R.string.all_in_one_comparison_header)
+            }
 
-            // Distinct model names actually present in the LONG sub-results. Records
-            // persisted before the Multi-Model migration carry modelName == null —
-            // those collapse into a single "primary" group keyed by `null`.
-            val modelNames = recordsWithSubs
-                .flatMap { it.longSubResults ?: emptyList() }
-                .map { it.modelName }
-                .distinct()
+            val density = context.resources.displayMetrics.density
 
-            modelNames.forEach { mName ->
-                // Per-model header — for legacy null-named entries, fall back to the
-                // record's primary model name so the stack still reads coherently.
-                val displayedModel = mName ?: recordsWithSubs.firstOrNull()?.modelName ?: "model"
+            // Effective model name for a LONG sub-result: legacy records persisted
+            // before the Multi-Model migration carry modelName == null, so fall back
+            // to the owning record's primary model name. This lets a null-named LONG
+            // group merge with an all-in-one group that names the same model.
+            fun effectiveLongName(rec: PredictionRecord, sub: LongSubResult): String =
+                sub.modelName ?: rec.modelName
+
+            // Union of model names across BOTH sources, first-seen order preserved.
+            val modelNames = LinkedHashSet<String>().apply {
+                recordsWithSubs.forEach { rec ->
+                    rec.longSubResults?.forEach { add(effectiveLongName(rec, it)) }
+                }
+                recordsWithAllInOne.forEach { rec ->
+                    rec.allInOneResults?.forEach { add(it.modelName) }
+                }
+            }.toList()
+
+            modelNames.forEachIndexed { index, modelName ->
+                // Thin divider before every model section except the first.
+                if (index > 0) {
+                    val divider = View(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            (1 * density).toInt()
+                        ).apply {
+                            topMargin = (12 * density).toInt()
+                            bottomMargin = (6 * density).toInt()
+                        }
+                        setBackgroundColor(ContextCompat.getColor(context, R.color.hairline))
+                    }
+                    mcContainer.addView(divider)
+                }
+
+                // One bold, larger header per model + a clip-length badge ([10s]/[1s]).
+                val clipSeconds = ModelTrainingDuration.secondsForFilename(modelName)
                 val modelHeader = TextView(context).apply {
-                    text = "🧠 ${displayedModel.stripModelSuffix()}"
-                    textSize = 14f
+                    text = "🧠 ${modelName.stripModelSuffix()}  [${clipSeconds}s]"
+                    textSize = 16f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                     setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                    setPadding(0, 16, 0, 4)
+                    setPadding(0, if (index == 0) 4 else 0, 0, 4)
                 }
                 mcContainer.addView(modelHeader)
 
+                // LONG sub-mode distributions for this model (Standard / Fast / Avg).
                 LongSubMode.entries.forEach { sub ->
                     val subRecords = recordsWithSubs.mapNotNull { rec ->
-                        rec.longSubResults?.firstOrNull { it.subMode == sub && it.modelName == mName }
+                        rec.longSubResults?.firstOrNull {
+                            it.subMode == sub && effectiveLongName(rec, it) == modelName
+                        }
                     }
                     if (subRecords.isEmpty()) return@forEach
 
                     val sectionLabel = TextView(context).apply {
-                        text = "  ${sub.label} (${sub.hint})"
-                        textSize = 13f
+                        text = "${sub.label} (${sub.hint})"
+                        textSize = 12f
                         setTypeface(null, android.graphics.Typeface.BOLD)
                         setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-                        setPadding(0, 8, 0, 4)
+                        setPadding((10 * density).toInt(), 8, 0, 4)
                     }
                     mcContainer.addView(sectionLabel)
 
@@ -460,54 +498,30 @@ object ModernDialogHelper {
                     val total = subRecords.size.toFloat()
                     dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
                         val percentage = if (total > 0) (count / total * 100).toInt() else 0
-                        val row = createDistributionItemWithProgress(context, scene, count, percentage)
-                        mcContainer.addView(row)
+                        mcContainer.addView(buildModelClassRow(context, scene, count, percentage, density))
                     }
                 }
-            }
-        }
 
-        // ALL-IN-ONE: Model comparison section — visible when any record carries
-        // per-model results. Shows one distribution stack per model, identical in
-        // shape to the LONG sub-mode comparison.
-        val recordsWithAllInOne = packageRecords.filter { !it.allInOneResults.isNullOrEmpty() }
-        if (recordsWithAllInOne.isNotEmpty()) {
-            dialog.findViewById<TextView>(R.id.modelDistributionHeader).visibility = View.GONE
-            distributionContainer.visibility = View.GONE
-            val mcDivider = dialog.findViewById<View>(R.id.methodComparisonDivider)
-            val mcHeader = dialog.findViewById<TextView>(R.id.methodComparisonHeader)
-            val mcContainer = dialog.findViewById<LinearLayout>(R.id.methodComparisonContainer)
-            mcDivider.visibility = View.VISIBLE
-            mcHeader.visibility = View.VISIBLE
-            mcContainer.visibility = View.VISIBLE
-            mcHeader.text = context.getString(R.string.all_in_one_comparison_header)
-
-            val modelNames = recordsWithAllInOne
-                .flatMap { it.allInOneResults ?: emptyList() }
-                .map { it.modelName }
-                .distinct()
-
-            modelNames.forEach { name ->
-                val perModelResults = recordsWithAllInOne.mapNotNull { rec ->
-                    rec.allInOneResults?.firstOrNull { it.modelName == name }
+                // ALL-IN-ONE distribution for this model.
+                val allInOneResults = recordsWithAllInOne.mapNotNull { rec ->
+                    rec.allInOneResults?.firstOrNull { it.modelName == modelName }
                 }
-                if (perModelResults.isEmpty()) return@forEach
+                if (allInOneResults.isNotEmpty()) {
+                    val sectionLabel = TextView(context).apply {
+                        text = "All-in-one distribution"
+                        textSize = 12f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                        setPadding((10 * density).toInt(), 8, 0, 4)
+                    }
+                    mcContainer.addView(sectionLabel)
 
-                val sectionLabel = TextView(context).apply {
-                    text = "🧠 ${name.stripModelSuffix()}"
-                    textSize = 14f
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                    setPadding(0, 12, 0, 6)
-                }
-                mcContainer.addView(sectionLabel)
-
-                val dist = perModelResults.groupBy { it.sceneClass }.mapValues { it.value.size }
-                val total = perModelResults.size.toFloat()
-                dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
-                    val percentage = if (total > 0) (count / total * 100).toInt() else 0
-                    val row = createDistributionItemWithProgress(context, scene, count, percentage)
-                    mcContainer.addView(row)
+                    val dist = allInOneResults.groupBy { it.sceneClass }.mapValues { it.value.size }
+                    val total = allInOneResults.size.toFloat()
+                    dist.entries.sortedByDescending { it.value }.forEach { (scene, count) ->
+                        val percentage = if (total > 0) (count / total * 100).toInt() else 0
+                        mcContainer.addView(buildModelClassRow(context, scene, count, percentage, density))
+                    }
                 }
             }
         }
@@ -869,6 +883,30 @@ object ModernDialogHelper {
     /**
      * Creates a distribution item with emoji, name, count, and progress bar
      */
+    /**
+     * Compact, slightly-indented class row for the per-model comparison stacks.
+     * Reuses [createDistributionItemWithProgress] and only tightens the type sizes
+     * and adds a left inset so these rows read as subordinate to the model header.
+     */
+    private fun buildModelClassRow(
+        context: Context,
+        scene: SceneClass,
+        count: Int,
+        percentage: Int,
+        density: Float
+    ): View {
+        val row = createDistributionItemWithProgress(context, scene, count, percentage)
+        row.findViewById<TextView>(R.id.classNameText)?.textSize = 11f
+        row.findViewById<TextView>(R.id.countText)?.textSize = 10f
+        row.setPadding(
+            (10 * density).toInt(),
+            row.paddingTop,
+            row.paddingRight,
+            row.paddingBottom
+        )
+        return row
+    }
+
     private fun createDistributionItemWithProgress(
         context: Context,
         scene: SceneClass,
