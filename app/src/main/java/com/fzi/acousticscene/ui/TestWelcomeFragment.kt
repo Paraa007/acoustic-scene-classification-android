@@ -23,6 +23,7 @@ import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.QuickstartRepository
 import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.ModelConfig
+import com.fzi.acousticscene.model.ModelMetadataRegistry
 import com.fzi.acousticscene.model.QuickstartSlot
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.WizardIntent
@@ -303,10 +304,10 @@ class TestWelcomeFragment : Fragment(R.layout.fragment_test_welcome) {
     }
 
     private fun listAvailableModels(): List<String> = try {
-        requireContext().assets.list(ModelConfig.DEV_MODELS_DIR)
+        val files = requireContext().assets.list(ModelConfig.DEV_MODELS_DIR)
             ?.filter { it.endsWith(".pt") }
-            ?.sorted()
             ?: emptyList()
+        ModelMetadataRegistry.sortByTestAccuracyDesc(requireContext(), files)
     } catch (_: Exception) {
         emptyList()
     }
