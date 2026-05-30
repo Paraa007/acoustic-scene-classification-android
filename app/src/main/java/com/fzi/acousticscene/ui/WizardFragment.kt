@@ -54,6 +54,13 @@ import kotlinx.coroutines.launch
  */
 class WizardFragment : Fragment(R.layout.fragment_wizard) {
 
+    private companion object {
+        // Interval-pause stops, in minutes. Fine-grained at the low end
+        // (5/10/15) so short cadences are reachable, then 15-min steps up to 3 h.
+        val INTERVAL_PAUSE_STEP_MINUTES =
+            listOf(5, 10, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180)
+    }
+
     private val viewModel: MainViewModel by activityViewModels()
 
     private lateinit var headerText: TextView
@@ -701,37 +708,35 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     /**
-     * Interval-Pause step (slide 06b): a 15-min-step slider from 0 to 6 h.
-     * Mirrors the visual language of the live-recording pause picker. The
-     * wizard's own Next/Back chrome handles navigation, so this step has no
-     * Confirm/Cancel buttons. The user picks any value (including 0) and
-     * advances via the bottom primary button.
+     * Interval-Pause step (slide 06b): a slider over fixed stops. The low end is
+     * fine-grained (5 / 10 / 15 min) so short test cadences are reachable, then
+     * it continues in 15-min steps up to 3 h. A pause of 0 would be back-to-back
+     * recording (i.e. Continuous), so the slider starts at 5 min and never hits 0.
      */
     private fun renderIntervalPause(state: WizardViewState) {
-        // 1..12 steps, each step = 15 min → total 15 min..3 h. A pause of 0
-        // would be back-to-back recording (i.e. Continuous), so the slider
-        // starts at 15 min and never reaches 0.
-        val minSteps = 1
-        val maxSteps = 12
-        val initialSteps = (state.intervalPause?.pauseMinutes ?: 30)
-            .coerceIn(minSteps * 15, maxSteps * 15) / 15
-        val tickLabels = listOf("15min", "1h", "2h", "3h")
+        val stepValues = INTERVAL_PAUSE_STEP_MINUTES
+        val maxSteps = stepValues.lastIndex
+        val current = state.intervalPause?.pauseMinutes
+        val initialSteps = current?.let { c ->
+            val i = stepValues.indexOfFirst { it >= c }
+            if (i >= 0) i else stepValues.lastIndex
+        } ?: stepValues.indexOf(15)
+        val tickLabels = listOf("5min", "1h", "2h", "3h")
         addSliderStep(
             eyebrowRes = R.string.wizard_interval_pause_eyebrow,
             hintRes = R.string.wizard_interval_pause_hint,
             initialSteps = initialSteps,
             maxSteps = maxSteps,
             tickLabels = tickLabels,
-            minSteps = minSteps,
+            stepValuesMinutes = stepValues,
             onChange = { steps ->
-                val minutes = steps * 15
-                viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(minutes))
+                viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(stepValues[steps]))
             }
         )
         // First time on this step (no pause picked yet) — push the slider's
         // default value into the wizard state so the next button enables.
         if (state.intervalPause == null) {
-            viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(initialSteps * 15))
+            viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(stepValues[initialSteps]))
         }
     }
 
@@ -749,8 +754,12 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         tickLabels: List<String>,
         minSteps: Int = 0,
         displayOverride: String? = null,
+        stepValuesMinutes: List<Int>? = null,
         onChange: (Int) -> Unit
     ): Slider {
+        // Minutes represented by a slider position: a lookup when the steps are
+        // non-uniform (interval pause), otherwise the plain 15-min grid.
+        fun minutesAt(step: Int): Int = stepValuesMinutes?.getOrNull(step) ?: (step * 15)
         val ctx = requireContext()
         val card = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -791,7 +800,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             typeface = Typeface.MONOSPACE
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            text = displayOverride ?: formatSliderValueLabel(initialSteps)
+            text = displayOverride ?: formatMinutesLabel(minutesAt(initialSteps))
         }
         headerRow.addView(durationDisplay)
         card.addView(headerRow)
@@ -830,7 +839,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             layoutParams = lp
             addOnChangeListener { _, v, _ ->
                 val steps = v.toInt()
-                durationDisplay.text = formatSliderValueLabel(steps)
+                durationDisplay.text = formatMinutesLabel(minutesAt(steps))
                 onChange(steps)
             }
         }
@@ -870,12 +879,14 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         return slider
     }
 
+    /** Uniform-grid helper: formats the value at a 15-min slider step. */
+    private fun formatSliderValueLabel(steps: Int): String = formatMinutesLabel(steps * 15)
+
     /**
-     * Slider-value display: "No pause" at 0, "X min" under an hour,
-     * "Xh" on the hour, otherwise "Xh Ymin".
+     * Value display: "No pause" at 0, "X min" under an hour, "Xh" on the hour,
+     * otherwise "Xh Ymin".
      */
-    private fun formatSliderValueLabel(steps: Int): String {
-        val totalMinutes = steps * 15
+    private fun formatMinutesLabel(totalMinutes: Int): String {
         if (totalMinutes <= 0) return getString(R.string.wizard_slider_zero)
         if (totalMinutes < 60) return "$totalMinutes min"
         val hours = totalMinutes / 60
@@ -981,7 +992,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             addSummaryRow(
                 label = getString(R.string.wizard_summary_pause),
                 value = state.intervalPause?.let {
-                    formatSliderValueLabel(it.pauseMinutes / 15)
+                    formatMinutesLabel(it.pauseMinutes)
                 }.orEmpty(),
                 step = WizardStep.IntervalPause,
                 tappable = tappable
