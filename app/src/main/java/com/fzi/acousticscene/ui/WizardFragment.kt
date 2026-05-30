@@ -229,7 +229,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         val existing = repo.getAll()
         val labels = existing.map { slot ->
             getString(R.string.test_welcome_slot_label, slot.index) +
-                " — " + slot.config.slotDescription()
+                ": " + slot.config.slotDescription()
         }.toTypedArray()
         val ctx = requireContext()
         val dialog = androidx.appcompat.app.AlertDialog.Builder(ctx)
