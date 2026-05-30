@@ -370,6 +370,13 @@
     <string name="pause_picker_subtitle">Pick a timer or pause without a limit. The current cycle finishes before the pause begins.</string>
     <string name="pause_picker_no_timer">No timer (manual resume)</string>
 
+    <!-- Active-session banner shown on the hub screens while a recording runs -->
+    <string name="active_banner_continuous">Recording — Continuous</string>
+    <string name="active_banner_interval">Recording — Interval</string>
+    <string name="active_banner_secondary">%1$s · %2$s</string>
+    <string name="active_banner_model_extra">%1$s +%2$d</string>
+    <string name="active_banner_open">Open running session</string>
+
     <!-- Results Summary -->
     <string name="results_summary_title">Session ended</string>
     <string name="results_back_home">Back to home</string>

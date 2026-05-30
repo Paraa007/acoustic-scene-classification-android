@@ -48,7 +48,21 @@ import kotlinx.coroutines.launch
  */
 class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
 
+    companion object {
+        /**
+         * Boolean nav/bundle arg. true when this screen was opened to re-attach to
+         * an already-running session (hub banner tap or notification), false on the
+         * normal wizard → live path. Re-entry changes the back behaviour: instead
+         * of being a no-op while classifying, back pops to the hub and leaves the
+         * session running in the foreground service.
+         */
+        const val ARG_REENTRY = "reentry"
+    }
+
     private val viewModel: MainViewModel by activityViewModels()
+
+    /** Set in onViewCreated from [ARG_REENTRY]. */
+    private var isReentry = false
 
     private lateinit var statusLabel: TextView
     private lateinit var stopwatch: ConcentricStopwatchView
@@ -106,6 +120,12 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        isReentry = arguments?.getBoolean(ARG_REENTRY, false) == true
+        if (isReentry) {
+            // Re-attaching to a session that's already running — never trigger the
+            // auto-start path, the foreground service is already recording.
+            hasAutoStarted = true
+        }
         statusLabel = view.findViewById(R.id.liveStatusLabel)
         stopwatch = view.findViewById(R.id.liveStopwatch)
         modelCardsContainer = view.findViewById(R.id.liveModelCardsContainer)
@@ -198,6 +218,13 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     }
 
     private fun handleBack() {
+        // Re-entry: we walked in to peek at a running session. Back just returns
+        // to the hub and leaves the session running in the foreground service —
+        // it must NOT stop or clear anything.
+        if (isReentry) {
+            findNavController().popBackStack()
+            return
+        }
         if (viewModel.isClassifying()) return
         viewModel.clearSessionResults()
         findNavController().popBackStack()

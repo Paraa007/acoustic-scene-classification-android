@@ -77,6 +77,16 @@
             android:textStyle="bold"
             android:lineSpacingMultiplier="1.2" />
 
+        <!-- Active-session banner: gone unless a recording is running. Tapping it
+             re-attaches to the live screen (the session keeps running). -->
+        <include
+            android:id="@+id/welcomeActiveBanner"
+            layout="@layout/view_active_session_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone" />
+
         <!-- Primary CTA: Start new session -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNewSession"
