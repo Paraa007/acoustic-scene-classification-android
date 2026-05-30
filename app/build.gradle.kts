@@ -3,6 +3,12 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+// Release signing is opt-in: only active when FZI_RELEASE_STORE_FILE is set
+// via ~/.gradle/gradle.properties or ENV. Otherwise the release APK falls
+// back to the default debug signing (good enough for local R8/minify tests).
+val releaseSigningEnabled =
+    (project.findProperty("FZI_RELEASE_STORE_FILE") as String?)?.isNotBlank() == true
+
 android {
     namespace = "com.fzi.acousticscene"
     compileSdk {
@@ -19,13 +25,28 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (releaseSigningEnabled) {
+            create("release") {
+                storeFile = file(project.property("FZI_RELEASE_STORE_FILE") as String)
+                storePassword = project.property("FZI_RELEASE_STORE_PASSWORD") as String
+                keyAlias = project.property("FZI_RELEASE_KEY_ALIAS") as String
+                keyPassword = project.property("FZI_RELEASE_KEY_PASSWORD") as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (releaseSigningEnabled) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

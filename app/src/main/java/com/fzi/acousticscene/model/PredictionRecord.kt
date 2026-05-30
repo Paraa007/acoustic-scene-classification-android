@@ -208,17 +208,17 @@ data class PredictionRecord(
                 id.toString(),
                 getFormattedDateTime(),
                 sessionStartStr,
-                sessionDurationStr,
+                escapeCsv(sessionDurationStr),
                 "",                       // battery
                 "",                       // class_display_name
                 "0",                      // confidence_percent
                 "",                       // inference_time_sec
                 "PAUSE",                  // recording_mode → "PAUSE" makes filtering trivial
                 "",                       // model_name
-                modelsSelectedStr,
-                categoryStr,
-                continuousMethodsStr,
-                intervalMethodsStr,
+                escapeCsv(modelsSelectedStr),
+                escapeCsv(categoryStr),
+                escapeCsv(continuousMethodsStr),
+                escapeCsv(intervalMethodsStr),
                 pauseAutoResumeStr,
                 "", "", "", "", "", "",   // top1..top3
                 "",                       // probabilities
@@ -253,8 +253,8 @@ data class PredictionRecord(
         // Batterie-Level (oder "N/A" wenn unbekannt)
         val batteryString = if (batteryLevel >= 0) batteryLevel.toString() else "N/A"
 
-        // User evaluation column (empty if no response)
-        val userClassStr = userSelectedClass?.label?.let { "\"$it\"" } ?: ""
+        // User evaluation column (empty if no response). Escaped — user-configurable input.
+        val userClassStr = userSelectedClass?.label?.let { escapeCsv(it) } ?: ""
 
         // Per-second clips (AVERAGE mode + LONG-with-Avg sub-mode).
         // When per-clip volume was captured (new records) the entry carries
@@ -293,32 +293,32 @@ data class PredictionRecord(
             id.toString(),
             getFormattedDateTime(),
             sessionStartStr,
-            sessionDurationStr,
+            escapeCsv(sessionDurationStr),
             batteryString,
-            "\"${sceneClass.label}\"",
+            escapeCsv(sceneClass.label),
             confidencePercent.toString(),
             String.format(Locale.US, "%.2f", inferenceTimeMs / 1000.0),
-            recordingModeWithTime,
-            modelName,
-            modelsSelectedStr,
-            categoryStr,
-            continuousMethodsStr,
-            intervalMethodsStr,
+            escapeCsv(recordingModeWithTime),
+            escapeCsv(modelName),
+            escapeCsv(modelsSelectedStr),
+            escapeCsv(categoryStr),
+            escapeCsv(continuousMethodsStr),
+            escapeCsv(intervalMethodsStr),
             pauseAutoResumeStr,
             // Top 3 Predictions (ohne Indexe, ohne name)
-            "\"${top1.first.label}\"",
+            escapeCsv(top1.first.label),
             String.format(Locale.US, "%.2f", top1.second * 100),
-            "\"${top2.first.label}\"",
+            escapeCsv(top2.first.label),
             String.format(Locale.US, "%.2f", top2.second * 100),
-            "\"${top3_entry.first.label}\"",
+            escapeCsv(top3_entry.first.label),
             String.format(Locale.US, "%.2f", top3_entry.second * 100),
             probsString,
             userClassStr,
-            "\"$perSecondStr\"",
-            "\"$longStdStr\"",
-            "\"$longFastStr\"",
-            "\"$longAvgStr\"",
-            "\"$longIntervalStr\"",
+            escapeCsv(perSecondStr),
+            escapeCsv(longStdStr),
+            escapeCsv(longFastStr),
+            escapeCsv(longAvgStr),
+            escapeCsv(longIntervalStr),
             volumeMeanCell,
             volumePeakCell
         ) + volumeSecondCells + listOf(
@@ -330,7 +330,7 @@ data class PredictionRecord(
             allInOneModelNames.map { name ->
                 val r = allInOneResults?.firstOrNull { it.modelName == name }
                 if (r != null) {
-                    "\"${r.sceneClass.label}:${(r.confidence * 100).toInt()}%\""
+                    escapeCsv("${r.sceneClass.label}:${(r.confidence * 100).toInt()}%")
                 } else ""
             }
         } else emptyList()
@@ -339,6 +339,33 @@ data class PredictionRecord(
     }
 
     companion object {
+        /**
+         * Escapes a string for safe CSV output.
+         *
+         * Defends against two classes of attack/corruption:
+         *  1. **Formula injection** — Excel/LibreOffice/Numbers interpret cells starting
+         *     with `=`, `+`, `-`, `@`, TAB or CR as formulas. We prefix such values with
+         *     a single quote (`'`), which spreadsheet apps render as plain text. This is
+         *     the OWASP-recommended mitigation.
+         *  2. **RFC 4180 structural breakage** — values containing `,`, `"`, or newline
+         *     must be wrapped in double quotes with embedded quotes doubled.
+         *
+         * Numeric fields (Long/Double/Int rendered via toString or String.format) are
+         * safe by construction and don't need escaping.
+         */
+        internal fun escapeCsv(value: String): String {
+            if (value.isEmpty()) return ""
+            // Formula-injection guard: neutralize leading meta-chars.
+            val deFormula = if (value[0] in "=+-@\t\r") "'$value" else value
+            // RFC 4180 quoting if the value contains structural chars.
+            val needsQuoting = deFormula.any { it == ',' || it == '"' || it == '\n' || it == '\r' }
+            return if (needsQuoting) {
+                "\"" + deFormula.replace("\"", "\"\"") + "\""
+            } else {
+                deFormula
+            }
+        }
+
         /**
          * CSV Header. Spalten in der Reihenfolge wie [toCsvRow] sie erzeugt —
          * gruppiert in Session-Meta (timestamp + Session-Start/Duration), Predict
@@ -365,7 +392,7 @@ data class PredictionRecord(
                     "$volumeSecondCols," +
                     "pause_duration_sec"
             val allInOneCols = if (!allInOneModelNames.isNullOrEmpty()) {
-                "," + allInOneModelNames.joinToString(",") { "allinone_${it.removeSuffix(".pt")}" }
+                "," + allInOneModelNames.joinToString(",") { "allinone_${escapeCsv(it.removeSuffix(".pt"))}" }
             } else ""
             return base + allInOneCols
         }
