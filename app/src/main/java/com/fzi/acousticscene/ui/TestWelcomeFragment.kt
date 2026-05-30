@@ -19,12 +19,14 @@ import com.fzi.acousticscene.data.QuickstartRepository
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.QuickstartSlot
 import com.fzi.acousticscene.model.SessionMode
+import com.fzi.acousticscene.model.WizardIntent
 import com.google.android.material.button.MaterialButton
 
 /**
  * Test mode home — the tester's entry point. Lists up to [QuickstartRepository.MAX_SLOTS]
- * quickstart slots. Filled slots launch the live recording immediately on tap
- * (no wizard, no confirmation). Empty slots are display-only (dashed border).
+ * quickstart slots. Tapping a filled slot opens the wizard's read-only Summary
+ * so the tester can review the config and confirm before recording starts.
+ * Empty slots are display-only (dashed border).
  *
  * Spec: no app logo or title on this screen — the chip + header carry it.
  * Slot descriptions are derived from the config (see [SessionConfig.slotDescription]).
@@ -234,11 +236,17 @@ class TestWelcomeFragment : Fragment(R.layout.fragment_test_welcome) {
     }
 
     private fun launchSlot(slot: QuickstartSlot) {
-        // Stage the config on the ViewModel so LiveRecording reads it via the
-        // shared uiState. applySessionConfig flips appState to Loading and the
-        // recording fragment auto-starts the session once the models load.
-        viewModel.applySessionConfig(slot.config)
-        findNavController().navigate(R.id.action_test_welcome_to_live)
+        // Open the wizard on its read-only Summary page so the tester sees the
+        // slot's config before recording starts and confirms with "Start". The
+        // QuickStartTest intent reuses Quick Start's review screen but keeps the
+        // session tagged as TEST so it lands in test history. The wizard's Start
+        // button stages the config and navigates on to live recording.
+        viewModel.resetWizard(
+            availableModels = listAvailableModels(),
+            prefill = slot.config,
+            intent = WizardIntent.QuickStartTest
+        )
+        findNavController().navigate(R.id.action_test_welcome_to_wizard)
     }
 
     private fun confirmDeleteSlot(slot: QuickstartSlot) {

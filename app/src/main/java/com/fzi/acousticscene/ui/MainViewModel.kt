@@ -59,10 +59,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefill: SessionConfig? = null,
         intent: WizardIntent = WizardIntent.StartRecording
     ) {
-        val isQuickStart = intent is WizardIntent.QuickStart
+        val startOnSummary =
+            intent is WizardIntent.QuickStart || intent is WizardIntent.QuickStartTest
         _wizard.value = if (prefill != null) {
             WizardViewState(
-                step = if (isQuickStart) WizardStep.Summary else WizardStep.Models,
+                step = if (startOnSummary) WizardStep.Summary else WizardStep.Models,
                 availableModels = availableModels,
                 selectedModels = prefill.modelNames.filter { it in availableModels },
                 category = prefill.category,

@@ -40,6 +40,9 @@
         <action
             android:id="@+id/action_test_welcome_to_live"
             app:destination="@id/liveRecordingFragment" />
+        <action
+            android:id="@+id/action_test_welcome_to_wizard"
+            app:destination="@id/wizardFragment" />
     </fragment>
 
     <!-- Configuration mode home — 5 buttons including Configure test mode. -->
