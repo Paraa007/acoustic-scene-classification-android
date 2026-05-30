@@ -1,1 +1,107 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
 /build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+CLAUDE.md
+
+# Model weights and large ML artifacts — never upload to GitHub
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
+*.ptl
+*.bin
+*.h5
+*.ckpt
+*.safetensors
+app/src/main/assets/dev_models/
+app/src/main/assets/user_model/
+
+# Build outputs / APKs / AABs / native libs — large and reproducible
+app/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.so
+# Proguard / R8
+app/proguard/
+app/release/
+mapping.txt
+
+# Claude Code internal state
+.claude/
+
+# Logs / crash dumps
+*.log
+hs_err_pid*
+
+# Kotlin compiled
+*.kotlin_module
+
+# Maestro screenshots & local UI-test artifacts — don't push to GitHub
+.maestro_screenshots/
+maestro_screenshots/
+**/screenshots/
+
+# Images — keep them out of the repo by default.
+# Launcher icons under app/src/main/res/ are whitelisted below.
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.tif
+*.webp
+*.heic
+*.heif
+*.psd
+*.ai
+*.svg
+
+# Whitelist: app resources (launcher icons, drawables shipped with the APK)
+!app/src/main/res/**/*.png
+!app/src/main/res/**/*.jpg
+!app/src/main/res/**/*.jpeg
+!app/src/main/res/**/*.webp
+!app/src/main/res/**/*.gif
+!app/src/main/res/**/*.svg
+!app/src/main/res/**/*.xml
+
+# Audio recordings / samples — large, never commit
+*.wav
+*.mp3
+*.flac
+*.aac
+*.ogg
+*.m4a
+*.opus
+
+# Video
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.tgz
+*.bz2
+*.7z
+*.rar
