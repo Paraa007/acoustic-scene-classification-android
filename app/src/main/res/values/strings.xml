@@ -540,9 +540,9 @@
 
     <!-- v2 Wizard · Interval pause + Session duration slider step (slide 06b/07) -->
     <string name="wizard_interval_pause_eyebrow">Pause length</string>
-    <string name="wizard_interval_pause_hint">Pick the gap between two recordings. 15 min steps, 0 to 6 h.</string>
+    <string name="wizard_interval_pause_hint">Pick the gap between two recordings. 15 min steps, 15 min to 3 h.</string>
     <string name="wizard_session_duration_eyebrow">Total runtime</string>
-    <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 0 to 12 h.</string>
+    <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 15 min to 12 h, or stop manually.</string>
     <string name="wizard_session_duration_stop_manually">Stop manually</string>
     <string name="wizard_slider_zero">No pause</string>
 </resources>
