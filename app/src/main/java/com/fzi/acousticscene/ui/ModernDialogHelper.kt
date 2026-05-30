@@ -389,8 +389,14 @@ object ModernDialogHelper {
             batteryDisplay
         )
 
-        // Most-heard highlight tile — uses the top class from the real records
-        renderMostHeardHighlight(context, dialog, realRecords)
+        // Most-heard highlight tile — uses the top class from the real records.
+        // Only meaningful for single-model sessions; aggregating the top class
+        // across multiple models would be misleading, so hide it otherwise.
+        if (modelNames.size <= 1) {
+            renderMostHeardHighlight(context, dialog, realRecords)
+        } else {
+            dialog.findViewById<View>(R.id.detailMostHeard).visibility = View.GONE
+        }
 
         // Fill model distribution container with progress bars.
         // Wichtig: nur echte Records im Nenner — sonst werden die Prozente durch
