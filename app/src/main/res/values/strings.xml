@@ -169,6 +169,14 @@
     <string name="battery_search_app">Search for \'%1$s\' and select \'Don\'t optimize\'</string>
     <string name="battery_manual_disable">Disable battery optimization manually in settings</string>
 
+    <!-- Microphone permission -->
+    <string name="permission_record_audio_title">Microphone access needed</string>
+    <string name="permission_record_audio_rationale">This app records audio to classify the acoustic scene. Without microphone access there is nothing to record. The audio stays on the device and is not uploaded.</string>
+    <string name="permission_record_audio_settings_message">Microphone access is turned off. Open the app settings and grant the Microphone permission to start recording.</string>
+    <string name="permission_record_audio_grant">Grant access</string>
+    <string name="permission_record_audio_open_settings">Open settings</string>
+    <string name="permission_record_audio_denied_toast">Recording needs microphone access. Tap Start again to retry.</string>
+
     <!-- Dialog labels -->
     <string name="count">Count</string>
     <string name="distribution">Distribution</string>

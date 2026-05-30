@@ -19,3 +19,30 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# PyTorch Mobile — Reflection-basiertes Modell-Loading
+-keep class org.pytorch.** { *; }
+-keep class com.facebook.jni.** { *; }
+-dontwarn org.pytorch.**
+-dontwarn com.facebook.jni.**
+
+# Gson — TypeToken + Reflection
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes EnclosingMethod
+-keepattributes InnerClasses
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep public class * implements com.google.gson.JsonSerializer
+-keep public class * implements com.google.gson.JsonDeserializer
+
+# Eigene Modell-Klassen, die per Gson (de-)serialisiert werden — Felder beibehalten
+-keep class com.fzi.acousticscene.model.** { *; }
+-keep class com.fzi.acousticscene.data.** { *; }
+
+# TarsosDSP
+-keep class be.tarsos.dsp.** { *; }
+-dontwarn be.tarsos.dsp.**
+
+# Coroutines (defensive)
+-dontwarn kotlinx.coroutines.**
