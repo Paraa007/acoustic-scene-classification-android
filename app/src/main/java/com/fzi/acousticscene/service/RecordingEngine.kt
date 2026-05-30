@@ -888,7 +888,7 @@ class RecordingEngine(
         val notification = NotificationCompat.Builder(context, EVALUATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.evaluation_title))
-            .setContentText("${record.sceneClass.emoji} ${record.sceneClass.labelShort}. ${context.getString(R.string.evaluation_tap_to_rate)}")
+            .setContentText(context.getString(R.string.eval_blind_prompt))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

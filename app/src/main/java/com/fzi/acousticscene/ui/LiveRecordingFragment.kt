@@ -573,7 +573,9 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             return
         }
         evaluationCard.visibility = View.VISIBLE
-        evaluationTitle.text = "${pending.modelClass.emoji} ${pending.modelClass.label}: ${getString(R.string.evaluation_question)}"
+        // Blind self-rating: do not reveal the model's class here, only a neutral
+        // prompt. The model guess is shown in EvaluationActivity after the user picks.
+        evaluationTitle.text = getString(R.string.eval_blind_prompt)
         if (renderedEvaluationId != pending.predictionId) {
             renderedEvaluationId = pending.predictionId
             evaluationCountdownJob?.cancel()

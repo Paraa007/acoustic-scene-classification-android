@@ -484,6 +484,13 @@
     <string name="eval_note_hint">Describe the environment</string>
     <string name="eval_note_counter">%1$d / %2$d</string>
     <string name="eval_send">Send</string>
+    <!-- Blind self-rating (anti-anchoring): the model guess stays hidden until the user picks. -->
+    <string name="eval_blind_prompt">A recording just finished. Tap to rate what you heard.</string>
+    <string name="eval_reveal">Reveal model guess</string>
+    <string name="eval_done">Done</string>
+    <string name="eval_match">Match</string>
+    <string name="eval_differs">Different</string>
+    <string name="eval_your_pick">Your pick</string>
 
     <!-- v2 Config Welcome (slide 03) — two-line variant of the app title. -->
     <string name="welcome_title_two_line">Acoustic Scene\nClassification</string>
