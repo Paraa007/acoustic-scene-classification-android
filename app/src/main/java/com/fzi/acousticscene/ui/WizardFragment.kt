@@ -705,17 +705,21 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
      * advances via the bottom primary button.
      */
     private fun renderIntervalPause(state: WizardViewState) {
-        // 0..24 steps, each step = 15 min → total 0..6 h
-        val maxSteps = 24
+        // 1..12 steps, each step = 15 min → total 15 min..3 h. A pause of 0
+        // would be back-to-back recording (i.e. Continuous), so the slider
+        // starts at 15 min and never reaches 0.
+        val minSteps = 1
+        val maxSteps = 12
         val initialSteps = (state.intervalPause?.pauseMinutes ?: 30)
-            .coerceIn(0, maxSteps * 15) / 15
-        val tickLabels = listOf("0", "2h", "4h", "6h")
+            .coerceIn(minSteps * 15, maxSteps * 15) / 15
+        val tickLabels = listOf("15min", "1h", "2h", "3h")
         addSliderStep(
             eyebrowRes = R.string.wizard_interval_pause_eyebrow,
             hintRes = R.string.wizard_interval_pause_hint,
             initialSteps = initialSteps,
             maxSteps = maxSteps,
             tickLabels = tickLabels,
+            minSteps = minSteps,
             onChange = { steps ->
                 val minutes = steps * 15
                 viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(minutes))
@@ -740,6 +744,8 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         initialSteps: Int,
         maxSteps: Int,
         tickLabels: List<String>,
+        minSteps: Int = 0,
+        displayOverride: String? = null,
         onChange: (Int) -> Unit
     ): Slider {
         val ctx = requireContext()
@@ -782,7 +788,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             typeface = Typeface.MONOSPACE
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            text = formatSliderValueLabel(initialSteps)
+            text = displayOverride ?: formatSliderValueLabel(initialSteps)
         }
         headerRow.addView(durationDisplay)
         card.addView(headerRow)
@@ -795,10 +801,10 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         })
 
         val slider = Slider(ctx).apply {
-            valueFrom = 0f
+            valueFrom = minSteps.toFloat()
             valueTo = maxSteps.toFloat()
             stepSize = 1f
-            value = initialSteps.toFloat().coerceIn(0f, maxSteps.toFloat())
+            value = initialSteps.toFloat().coerceIn(minSteps.toFloat(), maxSteps.toFloat())
             ContextCompat.getColorStateList(ctx, R.color.accent_green)?.let {
                 thumbTintList = it
                 trackActiveTintList = it
@@ -881,10 +887,14 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
      * MANUAL value; moving the slider unselects Stop manually.
      */
     private fun renderSessionDuration(state: WizardViewState) {
+        // 1..48 steps, each step = 15 min → total 15 min..12 h. "Stop manually"
+        // is the explicit button below; the slider itself never reaches 0.
+        val minSteps = 1
         val maxSteps = 48
         val currentMin = state.sessionDuration.totalMinutes
-        val initialSteps = (currentMin ?: 30).coerceIn(0, maxSteps * 15) / 15
-        val tickLabels = listOf("0", "3h", "6h", "9h", "12h")
+        val initialSteps = (currentMin ?: 30).coerceIn(minSteps * 15, maxSteps * 15) / 15
+        val tickLabels = listOf("15min", "3h", "6h", "9h", "12h")
+        val manualSelected = state.sessionDuration.isManual
 
         val slider = addSliderStep(
             eyebrowRes = R.string.wizard_session_duration_eyebrow,
@@ -892,13 +902,18 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             initialSteps = initialSteps,
             maxSteps = maxSteps,
             tickLabels = tickLabels,
+            minSteps = minSteps,
+            // When manual is active the big display reads "Stop manually" instead
+            // of a stale duration, mirroring the greyed-out slider below.
+            displayOverride = if (manualSelected) {
+                getString(R.string.wizard_session_duration_stop_manually)
+            } else null,
             onChange = { steps ->
                 val minutes = steps * 15
                 viewModel.wizardSetSessionDuration(SessionDuration.fromMinutes(minutes))
             }
         )
 
-        val manualSelected = state.sessionDuration.isManual
         slider.isEnabled = !manualSelected
         slider.alpha = if (manualSelected) 0.4f else 1f
 
