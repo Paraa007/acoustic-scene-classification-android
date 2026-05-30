@@ -132,7 +132,9 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             return
         }
         when (state.intent) {
-            is WizardIntent.StartRecording, is WizardIntent.QuickStart -> {
+            is WizardIntent.StartRecording,
+            is WizardIntent.QuickStart,
+            is WizardIntent.QuickStartTest -> {
                 // Remind about the battery-optimization exemption if it was
                 // skipped on first launch, then gate on the mic permission
                 // before starting. Recording runs in the foreground service,
@@ -250,7 +252,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             stepDots.visibility = View.GONE
             stepLabel.visibility = View.GONE
             sectionLabel.visibility = View.VISIBLE
-            sectionLabel.text = getString(R.string.welcome_quick_start)
+            sectionLabel.text = sectionLabelFor(state.intent)
             headerText.visibility = View.GONE
             subHeader.visibility = View.GONE
         } else {
@@ -293,6 +295,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     private fun sectionLabelFor(intent: WizardIntent): String = when (intent) {
         is WizardIntent.SaveAsSlot -> getString(R.string.welcome_configure_test)
         is WizardIntent.QuickStart -> getString(R.string.welcome_quick_start)
+        is WizardIntent.QuickStartTest -> getString(R.string.wizard_section_test_session)
         is WizardIntent.StartRecording -> "New session"
     }
 

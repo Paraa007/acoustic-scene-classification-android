@@ -545,4 +545,5 @@
     <string name="wizard_session_duration_hint">Pick how long the session should run. 15 min steps, 15 min to 12 h, or stop manually.</string>
     <string name="wizard_session_duration_stop_manually">Stop manually</string>
     <string name="wizard_slider_zero">No pause</string>
+    <string name="wizard_section_test_session">Test session</string>
 </resources>

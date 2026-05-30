@@ -28,11 +28,19 @@ data class WizardViewState(
     val sessionDuration: SessionDuration = SessionDuration.DEFAULT,
     val intent: WizardIntent = WizardIntent.StartRecording
 ) {
-    /** True when the wizard was entered via Quick Start — Summary is read-only. */
-    val quickStartMode: Boolean get() = intent is WizardIntent.QuickStart
+    /**
+     * True when the Summary is a read-only single page — Quick Start and the
+     * test-slot launch both reuse the same review screen.
+     */
+    val quickStartMode: Boolean
+        get() = intent is WizardIntent.QuickStart || intent is WizardIntent.QuickStartTest
 
     /** True when the wizard exits by saving a quickstart slot instead of launching a session. */
     val saveAsSlotMode: Boolean get() = intent is WizardIntent.SaveAsSlot
+
+    /** Test-mode sessions (slot save + slot launch) are tagged so they land in test history. */
+    val isTestSession: Boolean
+        get() = intent is WizardIntent.SaveAsSlot || intent is WizardIntent.QuickStartTest
 
     /** Branch-aware ordered list of steps for the current category choice. */
     fun stepOrder(): List<WizardStep> = when (category) {
@@ -62,7 +70,7 @@ data class WizardViewState(
             intervalPause = intervalPause,
             intervalMethodsByModel = intervalMethodsByModel,
             sessionDuration = sessionDuration,
-            mode = if (saveAsSlotMode) SessionMode.TEST else SessionMode.CONFIG
+            mode = if (isTestSession) SessionMode.TEST else SessionMode.CONFIG
         )
     }
 }
