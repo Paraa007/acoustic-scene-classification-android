@@ -11,16 +11,24 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.QuickstartRepository
+import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.QuickstartSlot
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.WizardIntent
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 
 /**
  * Test mode home — the tester's entry point. Lists up to [QuickstartRepository.MAX_SLOTS]
@@ -54,7 +62,33 @@ class TestWelcomeFragment : Fragment(R.layout.fragment_test_welcome) {
                 .putExtra(HistoryActivity.EXTRA_MODE_FILTER, SessionMode.TEST.name)
             startActivity(intent)
         }
+        setupActiveSessionBanner(view)
         renderSlots(view)
+    }
+
+    /**
+     * Same running-session card as the Welcome hub: visible only while a session
+     * runs, tapping it re-attaches to the live screen (the recording keeps going
+     * in the background). Reuses the existing test → live nav action with the
+     * re-entry flag set so back returns here instead of being a no-op.
+     */
+    private fun setupActiveSessionBanner(view: View) {
+        val banner = view.findViewById<View>(R.id.testWelcomeActiveBanner)
+        banner.setOnClickListener {
+            findNavController().navigate(
+                R.id.action_test_welcome_to_live,
+                bundleOf(LiveRecordingFragment.ARG_REENTRY to true)
+            )
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ActiveSessionRegistry.active
+                    .combine(RecordingEngineHolder.uiState) { entry, ui -> entry to ui }
+                    .collect { (entry, ui) ->
+                        ActiveSessionBanner.bind(banner, entry != null, ui)
+                    }
+            }
+        }
     }
 
     override fun onResume() {

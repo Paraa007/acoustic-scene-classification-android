@@ -6,14 +6,21 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.LastConfigStore
+import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.WizardIntent
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 
 /**
  * Configuration mode home — the developer's hub. Hosts five buttons:
@@ -105,6 +112,34 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
                 intent = WizardIntent.SaveAsSlot
             )
             findNavController().navigate(R.id.action_welcome_to_wizard)
+        }
+
+        setupActiveSessionBanner(view)
+    }
+
+    /**
+     * Shows a "session is running" card between the title and the CTA whenever a
+     * recording is live in the background, and re-attaches to the live screen on
+     * tap. Visibility is driven by [ActiveSessionRegistry], the copy (mode, model,
+     * elapsed) by [RecordingEngineHolder.uiState] — combined so a single collector
+     * keeps both in sync.
+     */
+    private fun setupActiveSessionBanner(view: View) {
+        val banner = view.findViewById<View>(R.id.welcomeActiveBanner)
+        banner.setOnClickListener {
+            findNavController().navigate(
+                R.id.action_welcome_to_live,
+                bundleOf(LiveRecordingFragment.ARG_REENTRY to true)
+            )
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                com.fzi.acousticscene.data.ActiveSessionRegistry.active
+                    .combine(RecordingEngineHolder.uiState) { entry, ui -> entry to ui }
+                    .collect { (entry, ui) ->
+                        ActiveSessionBanner.bind(banner, entry != null, ui)
+                    }
+            }
         }
     }
 

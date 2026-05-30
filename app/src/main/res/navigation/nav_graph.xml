@@ -56,6 +56,10 @@
         <action
             android:id="@+id/action_welcome_to_settings"
             app:destination="@id/settingsFragment" />
+        <!-- Re-attach to a session that's already running in the background. -->
+        <action
+            android:id="@+id/action_welcome_to_live"
+            app:destination="@id/liveRecordingFragment" />
     </fragment>
 
     <fragment
@@ -73,6 +77,14 @@
         android:id="@+id/liveRecordingFragment"
         android:name="com.fzi.acousticscene.ui.LiveRecordingFragment"
         android:label="Live">
+        <!-- true when we navigated in to re-attach to an already-running session
+             (banner tap / notification), false on the normal wizard → live path.
+             Drives the back behaviour: re-entry pops back to the hub instead of
+             being a no-op while classifying. -->
+        <argument
+            android:name="reentry"
+            app:argType="boolean"
+            android:defaultValue="false" />
         <action
             android:id="@+id/action_live_to_results"
             app:destination="@id/resultsSummaryFragment"

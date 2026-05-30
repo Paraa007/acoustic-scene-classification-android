@@ -59,6 +59,9 @@ class ClassificationService : Service() {
 
         const val ACTION_START = "com.fzi.acousticscene.START_CLASSIFICATION"
         const val ACTION_STOP = "com.fzi.acousticscene.STOP_CLASSIFICATION"
+        // Tells MainActivity that the notification tap should land on the live
+        // recording screen (re-attach), not the nav start destination.
+        const val EXTRA_OPEN_LIVE = "com.fzi.acousticscene.OPEN_LIVE"
         // The recording engine lives inside the service now — these actions let the UI
         // drive the loop without ever touching the engine directly. The actual
         // SessionConfig + pause-timer values are handed over via
@@ -455,7 +458,13 @@ class ClassificationService : Service() {
      * WICHTIG: PRIORITY_HIGH für bessere Behandlung im Doze-Mode!
      */
     private fun createNotification(text: String): Notification {
-        val intent = Intent(this, MainActivity::class.java)
+        val intent = Intent(this, MainActivity::class.java).apply {
+            // Re-attach to the live screen instead of the nav start destination.
+            // SINGLE_TOP so an already-running MainActivity gets onNewIntent rather
+            // than a fresh instance on top of the stack.
+            putExtra(EXTRA_OPEN_LIVE, true)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
         val pendingIntent = PendingIntent.getActivity(
             this,
             0,
