@@ -237,7 +237,9 @@ class RecordingEngine(
                 topClassCountByModelMethod = emptyMap(),
                 sessionVolumeMean = 0f,
                 sessionVolumeMeanSampleCount = 0,
-                allInOneResults = emptyMap()
+                allInOneResults = emptyMap(),
+                lastCycleComputeMs = 0L,
+                sessionComputeMs = 0L
             )
         }
 
@@ -434,7 +436,6 @@ class RecordingEngine(
                             runningAverageResult = primaryRunning
                         )
                     }
-                    delay(60L)
                 }
             }
         }
@@ -451,17 +452,39 @@ class RecordingEngine(
             }
         }
 
-        for ((modelName, inf) in tenSecModels) {
-            if (!isRunning) break
-            val r = withContext(mlDispatcher) { inf.infer(samples, RecordingMode.STANDARD) } ?: continue
-            perModel.getOrPut(modelName) { mutableMapOf() }[LongSubMode.STANDARD] = r
-            state.update { s ->
-                val live = s.liveResultsByModel[modelName].orEmpty() + (LongSubMode.STANDARD to r)
-                s.copy(liveResultsByModel = s.liveResultsByModel + (modelName to live))
+        if (tenSecModels.isNotEmpty()) {
+            // Every 10 s model runs on the same 10 s audio, so the log-mel
+            // spectrogram (the expensive part) is identical — compute it once
+            // and feed each model, instead of recomputing it per model.
+            val sharedMel = withContext(mlDispatcher) {
+                tenSecModels.values.first().computeLogMel(samples, RecordingMode.STANDARD)
+            }
+            for ((modelName, inf) in tenSecModels) {
+                if (!isRunning) break
+                val r = withContext(mlDispatcher) {
+                    if (sharedMel != null) inf.inferFromLogMel(sharedMel)
+                    else inf.infer(samples, RecordingMode.STANDARD)
+                } ?: continue
+                perModel.getOrPut(modelName) { mutableMapOf() }[LongSubMode.STANDARD] = r
+                state.update { s ->
+                    val live = s.liveResultsByModel[modelName].orEmpty() + (LongSubMode.STANDARD to r)
+                    s.copy(liveResultsByModel = s.liveResultsByModel + (modelName to live))
+                }
             }
         }
 
         if (perModel.isEmpty()) return null
+
+        // Wall-clock spent on mel + inference this cycle (the gap on top of the
+        // 10 s recording). Surfaced live and summed across the session.
+        val computeMs = System.currentTimeMillis() - cycleStart
+        state.update {
+            it.copy(
+                lastCycleComputeMs = computeMs,
+                sessionComputeMs = it.sessionComputeMs + computeMs
+            )
+        }
+
         accumulateAggregate(perModel)
         accumulateSessionVolume(volume.mean)
 

@@ -132,15 +132,24 @@ class ModelInference(
      * @return ClassificationResult mit Ergebnis oder null bei Fehler
      */
     suspend fun infer(audioData: FloatArray, mode: RecordingMode = RecordingMode.STANDARD): ClassificationResult? {
+        val logMel = computeLogMel(audioData, mode) ?: return null
+        return inferFromLogMel(logMel)
+    }
+
+    /**
+     * Computes the log-mel spectrogram for [audioData] (the expensive step,
+     * ~150 ms). Split out from [infer] so callers running several models on the
+     * SAME audio can compute it once and feed each model via [inferFromLogMel].
+     */
+    suspend fun computeLogMel(
+        audioData: FloatArray,
+        mode: RecordingMode = RecordingMode.STANDARD
+    ): Array<FloatArray>? {
         if (!isLoaded || module == null) {
             Log.e(TAG, "Model not loaded")
             return null
         }
-        
-        val processor = melProcessor
         val expectedSize = mode.durationSeconds * SAMPLE_RATE_HZ
-        
-        // Normalisiere Audio-Länge
         val processedAudio = if (audioData.size != expectedSize) {
             Log.w(TAG, "Audio size mismatch: expected $expectedSize, got ${audioData.size}. Adjusting...")
             if (audioData.size < expectedSize) {
@@ -151,88 +160,50 @@ class ModelInference(
         } else {
             audioData
         }
-        
-        // WICHTIG: MelSpectrogram-Berechnung auf dediziertem Computation-Thread (verhindert ANR)
         return withContext(ComputationDispatcher.dispatcher) {
             try {
-                val totalStartTime = System.currentTimeMillis()
-                
-                // 1. Berechne Log-Mel-Spectrogram (der langsame Teil!)
-                val t0 = System.currentTimeMillis()
-                Log.d(TAG, "PERF: Starting Mel-Spectrogram computation...")
-                val logMelSpectrogram = processor.computeLogMelSpectrogram(processedAudio)
-                val t1 = System.currentTimeMillis()
-                val melTime = t1 - t0
-                Log.d(TAG, "PERF: Mel-Spectrogram computation: ${melTime}ms")
-                
-                val nMels = logMelSpectrogram.size
-                val nTimeFrames = logMelSpectrogram[0].size
-                
-                Log.d(TAG, "Mel-Spectrogram shape: [$nMels, $nTimeFrames]")
-                
-                // 2. Flatten zu 1D Array: [mel0_frame0, mel0_frame1, ..., mel1_frame0, ...]
-                val t2 = System.currentTimeMillis()
-                val flattenedMel = processor.toTensorFormat(logMelSpectrogram)
-                val t3 = System.currentTimeMillis()
-                val tensorFormatTime = t3 - t2
-                Log.d(TAG, "PERF: Tensor format conversion: ${tensorFormatTime}ms")
-                
-                // 3. Erstelle Input Tensor: Shape [1, 1, nMels, nTimeFrames]
-                val t4 = System.currentTimeMillis()
+                melProcessor.computeLogMelSpectrogram(processedAudio)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error computing mel-spectrogram: ${e.message}", e)
+                null
+            }
+        }
+    }
+
+    /**
+     * Runs the model on an already-computed [logMel] and returns the result.
+     * [inferenceTimeMs] here is the model-only time (mel is computed upstream).
+     */
+    suspend fun inferFromLogMel(logMel: Array<FloatArray>): ClassificationResult? {
+        val mod = module ?: run {
+            Log.e(TAG, "Model not loaded")
+            return null
+        }
+        return withContext(ComputationDispatcher.dispatcher) {
+            try {
+                val start = System.currentTimeMillis()
+                val nMels = logMel.size
+                val nTimeFrames = logMel[0].size
+                val flattenedMel = melProcessor.toTensorFormat(logMel)
                 val inputTensor = Tensor.fromBlob(
                     flattenedMel,
                     longArrayOf(1, 1, nMels.toLong(), nTimeFrames.toLong())
                 )
-                val t5 = System.currentTimeMillis()
-                val tensorCreationTime = t5 - t4
-                Log.d(TAG, "PERF: Tensor creation: ${tensorCreationTime}ms")
-                Log.d(TAG, "Input tensor created with shape [1, 1, $nMels, $nTimeFrames]")
-                
-                // 4. Führe Inferenz durch
-                val t6 = System.currentTimeMillis()
-                val output = module!!.forward(IValue.from(inputTensor))
-                val t7 = System.currentTimeMillis()
-                val modelInferenceTime = t7 - t6
-                Log.d(TAG, "PERF: Model inference: ${modelInferenceTime}ms")
-                
-                // 5. Extrahiere Output Tensor
-                val outputTensor = output.toTensor()
-                val outputData = outputTensor.dataAsFloatArray
-                
-                Log.d(TAG, "Output tensor shape: ${outputTensor.shape().contentToString()}, size: ${outputData.size}")
-
-                // 6. Wende Softmax an (Output sind Logits)
-                val t8 = System.currentTimeMillis()
+                val output = mod.forward(IValue.from(inputTensor))
+                val outputData = output.toTensor().dataAsFloatArray
                 val probabilities = softmax(outputData)
-                val t9 = System.currentTimeMillis()
-                val softmaxTime = t9 - t8
-                Log.d(TAG, "PERF: Softmax: ${softmaxTime}ms")
-
-                // 7. Finde argmax
                 val maxIndex = probabilities.indices.maxByOrNull { probabilities[it] } ?: 0
-                val maxProbability = probabilities[maxIndex]
-                
-                val totalTime = System.currentTimeMillis() - totalStartTime
-                
+                val totalTime = System.currentTimeMillis() - start
                 val sceneClass = SceneClass.fromIndex(maxIndex) ?: SceneClass.TRANSIT_VEHICLES
-                
-                Log.d(TAG, "PERF: ========== TOTAL INFERENCE TIME: ${totalTime}ms ==========")
-                Log.d(TAG, "PERF:   - Mel-Spectrogram: ${melTime}ms (${(melTime * 100 / totalTime)}%)")
-                Log.d(TAG, "PERF:   - Tensor Format: ${tensorFormatTime}ms (${(tensorFormatTime * 100 / totalTime)}%)")
-                Log.d(TAG, "PERF:   - Tensor Creation: ${tensorCreationTime}ms (${(tensorCreationTime * 100 / totalTime)}%)")
-                Log.d(TAG, "PERF:   - Model Inference: ${modelInferenceTime}ms (${(modelInferenceTime * 100 / totalTime)}%)")
-                Log.d(TAG, "PERF:   - Softmax: ${softmaxTime}ms (${(softmaxTime * 100 / totalTime)}%)")
-                Log.d(TAG, "Inference completed: ${sceneClass.label} (${(maxProbability * 100).toInt()}%) in ${totalTime}ms")
-                
+                Log.d(TAG, "Inference: ${sceneClass.label} (${(probabilities[maxIndex] * 100).toInt()}%) in ${totalTime}ms")
                 ClassificationResult(
                     sceneClass = sceneClass,
-                    confidence = maxProbability,
+                    confidence = probabilities[maxIndex],
                     allProbabilities = probabilities,
                     inferenceTimeMs = totalTime
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Error during inference: ${e.message}", e)
-                e.printStackTrace()
                 null
             }
         }
