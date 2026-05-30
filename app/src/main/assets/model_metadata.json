@@ -22,6 +22,31 @@
   {
     "model_filename": "dcase2025_1s_04_06_128bt.pt",
     "training_seconds": 1,
-    "test_accuracy": null
+    "test_accuracy": 0.882
+  },
+  {
+    "model_filename": "dcase2025_10s_05_16_8bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9279
+  },
+  {
+    "model_filename": "dcase2025_10s_05_16_16bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9324
+  },
+  {
+    "model_filename": "dcase2025_10s_05_16_32bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9279
+  },
+  {
+    "model_filename": "dcase2025_10s_05_16_64bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9369
+  },
+  {
+    "model_filename": "dcase2025_10s_05_16_128bt.pt",
+    "training_seconds": 10,
+    "test_accuracy": 0.9099
   }
 ]
