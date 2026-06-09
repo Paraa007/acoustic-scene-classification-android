@@ -93,6 +93,12 @@ data class PredictionRecord(
     // Aggregated audio level over the cycle. Range 0.0 – 1.0. null for legacy records.
     val volumeMean: Float? = null,
     val volumePeak: Float? = null,
+    // Device metrics captured once per cycle. null on legacy records and when
+    // the source was unavailable. Pause records keep both null on purpose: a
+    // synthetic 0 would read as a real measurement (0 °C / 0 % CPU), unlike
+    // the volume convention where 0 during a pause is the true value.
+    val batteryTempC: Float? = null,       // battery temperature in °C
+    val cpuUsagePercent: Float? = null,    // app CPU time / wall time × 100 (one-core scale, can exceed 100)
     // Synthetic PAUSE records: written whenever the user hits Pause/Resume so the
     // CSV carries an explicit gap row. When true, all classification fields are
     // placeholders and only `pauseDurationSec` is meaningful.
@@ -201,6 +207,17 @@ data class PredictionRecord(
             else -> ""
         }
 
+        // Device metrics — empty when unavailable AND on PAUSE rows. This
+        // deliberately differs from the volume convention above: volume 0
+        // during a pause is the true value, while 0 °C / 0 % CPU would be a
+        // fabricated measurement.
+        val batteryTempCell = if (!isPause && batteryTempC != null) {
+            String.format(Locale.US, "%.1f", batteryTempC)
+        } else ""
+        val cpuUsageCell = if (!isPause && cpuUsagePercent != null) {
+            String.format(Locale.US, "%.1f", cpuUsagePercent)
+        } else ""
+
         // Synthetic PAUSE record: classification cells stay empty, only timestamp,
         // session block, mode_label, volume zeros and pause_duration_sec carry data.
         if (isPause) {
@@ -227,7 +244,9 @@ data class PredictionRecord(
                 "", "", "",               // long_standard / fast / average
                 longIntervalStr,
                 volumeMeanCell,
-                volumePeakCell
+                volumePeakCell,
+                batteryTempCell,          // empty — see device-metrics comment above
+                cpuUsageCell              // empty — see device-metrics comment above
             ) + volumeSecondCells + listOf(
                 pauseDurationSec?.toString().orEmpty()
             )
@@ -320,7 +339,9 @@ data class PredictionRecord(
             escapeCsv(longAvgStr),
             escapeCsv(longIntervalStr),
             volumeMeanCell,
-            volumePeakCell
+            volumePeakCell,
+            batteryTempCell,
+            cpuUsageCell
         ) + volumeSecondCells + listOf(
             ""  // pause_duration_sec (empty for non-PAUSE rows)
         )
@@ -371,7 +392,8 @@ data class PredictionRecord(
          * gruppiert in Session-Meta (timestamp + Session-Start/Duration), Predict
          * (battery/class/confidence/inference/mode), Session-Config (model_name +
          * Wizard-Block), Top-N, Probabilities, Aux (user_selected, per_second_clips,
-         * long_*), Volume (mean/peak + s1..s10), Pause.
+         * long_*), Volume (mean/peak), Device-Metrics (battery_temp_c /
+         * cpu_usage_percent), Volume per second (s1..s10), Pause.
          */
         fun getCsvHeader(allInOneModelNames: List<String>? = null): String {
             // Probabilities mit Display-Namen (wie top3_display_name) - mit Anführungszeichen
@@ -389,6 +411,7 @@ data class PredictionRecord(
                     "per_second_clips," +
                     "long_standard,long_fast,long_average,long_interval_min," +
                     "volume_mean,volume_peak," +
+                    "battery_temp_c,cpu_usage_percent," +
                     "$volumeSecondCols," +
                     "pause_duration_sec"
             val allInOneCols = if (!allInOneModelNames.isNullOrEmpty()) {

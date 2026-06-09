@@ -5,7 +5,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -291,6 +293,10 @@ class RecordingEngine(
             if (!isRunning) break
 
             val cycleStartedAt = System.currentTimeMillis()
+            // Device-metric snapshots for this cycle: app CPU time + wall time
+            // at cycle start; the deltas after the cycle yield cpuUsagePercent.
+            val cpuTimeAtCycleStartMs = Process.getElapsedCpuTime()
+            val wallAtCycleStartMs = SystemClock.elapsedRealtime()
             val frameSegments = frameSegmentsFor(config)
             state.update {
                 it.copy(
@@ -306,7 +312,13 @@ class RecordingEngine(
             }
 
             if (cycleResult != null) {
-                persistCycle(config, cycleResult, cycleStartedAt)
+                persistCycle(
+                    config = config,
+                    outcome = cycleResult,
+                    cycleStartedAt = cycleStartedAt,
+                    batteryTempC = getBatteryTemperatureC(),
+                    cpuUsagePercent = computeCpuUsagePercent(cpuTimeAtCycleStartMs, wallAtCycleStartMs)
+                )
             }
             if (cycleResult == null) continue
 
@@ -575,7 +587,9 @@ class RecordingEngine(
     private fun persistCycle(
         config: SessionConfig,
         outcome: CycleOutcome,
-        cycleStartedAt: Long
+        cycleStartedAt: Long,
+        batteryTempC: Float?,
+        cpuUsagePercent: Float?
     ) {
         val primaryName = config.modelNames.first()
         val primaryRow = outcome.perModel[primaryName] ?: return
@@ -638,6 +652,8 @@ class RecordingEngine(
             allInOneResults = allInOne,
             volumeMean = outcome.volume.mean,
             volumePeak = outcome.volume.peak,
+            batteryTempC = batteryTempC,
+            cpuUsagePercent = cpuUsagePercent,
             modelsSelected = config.modelNames,
             recordingCategory = config.category,
             continuousMethodsByModel = if (config.category == RecordingCategory.CONTINUOUS) {
@@ -847,6 +863,8 @@ class RecordingEngine(
             pauseDurationSec = durationMs / 1000L,
             volumeMean = 0f,
             volumePeak = 0f,
+            // batteryTempC / cpuUsagePercent stay null on pause records — a 0
+            // would read as a real measurement (see PredictionRecord).
             perSecondVolumes = FloatArray(10),
             modelsSelected = config?.modelNames,
             recordingCategory = config?.category,
@@ -945,6 +963,34 @@ class RecordingEngine(
         bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
     } catch (_: Exception) {
         -1
+    }
+
+    /**
+     * Battery temperature in °C, read from the sticky ACTION_BATTERY_CHANGED
+     * intent (EXTRA_TEMPERATURE carries tenths of a degree). Returns null when
+     * the intent or the extra is unavailable (-1 sentinel or missing).
+     */
+    private fun getBatteryTemperatureC(): Float? = try {
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val tenths = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
+        if (tenths == -1) null else tenths / 10f
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * This app's own CPU usage across the cycle, in percent of wall time on a
+     * single-core scale: delta of [Process.getElapsedCpuTime] (CPU time used by
+     * this process across all its threads) divided by the elapsed wall time,
+     * times 100. Because multiple threads can burn CPU in parallel, the value
+     * can exceed 100 on multi-core devices. Returns null when the wall-time
+     * delta is non-positive.
+     */
+    private fun computeCpuUsagePercent(cpuTimeAtStartMs: Long, wallAtStartMs: Long): Float? {
+        val wallDeltaMs = SystemClock.elapsedRealtime() - wallAtStartMs
+        if (wallDeltaMs <= 0L) return null
+        val cpuDeltaMs = Process.getElapsedCpuTime() - cpuTimeAtStartMs
+        return cpuDeltaMs * 100f / wallDeltaMs
     }
 
     /**
