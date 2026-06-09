@@ -540,6 +540,12 @@
     <string name="detail_mode_test">TEST MODE</string>
     <string name="detail_mode_config">CONFIG MODE</string>
 
+    <!-- Persistent mode badge - small pill on every screen behind the mode
+         picker so the user always knows which mode they are operating in.
+         Rendered all-caps via textAllCaps. -->
+    <string name="mode_badge_test">Test mode</string>
+    <string name="mode_badge_config">Config mode</string>
+
     <!-- History filter chip row - shown only when History is launched from the
          Config-mode welcome. Default selection is "All". -->
     <string name="history_filter_all">ALL</string>

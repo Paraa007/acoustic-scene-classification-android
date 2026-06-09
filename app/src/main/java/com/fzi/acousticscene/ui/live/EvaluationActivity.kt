@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.model.SceneClass
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.util.SceneClassColors
 import com.google.android.material.button.MaterialButton
 
@@ -66,6 +67,10 @@ class EvaluationActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_evaluation)
+
+        // Persistent mode badge — may be reached from a notification, so the
+        // helper falls back to the running session's mode when needed.
+        ModeBadge.bind(findViewById(R.id.screenModeBadge))
 
         // Back row (chevron + "Back" label) finishes the activity without
         // submitting an evaluation — same effect as the Skip button. The

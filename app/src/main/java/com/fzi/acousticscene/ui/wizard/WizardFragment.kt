@@ -37,6 +37,7 @@ import com.fzi.acousticscene.model.SessionDuration
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
 import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.util.BatteryOptimizationHelper
 import com.fzi.acousticscene.util.stripModelSuffix
@@ -96,6 +97,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
         headerText = view.findViewById(R.id.wizardHeader)
         subHeader = view.findViewById(R.id.wizardSubheader)
         stepLabel = view.findViewById(R.id.wizardStepLabel)

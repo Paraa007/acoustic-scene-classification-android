@@ -24,6 +24,7 @@ import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.common.AppState
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.ui.common.UiState
 import com.fzi.acousticscene.ui.views.BarDistributionView
@@ -127,6 +128,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
         isReentry = arguments?.getBoolean(ARG_REENTRY, false) == true
         if (isReentry) {
             // Re-attaching to a session that's already running — never trigger the

@@ -30,6 +30,7 @@ import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.ThemeHelper
@@ -116,6 +117,10 @@ class HistoryActivity : AppCompatActivity() {
         }
 
         repository = PredictionRepository.getInstance(this)
+
+        // Persistent mode badge — may be reached from a notification, so the
+        // helper falls back to the running session's mode when needed.
+        ModeBadge.bind(findViewById(R.id.screenModeBadge))
 
         // Normal toolbar views
         recyclerView = findViewById(R.id.historyRecyclerView)

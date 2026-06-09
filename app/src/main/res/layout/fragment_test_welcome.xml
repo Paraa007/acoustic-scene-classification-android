@@ -9,37 +9,56 @@
     android:paddingTop="18dp"
     android:paddingBottom="22dp">
 
-    <!-- Back row: chevron + "Back" label, both tap targets behave as one button.
-         Matches the Config Welcome style so the user has the same affordance on
-         both Welcome screens. -->
+    <!-- Top row: back affordance on the left, persistent mode badge top-end. -->
     <LinearLayout
-        android:id="@+id/testWelcomeBackButton"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingVertical="6dp"
-        android:paddingEnd="8dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="?attr/selectableItemBackground"
-        android:contentDescription="@string/back">
+        android:gravity="center_vertical">
 
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="@color/text_secondary"
-            android:importantForAccessibility="no" />
-
-        <TextView
+        <!-- Back row: chevron + "Back" label, both tap targets behave as one button.
+             Matches the Config Welcome style so the user has the same affordance on
+             both Welcome screens. -->
+        <LinearLayout
+            android:id="@+id/testWelcomeBackButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="@string/back"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:fontFamily="monospace" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="6dp"
+            android:paddingEnd="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"
+            android:contentDescription="@string/back">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/text_secondary"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="@string/back"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:fontFamily="monospace" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <include
+            android:id="@+id/screenModeBadge"
+            layout="@layout/view_mode_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
     </LinearLayout>
 
     <TextView

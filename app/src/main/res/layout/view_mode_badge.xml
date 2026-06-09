@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Persistent mode badge (TEST MODE / CONFIG MODE). Included top-end on every
+    screen behind the mode picker. Dot + mono uppercase label inside a soft
+    pill, same chip language as bg_chip_accent_soft / the active-session badge.
+
+    The root id is overridden by the includer (@+id/screenModeBadge). Variant
+    (background, dot tint, label text + colour) is applied at runtime by
+    ModeBadge.bind(); starts gone so screens without a known mode never flash
+    a stale default.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_mode_badge_config"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="5dp"
+    android:visibility="gone"
+    tools:visibility="visible">
+
+    <View
+        android:id="@+id/modeBadgeDot"
+        android:layout_width="6dp"
+        android:layout_height="6dp"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/bg_eyebrow_dot"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/modeBadgeLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAllCaps="true"
+        android:textSize="9.5sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:letterSpacing="0.12"
+        android:textColor="@color/accent_green"
+        tools:text="@string/mode_badge_config" />
+
+</LinearLayout>

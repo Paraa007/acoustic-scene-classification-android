@@ -29,6 +29,7 @@ import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.common.ActiveSessionBanner
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.ui.history.HistoryActivity
 import com.fzi.acousticscene.ui.live.LiveRecordingFragment
@@ -51,6 +52,10 @@ class TestWelcomeFragment : Fragment(R.layout.fragment_test_welcome) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // This hub is the Test-mode entry point — remember the choice for every
+        // screen behind it, then show the badge here too.
+        ModeBadge.record(SessionMode.TEST)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
         view.findViewById<LinearLayout>(R.id.testWelcomeBackButton).setOnClickListener {
             findNavController().popBackStack()
         }
