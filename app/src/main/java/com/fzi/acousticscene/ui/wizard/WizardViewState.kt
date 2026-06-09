@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.wizard
 
 import com.fzi.acousticscene.model.LongInterval
 import com.fzi.acousticscene.model.LongSubMode
@@ -8,6 +8,7 @@ import com.fzi.acousticscene.model.SessionDuration
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
+import com.fzi.acousticscene.ui.MainViewModel
 
 /**
  * In-flight wizard answers. Persisted to no storage — kept only on the

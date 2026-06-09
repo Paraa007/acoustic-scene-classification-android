@@ -40,7 +40,7 @@
 
         <!-- History Activity - reachable from Welcome and Results Summary -->
         <activity
-            android:name=".ui.HistoryActivity"
+            android:name=".ui.history.HistoryActivity"
             android:exported="false"
             android:theme="@style/Theme.AcousticSceneClassifier" />
 
@@ -57,7 +57,7 @@
 
         <!-- Evaluation Activity für LONG-Modus Bewertungen -->
         <activity
-            android:name=".ui.EvaluationActivity"
+            android:name=".ui.live.EvaluationActivity"
             android:exported="false"
             android:launchMode="singleTop"
             android:excludeFromRecents="true"

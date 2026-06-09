@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.live
 
 import android.content.Intent
 import android.graphics.Typeface
@@ -22,6 +22,13 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SessionConfig
+import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.common.AppState
+import com.fzi.acousticscene.ui.common.ModernDialogHelper
+import com.fzi.acousticscene.ui.common.UiState
+import com.fzi.acousticscene.ui.views.BarDistributionView
+import com.fzi.acousticscene.ui.views.ConcentricStopwatchView
+import com.fzi.acousticscene.ui.views.VolumeLineChartView
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton

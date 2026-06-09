@@ -19,6 +19,7 @@ import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.service.ClassificationService
+import com.fzi.acousticscene.ui.live.LiveRecordingFragment
 import com.fzi.acousticscene.util.BatteryOptimizationHelper
 import com.fzi.acousticscene.util.ThemeHelper
 

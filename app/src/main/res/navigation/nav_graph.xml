@@ -7,7 +7,7 @@
     <!-- Entry point — picks Test vs Config mode. Runs on every app start. -->
     <fragment
         android:id="@+id/modeSelectFragment"
-        android:name="com.fzi.acousticscene.ui.ModeSelectFragment"
+        android:name="com.fzi.acousticscene.ui.entry.ModeSelectFragment"
         android:label="ModeSelect">
         <action
             android:id="@+id/action_mode_to_password"
@@ -20,7 +20,7 @@
     <!-- Developer-access gate for Configuration mode. -->
     <fragment
         android:id="@+id/passwordFragment"
-        android:name="com.fzi.acousticscene.ui.PasswordFragment"
+        android:name="com.fzi.acousticscene.ui.entry.PasswordFragment"
         android:label="Password">
         <!-- Pop only the Password screen from the back stack on success, leave
              Mode Select underneath. From Welcome the user can press the Back
@@ -35,7 +35,7 @@
     <!-- Test mode home — list of quickstart slots. -->
     <fragment
         android:id="@+id/testWelcomeFragment"
-        android:name="com.fzi.acousticscene.ui.TestWelcomeFragment"
+        android:name="com.fzi.acousticscene.ui.entry.TestWelcomeFragment"
         android:label="TestWelcome">
         <action
             android:id="@+id/action_test_welcome_to_live"
@@ -48,7 +48,7 @@
     <!-- Configuration mode home — 5 buttons including Configure test mode. -->
     <fragment
         android:id="@+id/welcomeFragment"
-        android:name="com.fzi.acousticscene.ui.WelcomeFragment"
+        android:name="com.fzi.acousticscene.ui.entry.WelcomeFragment"
         android:label="Welcome">
         <action
             android:id="@+id/action_welcome_to_wizard"
@@ -64,7 +64,7 @@
 
     <fragment
         android:id="@+id/wizardFragment"
-        android:name="com.fzi.acousticscene.ui.WizardFragment"
+        android:name="com.fzi.acousticscene.ui.wizard.WizardFragment"
         android:label="Wizard">
         <action
             android:id="@+id/action_wizard_to_live"
@@ -75,7 +75,7 @@
 
     <fragment
         android:id="@+id/liveRecordingFragment"
-        android:name="com.fzi.acousticscene.ui.LiveRecordingFragment"
+        android:name="com.fzi.acousticscene.ui.live.LiveRecordingFragment"
         android:label="Live">
         <!-- true when we navigated in to re-attach to an already-running session
              (banner tap / notification), false on the normal wizard → live path.
@@ -94,12 +94,12 @@
 
     <fragment
         android:id="@+id/resultsSummaryFragment"
-        android:name="com.fzi.acousticscene.ui.ResultsSummaryFragment"
+        android:name="com.fzi.acousticscene.ui.history.ResultsSummaryFragment"
         android:label="Results" />
 
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.fzi.acousticscene.ui.SettingsFragment"
+        android:name="com.fzi.acousticscene.ui.common.SettingsFragment"
         android:label="@string/settings" />
 
 </navigation>

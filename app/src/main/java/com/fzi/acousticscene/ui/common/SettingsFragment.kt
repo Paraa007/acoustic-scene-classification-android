@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.common
 
 import android.app.Dialog
 import android.content.res.AssetManager

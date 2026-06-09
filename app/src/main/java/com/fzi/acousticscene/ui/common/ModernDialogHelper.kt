@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.common
 
 import android.app.Dialog
 import android.content.Context
@@ -23,6 +23,7 @@ import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
+import com.fzi.acousticscene.ui.history.HistoryActivity
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton

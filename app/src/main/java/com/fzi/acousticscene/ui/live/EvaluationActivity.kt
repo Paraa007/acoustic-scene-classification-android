@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.live
 
 import android.graphics.Color
 import android.graphics.Typeface

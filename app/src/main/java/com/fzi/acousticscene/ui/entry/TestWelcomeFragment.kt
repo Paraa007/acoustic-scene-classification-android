@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.entry
 
 import android.content.Intent
 import android.graphics.Color
@@ -27,6 +27,11 @@ import com.fzi.acousticscene.model.ModelMetadataRegistry
 import com.fzi.acousticscene.model.QuickstartSlot
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.WizardIntent
+import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.common.ActiveSessionBanner
+import com.fzi.acousticscene.ui.common.ModernDialogHelper
+import com.fzi.acousticscene.ui.history.HistoryActivity
+import com.fzi.acousticscene.ui.live.LiveRecordingFragment
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch

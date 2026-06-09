@@ -128,7 +128,7 @@ object BatteryOptimizationHelper {
         firstRun: Boolean,
         onProceed: (() -> Unit)? = null
     ) {
-        com.fzi.acousticscene.ui.ModernDialogHelper.showConfirmDialog(
+        com.fzi.acousticscene.ui.common.ModernDialogHelper.showConfirmDialog(
             context = activity,
             title = activity.getString(R.string.battery_optimization_title),
             message = activity.getString(R.string.battery_optimization_message),

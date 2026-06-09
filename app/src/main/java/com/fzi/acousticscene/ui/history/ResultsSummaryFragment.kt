@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.history
 
 import android.content.Intent
 import android.graphics.Color
@@ -19,6 +19,8 @@ import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionConfig
+import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.common.UiState
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
