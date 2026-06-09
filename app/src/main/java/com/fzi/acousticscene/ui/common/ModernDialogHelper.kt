@@ -24,6 +24,8 @@ import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
 import com.fzi.acousticscene.ui.history.HistoryActivity
+import com.fzi.acousticscene.ui.views.ChartPoint
+import com.fzi.acousticscene.ui.views.MetricLineChartView
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
@@ -399,6 +401,9 @@ object ModernDialogHelper {
             dialog.findViewById<View>(R.id.detailMostHeard).visibility = View.GONE
         }
 
+        // Session charts — volume / battery temp / app CPU over the session.
+        renderSessionCharts(context, dialog, realRecords)
+
         // Fill model distribution container with progress bars.
         // Wichtig: nur echte Records im Nenner — sonst werden die Prozente durch
         // Pause-Records aufgebläht (Zähler kommt aus stats.classDistribution, die
@@ -673,6 +678,95 @@ object ModernDialogHelper {
         val nameView = dialog.findViewById<TextView>(R.id.detailMostHeardName)
         nameView.text = top.labelShort
         nameView.setTextColor(SceneClassColors.color(context, top))
+    }
+
+    /**
+     * Fills the "Session charts" section: volume (mean per cycle, shown as %),
+     * battery temperature (°C) and app CPU (%), all on the same x-axis span
+     * (first to last real record). Pause records never reach this method —
+     * [realRecords] is the pre-filtered subset. A chart whose metric is null
+     * on every record (legacy session) is hidden; the temp/CPU case gets a
+     * one-line note instead.
+     */
+    private fun renderSessionCharts(
+        context: Context,
+        dialog: Dialog,
+        realRecords: List<PredictionRecord>
+    ) {
+        val section = dialog.findViewById<View>(R.id.detailChartsSection)
+        if (realRecords.isEmpty()) {
+            section.visibility = View.GONE
+            return
+        }
+        val startTs = realRecords.first().timestamp
+        val spanSec = ((realRecords.last().timestamp - startTs) / 1000f).coerceAtLeast(1f)
+
+        fun points(selector: (PredictionRecord) -> Float?): List<ChartPoint> =
+            realRecords.mapNotNull { r ->
+                selector(r)?.let { ChartPoint((r.timestamp - startTs) / 1000f, it) }
+            }
+
+        val volumePoints = points { rec -> rec.volumeMean?.times(100f) }
+        val tempPoints = points { it.batteryTempC }
+        val cpuPoints = points { it.cpuUsagePercent }
+
+        fun bindChart(
+            blockId: Int,
+            chartId: Int,
+            chartPoints: List<ChartPoint>,
+            unitSuffix: String,
+            yMode: MetricLineChartView.YRangeMode,
+            colorRes: Int
+        ): Boolean {
+            val block = dialog.findViewById<View>(blockId)
+            if (chartPoints.isEmpty()) {
+                block.visibility = View.GONE
+                return false
+            }
+            block.visibility = View.VISIBLE
+            dialog.findViewById<MetricLineChartView>(chartId).apply {
+                configure(unitSuffix, yMode, ContextCompat.getColor(context, colorRes))
+                setFixedSpanSeconds(spanSec)
+                setPoints(chartPoints)
+            }
+            return true
+        }
+
+        val hasVolume = bindChart(
+            R.id.detailVolumeChartBlock, R.id.detailVolumeChart, volumePoints,
+            "%", MetricLineChartView.YRangeMode.ZERO_BASED, R.color.accent_green_light
+        )
+        val hasTemp = bindChart(
+            R.id.detailTempChartBlock, R.id.detailTempChart, tempPoints,
+            "°C", MetricLineChartView.YRangeMode.AUTO_PADDED, R.color.status_warning
+        )
+        val hasCpu = bindChart(
+            R.id.detailCpuChartBlock, R.id.detailCpuChart, cpuPoints,
+            "%", MetricLineChartView.YRangeMode.ZERO_BASED, R.color.status_info
+        )
+
+        val note = dialog.findViewById<TextView>(R.id.detailChartsNote)
+        when {
+            !hasTemp && !hasCpu -> {
+                note.text = context.getString(R.string.detail_no_temp_cpu_data)
+                note.visibility = View.VISIBLE
+            }
+            !hasTemp -> {
+                note.text = context.getString(R.string.detail_no_temp_data)
+                note.visibility = View.VISIBLE
+            }
+            !hasCpu -> {
+                note.text = context.getString(R.string.detail_no_cpu_data)
+                note.visibility = View.VISIBLE
+            }
+            else -> note.visibility = View.GONE
+        }
+
+        // Fully legacy session (no volume, no metrics): the note alone explains
+        // the gap; keep the section so the header + note still read coherently.
+        section.visibility = if (hasVolume || hasTemp || hasCpu || note.visibility == View.VISIBLE) {
+            View.VISIBLE
+        } else View.GONE
     }
 
     private fun renderPausesSection(

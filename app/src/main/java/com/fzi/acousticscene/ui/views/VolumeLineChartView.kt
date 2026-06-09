@@ -18,6 +18,13 @@ import com.fzi.acousticscene.R
  * stopwatch ring (both read the same frame clock). When a new frame begins,
  * `frameElapsedMs` jumps back to 0 and the chart clears.
  *
+ * The Y-axis is adaptive: real RMS values rarely exceed 0.3, so a fixed 0..1
+ * range squashed the curve at the bottom. The axis now tracks the loudest
+ * sample of the current frame plus ~20 % headroom (never tighter than 0..0.1)
+ * and animates toward that target. Within a frame the scale only grows; it
+ * resets when the frame clears. Gridlines sit at round percent values for the
+ * current range.
+ *
  * While the session is paused the chart freezes — the last drawn line stays
  * on screen until the next frame starts.
  */
@@ -87,6 +94,12 @@ class VolumeLineChartView @JvmOverloads constructor(
     private var lastFrameElapsedMs: Long = -1L
     private var highestSlot: Int = -1
 
+    // Adaptive Y-axis: target follows the loudest sample of the current frame
+    // (+ headroom, floored); the displayed max eases toward it so a loud sample
+    // widens the scale smoothly instead of snapping. Grow-only within a frame.
+    private var axisTargetMax: Float = ChartScales.VOLUME_AXIS_FLOOR
+    private var axisDisplayedMax: Float = ChartScales.VOLUME_AXIS_FLOOR
+
     private var isDrawingEnabled: Boolean = false
 
     private val paddingLeftPx: Float get() = PADDING_LEFT_DP * resources.displayMetrics.density
@@ -113,8 +126,11 @@ class VolumeLineChartView @JvmOverloads constructor(
         }
         lastFrameElapsedMs = frameElapsedMs
         val slot = (frameElapsedMs / SLOT_MS).toInt().coerceIn(0, SLOT_COUNT - 1)
-        slotVolumes[slot] = volume.coerceIn(0f, 1f)
+        val clamped = volume.coerceIn(0f, 1f)
+        slotVolumes[slot] = clamped
         if (slot > highestSlot) highestSlot = slot
+        val target = ChartScales.volumeAxisTarget(clamped)
+        if (target > axisTargetMax) axisTargetMax = target
         invalidate()
     }
 
@@ -130,11 +146,17 @@ class VolumeLineChartView @JvmOverloads constructor(
         for (i in slotVolumes.indices) slotVolumes[i] = Float.NaN
         highestSlot = -1
         lastFrameElapsedMs = -1L
+        // New frame: the scale starts back at the floor. The chart is empty at
+        // this moment, so the snap is invisible.
+        axisTargetMax = ChartScales.VOLUME_AXIS_FLOOR
+        axisDisplayedMax = ChartScales.VOLUME_AXIS_FLOOR
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
+        stepAxisAnimation()
 
         drawGrid(canvas)
         drawAxisLabels(canvas)
@@ -151,14 +173,33 @@ class VolumeLineChartView @JvmOverloads constructor(
     }
 
     /**
-     * Eleven vertical gridlines (every second 0..10) + four horizontal lines
-     * for the Y-axis (25/50/75/100%).
+     * Eases the displayed axis max toward the target so a louder sample widens
+     * the scale over a few frames instead of jumping. Grow-only — shrink
+     * happens exclusively via [clearData].
+     */
+    private fun stepAxisAnimation() {
+        val diff = axisTargetMax - axisDisplayedMax
+        if (diff <= 0.0005f) {
+            axisDisplayedMax = maxOf(axisDisplayedMax, axisTargetMax)
+            return
+        }
+        axisDisplayedMax += diff * 0.25f
+        postInvalidateOnAnimation()
+    }
+
+    /**
+     * Eleven vertical gridlines (every second 0..10) + horizontal lines at
+     * round percent values of the current adaptive range.
      */
     private fun drawGrid(canvas: Canvas) {
-        // Horizontal lines at 25/50/75/100%
-        for (i in 1..4) {
-            val y = chartTop + (chartHeight * i / 5f)
+        // Horizontal lines at round percent steps within the displayed range.
+        val rangePct = axisDisplayedMax * 100f
+        val stepPct = ChartScales.niceStep(rangePct)
+        var pct = stepPct
+        while (pct < rangePct) {
+            val y = chartBottom - (pct / rangePct) * chartHeight
             canvas.drawLine(chartLeft, y, chartRight, y, gridPaint)
+            pct += stepPct
         }
         // Vertical lines every second (1..9, plus 0 and 10 = chart borders)
         for (s in 1..9) {
@@ -170,15 +211,23 @@ class VolumeLineChartView @JvmOverloads constructor(
     }
 
     /**
-     * X-axis labels: 0,1,2,...,9,10s. Y-axis: 0/50/100.
+     * X-axis labels: 0,1,2,...,9,10s. Y-axis: "0" plus each round-percent
+     * gridline; the topmost gridline carries the "%" unit.
      */
     private fun drawAxisLabels(canvas: Canvas) {
-        // Y-axis
-        val yLabels = listOf("0", "50", "100")
-        val yPositions = listOf(chartBottom, chartTop + chartHeight / 2, chartTop)
-        for (i in yLabels.indices) {
-            val y = yPositions[i] + yAxisLabelPaint.textSize / 3
-            canvas.drawText(yLabels[i], chartLeft - 8 * resources.displayMetrics.density, y, yAxisLabelPaint)
+        val labelX = chartLeft - 8 * resources.displayMetrics.density
+        val baselineShift = yAxisLabelPaint.textSize / 3
+        canvas.drawText("0", labelX, chartBottom + baselineShift, yAxisLabelPaint)
+
+        val rangePct = axisDisplayedMax * 100f
+        val stepPct = ChartScales.niceStep(rangePct)
+        var pct = stepPct
+        while (pct < rangePct) {
+            val isTopLabel = pct + stepPct >= rangePct
+            val text = formatPercentLabel(pct) + if (isTopLabel) "%" else ""
+            val y = chartBottom - (pct / rangePct) * chartHeight + baselineShift
+            canvas.drawText(text, labelX, y, yAxisLabelPaint)
+            pct += stepPct
         }
 
         // X-axis: 11 labels (0..10). Label at "10" is suffixed with "s" so the
@@ -191,16 +240,27 @@ class VolumeLineChartView @JvmOverloads constructor(
         }
     }
 
+    /** "2.5" for sub-integer steps, "25" otherwise. */
+    private fun formatPercentLabel(pct: Float): String =
+        if (pct < 10f && pct != pct.toInt().toFloat()) {
+            String.format(java.util.Locale.US, "%.1f", pct)
+        } else {
+            pct.toInt().toString()
+        }
+
     private fun drawVolumeLine(canvas: Canvas) {
         linePath.reset()
         fillPath.reset()
         var started = false
         var lastX = chartLeft
+        val axisMax = axisDisplayedMax.coerceAtLeast(0.0001f)
         for (i in 0..highestSlot) {
             val v = slotVolumes[i]
             if (v.isNaN()) continue
             val x = chartLeft + chartWidth * (i.toFloat() / SLOT_COUNT)
-            val y = chartBottom - v * chartHeight
+            // While the scale is still animating toward a louder sample, the
+            // sample can momentarily exceed the displayed range — clamp to top.
+            val y = (chartBottom - (v / axisMax) * chartHeight).coerceAtLeast(chartTop)
             if (!started) {
                 linePath.moveTo(x, y)
                 fillPath.moveTo(x, chartBottom)

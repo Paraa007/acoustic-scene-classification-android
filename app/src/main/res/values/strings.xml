@@ -517,6 +517,20 @@
     <string name="live_section_models_count">%1$d models</string>
     <string name="live_section_models_count_one">1 model</string>
     <string name="live_audio_level">Audio Level</string>
+
+    <!-- Device-metric charts (battery temperature + app CPU) on the live screen
+         and in the History session-detail dialog. The captions spell out what
+         each chart measures so testers don't have to guess the unit. -->
+    <string name="live_chart_battery_temp">Battery temp</string>
+    <string name="live_chart_app_cpu">App CPU</string>
+    <string name="chart_caption_battery_temp">Battery temperature in °C</string>
+    <string name="chart_caption_app_cpu">CPU usage of this app in % (relative to one core)</string>
+    <string name="metric_chart_waiting">Waiting for data…</string>
+    <string name="detail_section_charts">Session charts</string>
+    <string name="detail_chart_volume">Volume</string>
+    <string name="detail_no_temp_cpu_data">No temperature/CPU data for this session.</string>
+    <string name="detail_no_temp_data">No temperature data for this session.</string>
+    <string name="detail_no_cpu_data">No CPU data for this session.</string>
     <string name="live_pause_picker_eyebrow">Paused</string>
     <string name="live_pause_picker_subtitle">How long should the pause last? (0 to 12 h, 15 min steps)</string>
     <string name="live_pause_picker_confirm">Confirm pause</string>
