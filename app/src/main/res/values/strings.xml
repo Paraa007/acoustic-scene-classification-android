@@ -560,4 +560,19 @@
     <string name="wizard_session_duration_stop_manually">Stop manually</string>
     <string name="wizard_slider_zero">No pause</string>
     <string name="wizard_section_test_session">Test session</string>
+
+    <!-- Rating quota slider (Interval wizard step) -->
+    <string name="wizard_rating_quota_eyebrow">Rating prompts</string>
+    <string name="wizard_rating_quota_hint">How often should a rating be asked? At 100% every recording asks.</string>
+
+    <!-- Calendar end date (Session-duration wizard step, Interval only) -->
+    <string name="wizard_pick_end_date">Pick end date</string>
+    <string name="wizard_end_date_picker_title">Session runs until</string>
+    <string name="wizard_end_date_chip">Ends: %1$s (%2$s, ~%3$s recordings)</string>
+
+    <!-- Interrupted-session recovery -->
+    <string name="recovery_channel_name">Session Recovery</string>
+    <string name="recovery_channel_description">Tells you when an interrupted study session can be picked up again</string>
+    <string name="recovery_notification_title">Study session was interrupted</string>
+    <string name="recovery_notification_text">Tap to resume the recording where it left off.</string>
 </resources>

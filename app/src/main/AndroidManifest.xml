@@ -17,6 +17,9 @@
     <!-- Für Evaluation-Benachrichtigungen im LONG-Modus (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Recovery-Check nach Reboot: unterbrochene Studien-Session erkennen -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -70,6 +73,18 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- Nach Reboot prüfen, ob eine Studien-Session unterbrochen wurde.
+             BOOT_COMPLETED ist ein protected broadcast — nur das System kann
+             ihn senden, daher ist exported="true" hier unkritisch. -->
+        <receiver
+            android:name=".service.SessionRecoveryReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

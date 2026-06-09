@@ -17,6 +17,7 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.audio.AudioRecorder
 import com.fzi.acousticscene.audio.RecordingState
 import com.fzi.acousticscene.data.ActiveSessionRegistry
+import com.fzi.acousticscene.data.ActiveSessionStore
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.data.RecordingEngineHolder
@@ -114,6 +115,14 @@ class RecordingEngine(
     private var pauseStartedWallClockMs: Long = 0L
     private var pauseStartedAutoResumeMin: Int? = null
 
+    // "Rate now" quota for the running interval session. Rebuilt on every
+    // start(); 100 % behaves exactly like the pre-quota app.
+    private var ratingQuota = RatingQuotaSchedule(100)
+
+    // True while the running session is snapshotted in [ActiveSessionStore]
+    // (interval + calendar end date). Cleared together with the store.
+    @Volatile private var trackInterruption = false
+
     init {
         updateStatistics()
         scope.launch {
@@ -204,14 +213,35 @@ class RecordingEngine(
             return
         }
 
+        // Recovery restart? Keep the original session identity so the resumed
+        // cycles land in the same session block as the pre-crash ones.
+        val resume = RecordingEngineHolder.pendingResume
+        RecordingEngineHolder.pendingResume = null
+
         isRunning = true
         isPaused = false
         pausePending = false
         pendingAutoResumeMs = null
         stopReasonAuto = false
-        sessionStartTime = System.currentTimeMillis()
+        pauseStartedAutoResumeMin = null
+        sessionStartTime = resume?.originalSessionStartTime ?: System.currentTimeMillis()
         sessionResumeWallClockMs = SystemClock.elapsedRealtime()
         sessionElapsedAtPauseMs = 0L
+        ratingQuota = RatingQuotaSchedule(config.ratingPercent)
+
+        // A deliberate new start supersedes any stale interruption snapshot.
+        ActiveSessionStore.clear(context)
+        trackInterruption = config.category == RecordingCategory.INTERVAL &&
+                config.sessionDuration.endDateMillis != null
+        if (trackInterruption) {
+            ActiveSessionStore.save(
+                context = context,
+                config = config,
+                sessionStartTime = sessionStartTime,
+                plannedEndMillis = config.sessionDuration.endDateMillis!!,
+                lastCycleTimestamp = System.currentTimeMillis()
+            )
+        }
 
         ActiveSessionRegistry.register(
             ActiveSessionRegistry.Entry(
@@ -245,10 +275,26 @@ class RecordingEngine(
             )
         }
 
+        // The downtime between the interruption and this restart goes into the
+        // CSV as a regular synthetic pause row, so the session's timeline stays
+        // gap-free for analysis.
+        if (resume != null && resume.gapSec >= 1) {
+            persistPauseRecord(resume.gapSec * 1000L)
+        }
+
         sessionTimerJob?.cancel()
         sessionTimerJob = scope.launch {
             val total = config.sessionDuration.totalMs
+            val endWallMs = config.sessionDuration.endDateMillis
             while (isActive && isRunning) {
+                // Calendar deadline is wall clock — checked even while paused,
+                // unlike the elapsed-based window below.
+                if (endWallMs != null && System.currentTimeMillis() >= endWallMs) {
+                    stopReasonAuto = true
+                    isRunning = false
+                    Log.d(TAG, "Session end date reached — soft stop scheduled")
+                    break
+                }
                 if (!isPaused) {
                     val elapsed = sessionElapsedAtPauseMs +
                             (SystemClock.elapsedRealtime() - sessionResumeWallClockMs)
@@ -325,7 +371,11 @@ class RecordingEngine(
             if (config.category == RecordingCategory.INTERVAL && isRunning) {
                 val pauseMs = config.intervalPause?.pauseMs ?: 0L
                 if (pauseMs > 0L) {
-                    sendIntervalEvaluationNotification(cycleResult)
+                    // Quota gate: skipped cycles keep their prediction record,
+                    // they just never raise the rating prompt.
+                    if (ratingQuota.shouldPrompt()) {
+                        sendIntervalEvaluationNotification(cycleResult)
+                    }
                     runIntervalPause(pauseMs)
                 }
             }
@@ -346,6 +396,12 @@ class RecordingEngine(
         sessionTimerJob?.cancel()
         audioRecorder.stopRecording()
         ActiveSessionRegistry.unregister()
+        // Normal exit (user stop, soft stop, error) — drop the interruption
+        // snapshot so no recovery prompt fires for a session that ended cleanly.
+        if (trackInterruption) {
+            trackInterruption = false
+            ActiveSessionStore.clear(context)
+        }
         pausePending = false
         pendingAutoResumeMs = null
         state.update {
@@ -663,10 +719,16 @@ class RecordingEngine(
                 config.intervalMethodsByModel.takeIf { it.isNotEmpty() }
             } else null,
             sessionDurationPlanned = config.sessionDuration,
+            ratingPercent = if (config.category == RecordingCategory.INTERVAL) {
+                config.ratingPercent
+            } else null,
             perSecondVolumes = outcome.perSecondVolumes,
             sessionMode = config.mode
         )
         predictionRepository.addPrediction(record)
+        if (trackInterruption) {
+            ActiveSessionStore.updateLastCycle(context, System.currentTimeMillis())
+        }
         updateStatistics()
 
         state.update { it.copy(currentResult = primaryResult, errorMessage = null) }
@@ -877,6 +939,9 @@ class RecordingEngine(
             sessionDurationPlanned = config?.sessionDuration,
             longIntervalMinutes = config?.intervalPause?.pauseMinutes,
             pauseAutoResumeMin = pauseStartedAutoResumeMin,
+            ratingPercent = if (config?.category == RecordingCategory.INTERVAL) {
+                config.ratingPercent
+            } else null,
             sessionMode = config?.mode
         )
         predictionRepository.addPrediction(record)

@@ -18,7 +18,8 @@ class PredictionRecordCsvTest {
 
     private fun realRecord(
         batteryTempC: Float? = null,
-        cpuUsagePercent: Float? = null
+        cpuUsagePercent: Float? = null,
+        ratingPercent: Int? = null
     ) = PredictionRecord(
         id = 1L,
         timestamp = 1_700_000_000_000L,
@@ -39,7 +40,8 @@ class PredictionRecordCsvTest {
         volumePeak = 0.2f,
         perSecondVolumes = FloatArray(10),
         batteryTempC = batteryTempC,
-        cpuUsagePercent = cpuUsagePercent
+        cpuUsagePercent = cpuUsagePercent,
+        ratingPercent = ratingPercent
     )
 
     private fun pauseRecord() = PredictionRecord(
@@ -100,6 +102,44 @@ class PredictionRecordCsvTest {
         assertEquals("", row[tempIdx])
         assertEquals("", row[cpuIdx])
         assertEquals("30", row[header.indexOf("pause_duration_sec")])
+    }
+
+    @Test
+    fun header_placesRatingPercentAfterPauseAutoResumeMin() {
+        val pauseAutoResumeIdx = header.indexOf("pause_auto_resume_min")
+        assertEquals(pauseAutoResumeIdx + 1, header.indexOf("rating_percent"))
+    }
+
+    @Test
+    fun toCsvRow_writesRatingPercentWhenSet() {
+        val row = realRecord(ratingPercent = 30).toCsvRow().split(",")
+        assertEquals(header.size, row.size)
+        assertEquals("30", row[header.indexOf("rating_percent")])
+    }
+
+    @Test
+    fun toCsvRow_emitsEmptyRatingPercentForLegacyRecords() {
+        val row = realRecord().toCsvRow().split(",")
+        assertEquals(header.size, row.size)
+        assertEquals("", row[header.indexOf("rating_percent")])
+    }
+
+    @Test
+    fun toCsvRow_pauseRecordRowStillMatchesHeaderWidth() {
+        val row = pauseRecord().toCsvRow().split(",")
+        assertEquals(header.size, row.size)
+        assertEquals("", row[header.indexOf("rating_percent")])
+    }
+
+    @Test
+    fun gson_deserializesLegacyJsonWithoutRatingPercentToNull() {
+        val legacyJson = """
+            {"id":1,"timestamp":2,"sessionStartTime":3,"sceneClass":"NATURE",
+             "confidence":0.5,"inferenceTimeMs":10,"recordingMode":"STANDARD",
+             "batteryLevel":50,"modelName":"model1.pt","isPause":false}
+        """.trimIndent()
+        val record = Gson().fromJson(legacyJson, PredictionRecord::class.java)
+        assertNull(record.ratingPercent)
     }
 
     @Test

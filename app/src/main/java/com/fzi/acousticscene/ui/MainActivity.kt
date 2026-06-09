@@ -16,9 +16,11 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.ActiveSessionRegistry
+import com.fzi.acousticscene.data.ActiveSessionStore
 import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.service.ClassificationService
+import com.fzi.acousticscene.service.SessionRecoveryNotifier
 import com.fzi.acousticscene.ui.live.LiveRecordingFragment
 import com.fzi.acousticscene.util.BatteryOptimizationHelper
 import com.fzi.acousticscene.util.ThemeHelper
@@ -72,12 +74,20 @@ class MainActivity : AppCompatActivity() {
         // Tapped the foreground-service notification → jump straight to the live
         // screen and re-attach to the running session.
         maybeRouteToLive(intent)
+
+        // Recovery flow: either this launch IS the notification tap (restart the
+        // interrupted session), or it's a plain app launch — then check whether
+        // an interrupted session exists and surface the notification.
+        if (!maybeResumeInterruptedSession(intent)) {
+            SessionRecoveryNotifier.maybeNotify(this)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         maybeRouteToLive(intent)
+        maybeResumeInterruptedSession(intent)
     }
 
     /**
@@ -98,6 +108,45 @@ class MainActivity : AppCompatActivity() {
             R.id.liveRecordingFragment,
             bundleOf(LiveRecordingFragment.ARG_REENTRY to true)
         )
+    }
+
+    /**
+     * Handles a tap on the "session was interrupted" notification. Restarts the
+     * stored session through the same apply-config → live-screen path the wizard
+     * uses; the engine consumes [RecordingEngineHolder.pendingResume] to keep
+     * the original session identity and write the gap as a synthetic pause
+     * record. Returns true when this intent was the recovery tap (whether or
+     * not the restart actually happened).
+     */
+    private fun maybeResumeInterruptedSession(intent: Intent?): Boolean {
+        if (intent?.getBooleanExtra(
+                SessionRecoveryNotifier.EXTRA_RESUME_INTERRUPTED, false
+            ) != true
+        ) return false
+        intent.removeExtra(SessionRecoveryNotifier.EXTRA_RESUME_INTERRUPTED)
+        SessionRecoveryNotifier.cancel(this)
+
+        val snapshot = ActiveSessionStore.load(this) ?: return true
+        // A session is already live (user restarted manually) — just re-attach.
+        if (ActiveSessionRegistry.get() != null) {
+            maybeRouteToLive(Intent().putExtra(ClassificationService.EXTRA_OPEN_LIVE, true))
+            return true
+        }
+        if (snapshot.plannedEndMillis <= System.currentTimeMillis()) {
+            ActiveSessionStore.clear(this)
+            return true
+        }
+        val gapSec = ((System.currentTimeMillis() - snapshot.lastCycleTimestamp) / 1000L)
+            .coerceAtLeast(0L)
+        RecordingEngineHolder.pendingResume = RecordingEngineHolder.ResumeInfo(
+            originalSessionStartTime = snapshot.sessionStartTime,
+            gapSec = gapSec
+        )
+        applySessionConfigViaService(snapshot.config)
+        // Fresh entry (no re-entry flag): LiveRecordingFragment auto-starts the
+        // session once the models finish loading — same as the wizard start.
+        navControllerOrNull()?.navigate(R.id.liveRecordingFragment)
+        return true
     }
 
     private fun navControllerOrNull(): NavController? {

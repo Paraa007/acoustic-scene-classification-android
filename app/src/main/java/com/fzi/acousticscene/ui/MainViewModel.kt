@@ -74,6 +74,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 intervalPause = prefill.intervalPause,
                 intervalMethodsByModel = prefill.intervalMethodsByModel,
                 sessionDuration = prefill.sessionDuration,
+                ratingPercent = prefill.ratingPercent,
                 intent = intent
             )
         } else {
@@ -118,11 +119,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun wizardSetCategory(cat: RecordingCategory) {
-        _wizard.update { it.copy(category = cat) }
+        _wizard.update { state ->
+            // Calendar end dates exist only on the Interval branch. If the user
+            // picked one and then walks back to Continuous, fall back to the
+            // default window instead of carrying an unsupported duration shape.
+            val duration = if (cat == RecordingCategory.CONTINUOUS &&
+                state.sessionDuration.hasEndDate
+            ) SessionDuration.DEFAULT else state.sessionDuration
+            state.copy(category = cat, sessionDuration = duration)
+        }
     }
 
     fun wizardSetIntervalPause(pause: LongInterval) {
         _wizard.update { it.copy(intervalPause = pause) }
+    }
+
+    fun wizardSetRatingPercent(percent: Int) {
+        _wizard.update { it.copy(ratingPercent = percent.coerceIn(10, 100)) }
     }
 
     fun wizardSetSessionDuration(duration: SessionDuration) {
