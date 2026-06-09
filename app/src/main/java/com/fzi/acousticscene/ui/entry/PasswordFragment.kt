@@ -16,7 +16,7 @@ import com.google.android.material.button.MaterialButton
 
 /**
  * Hard-coded developer-access gate behind the Configuration tile on the mode
- * picker. The password is `Welcome2fzi` (per v2 spec) — this is a UX gate, not
+ * picker. The password is `1234` (study setup) — this is a UX gate, not
  * real auth, so we keep it in code.
  *
  * Right password → navigate to Config Welcome and pop only this fragment off
@@ -27,7 +27,7 @@ import com.google.android.material.button.MaterialButton
 class PasswordFragment : Fragment(R.layout.fragment_password) {
 
     companion object {
-        private const val DEV_PASSWORD = "Welcome2fzi"
+        private const val DEV_PASSWORD = "1234"
     }
 
     private lateinit var input: EditText
