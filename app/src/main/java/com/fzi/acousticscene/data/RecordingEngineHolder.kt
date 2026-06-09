@@ -3,7 +3,7 @@ package com.fzi.acousticscene.data
 import android.content.Context
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.service.RecordingEngine
-import com.fzi.acousticscene.ui.UiState
+import com.fzi.acousticscene.ui.common.UiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -19,12 +19,15 @@ import com.fzi.acousticscene.model.SessionDuration
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
 import com.fzi.acousticscene.service.ClassificationService
+import com.fzi.acousticscene.ui.common.AppState
+import com.fzi.acousticscene.ui.common.UiState
+import com.fzi.acousticscene.ui.wizard.WizardViewState
+import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
  * View-model thin wrapper around the wizard UI state and the recording engine

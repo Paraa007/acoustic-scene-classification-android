@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.views
 
 import android.content.Context
 import android.graphics.Canvas

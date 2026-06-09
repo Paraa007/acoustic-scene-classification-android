@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.live
 
 import com.fzi.acousticscene.model.SceneClass
 import kotlinx.coroutines.flow.MutableSharedFlow

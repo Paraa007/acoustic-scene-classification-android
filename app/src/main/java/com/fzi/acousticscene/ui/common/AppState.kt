@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.common
 
 import com.fzi.acousticscene.model.ClassificationResult
 import com.fzi.acousticscene.model.LongInterval

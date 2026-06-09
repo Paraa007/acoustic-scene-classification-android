@@ -182,7 +182,7 @@ class ClassificationService : Service() {
                 // UI snaps back to a clean slate.
                 if (RecordingEngineHolder.engineOrNull() == null) {
                     RecordingEngineHolder.mutableUiState.value =
-                        com.fzi.acousticscene.ui.UiState()
+                        com.fzi.acousticscene.ui.common.UiState()
                 }
             }
             ACTION_STOP -> {

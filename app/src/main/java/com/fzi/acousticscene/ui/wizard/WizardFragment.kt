@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.wizard
 
 import android.Manifest
 import android.content.Intent
@@ -36,6 +36,8 @@ import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.model.SessionDuration
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
+import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.util.BatteryOptimizationHelper
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton

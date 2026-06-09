@@ -1,4 +1,4 @@
-package com.fzi.acousticscene.ui
+package com.fzi.acousticscene.ui.entry
 
 import android.os.Bundle
 import android.text.InputType

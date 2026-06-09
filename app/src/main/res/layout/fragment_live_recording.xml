@@ -102,7 +102,7 @@
                 android:background="@drawable/bg_tile"
                 android:padding="17dp">
 
-                <com.fzi.acousticscene.ui.ConcentricStopwatchView
+                <com.fzi.acousticscene.ui.views.ConcentricStopwatchView
                     android:id="@+id/liveStopwatch"
                     android:layout_width="128dp"
                     android:layout_height="128dp" />
@@ -353,7 +353,7 @@
                         tools:text="0.47" />
                 </LinearLayout>
 
-                <com.fzi.acousticscene.ui.VolumeLineChartView
+                <com.fzi.acousticscene.ui.views.VolumeLineChartView
                     android:id="@+id/liveVolumeChart"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"

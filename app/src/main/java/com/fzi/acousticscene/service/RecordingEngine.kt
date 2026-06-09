@@ -31,11 +31,11 @@ import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionConfig
-import com.fzi.acousticscene.ui.AppState
-import com.fzi.acousticscene.ui.EvaluationActivity
-import com.fzi.acousticscene.ui.EvaluationPromptBus
-import com.fzi.acousticscene.ui.PendingEvaluation
-import com.fzi.acousticscene.ui.UiState
+import com.fzi.acousticscene.ui.common.AppState
+import com.fzi.acousticscene.ui.live.EvaluationActivity
+import com.fzi.acousticscene.ui.live.EvaluationPromptBus
+import com.fzi.acousticscene.ui.common.PendingEvaluation
+import com.fzi.acousticscene.ui.common.UiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
