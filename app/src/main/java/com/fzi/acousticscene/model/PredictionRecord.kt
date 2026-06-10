@@ -253,7 +253,8 @@ data class PredictionRecord(
                 batteryTempCell,          // empty — see device-metrics comment above
                 cpuUsageCell              // empty — see device-metrics comment above
             ) + volumeSecondCells + listOf(
-                pauseDurationSec?.toString().orEmpty()
+                pauseDurationSec?.toString().orEmpty(),
+                sessionMode?.name.orEmpty()
             )
             val emptyAllInOne = allInOneModelNames?.map { "" }.orEmpty()
             return (baseCells + emptyAllInOne).joinToString(",")
@@ -349,7 +350,8 @@ data class PredictionRecord(
             batteryTempCell,
             cpuUsageCell
         ) + volumeSecondCells + listOf(
-            ""  // pause_duration_sec (empty for non-PAUSE rows)
+            "",  // pause_duration_sec (empty for non-PAUSE rows)
+            sessionMode?.name.orEmpty()  // TEST/CONFIG; empty on legacy records
         )
 
         // ALL-IN-ONE dynamische Spalten: eine Zelle pro bekanntem Modellnamen
@@ -399,7 +401,9 @@ data class PredictionRecord(
          * (battery/class/confidence/inference/mode), Session-Config (model_name +
          * Wizard-Block), Top-N, Probabilities, Aux (user_selected, per_second_clips,
          * long_*), Volume (mean/peak), Device-Metrics (battery_temp_c /
-         * cpu_usage_percent), Volume per second (s1..s10), Pause.
+         * cpu_usage_percent), Volume per second (s1..s10), Pause, session_mode.
+         * session_mode steht bewusst als letzte feste Spalte VOR den dynamischen
+         * allinone_*-Spalten, damit alle festen Spaltenindizes stabil bleiben.
          */
         fun getCsvHeader(allInOneModelNames: List<String>? = null): String {
             // Probabilities mit Display-Namen (wie top3_display_name) - mit Anführungszeichen
@@ -419,7 +423,7 @@ data class PredictionRecord(
                     "volume_mean,volume_peak," +
                     "battery_temp_c,cpu_usage_percent," +
                     "$volumeSecondCols," +
-                    "pause_duration_sec"
+                    "pause_duration_sec,session_mode"
             val allInOneCols = if (!allInOneModelNames.isNullOrEmpty()) {
                 "," + allInOneModelNames.joinToString(",") { "allinone_${escapeCsv(it.removeSuffix(".pt"))}" }
             } else ""

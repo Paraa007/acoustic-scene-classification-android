@@ -19,8 +19,10 @@ class PredictionRecordCsvTest {
     private fun realRecord(
         batteryTempC: Float? = null,
         cpuUsagePercent: Float? = null,
-        ratingPercent: Int? = null
+        ratingPercent: Int? = null,
+        sessionMode: SessionMode? = null
     ) = PredictionRecord(
+        sessionMode = sessionMode,
         id = 1L,
         timestamp = 1_700_000_000_000L,
         sessionStartTime = 1_700_000_000_000L,
@@ -129,6 +131,37 @@ class PredictionRecordCsvTest {
         val row = pauseRecord().toCsvRow().split(",")
         assertEquals(header.size, row.size)
         assertEquals("", row[header.indexOf("rating_percent")])
+    }
+
+    @Test
+    fun header_placesSessionModeLastBeforeDynamicColumns() {
+        assertEquals(header.indexOf("pause_duration_sec") + 1, header.indexOf("session_mode"))
+        // session_mode is the final fixed column; allinone_* columns append after it.
+        assertEquals(header.size - 1, header.indexOf("session_mode"))
+    }
+
+    @Test
+    fun toCsvRow_writesSessionModeWhenSet() {
+        val modeIdx = header.indexOf("session_mode")
+        val testRow = realRecord(sessionMode = SessionMode.TEST).toCsvRow().split(",")
+        assertEquals(header.size, testRow.size)
+        assertEquals("TEST", testRow[modeIdx])
+        val configRow = realRecord(sessionMode = SessionMode.CONFIG).toCsvRow().split(",")
+        assertEquals("CONFIG", configRow[modeIdx])
+    }
+
+    @Test
+    fun toCsvRow_emitsEmptySessionModeForLegacyRecords() {
+        val row = realRecord().toCsvRow().split(",")
+        assertEquals(header.size, row.size)
+        assertEquals("", row[header.indexOf("session_mode")])
+    }
+
+    @Test
+    fun toCsvRow_pauseRecordStillMatchesHeaderWithSessionMode() {
+        val row = pauseRecord().toCsvRow().split(",")
+        assertEquals(header.size, row.size)
+        assertEquals("", row[header.indexOf("session_mode")])
     }
 
     @Test
