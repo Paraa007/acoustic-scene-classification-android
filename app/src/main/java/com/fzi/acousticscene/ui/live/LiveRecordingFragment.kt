@@ -80,6 +80,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private lateinit var statusLabel: TextView
     private lateinit var headerTitle: TextView
     private lateinit var headerDot: View
+    private lateinit var scrollView: android.widget.ScrollView
     private lateinit var stopwatch: ConcentricStopwatchView
     private lateinit var modelCardsContainer: LinearLayout
     private lateinit var blindHint: TextView
@@ -152,6 +153,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         statusLabel = view.findViewById(R.id.liveStatusLabel)
         headerTitle = view.findViewById(R.id.liveHeaderTitle)
         headerDot = view.findViewById(R.id.liveLiveDot)
+        scrollView = view.findViewById(R.id.liveScrollView)
         stopwatch = view.findViewById(R.id.liveStopwatch)
         modelCardsContainer = view.findViewById(R.id.liveModelCardsContainer)
         blindHint = view.findViewById(R.id.liveBlindHint)
@@ -690,6 +692,12 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         evaluationTitle.text = getString(R.string.eval_blind_prompt)
         if (renderedEvaluationId != pending.predictionId) {
             renderedEvaluationId = pending.predictionId
+            // The card sits below the model cards and charts — without this
+            // scroll a fresh prompt is invisible whenever the user is at the
+            // top of the screen, which reads as "no rating ever came".
+            scrollView.post {
+                scrollView.smoothScrollTo(0, evaluationCard.top - dp(8f))
+            }
             evaluationCountdownJob?.cancel()
             evaluationCountdownJob = viewLifecycleOwner.lifecycleScope.launch {
                 while (isActive) {

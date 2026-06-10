@@ -70,4 +70,41 @@ class RatingQuotaScheduleTest {
     fun zeroPercent_neverPrompts() {
         assertTrue(drain(RatingQuotaSchedule(0), 20).none { it })
     }
+
+    @Test
+    fun firstCycle_alwaysPrompts_forEveryQuota() {
+        // The session's first cycle must prompt no matter the percentage or
+        // seed — otherwise low quotas with long pauses look like a broken
+        // rating feature right after session start.
+        for (percent in 10..90 step 10) {
+            for (seed in 0L..19L) {
+                val schedule = RatingQuotaSchedule(percent, Random(seed))
+                assertTrue(
+                    "percent=$percent seed=$seed",
+                    schedule.shouldPrompt()
+                )
+            }
+        }
+    }
+
+    @Test
+    fun firstCyclePin_consumesQuotaInsteadOfAddingToIt() {
+        // Block 1 still carries the exact quota: the pinned first prompt is
+        // one of its slots, not a bonus on top.
+        for (percent in 10..90 step 10) {
+            val schedule = RatingQuotaSchedule(percent, Random(11))
+            val firstBlock = drain(schedule, 10)
+            assertEquals("percent=$percent", percent / 10, firstBlock.count { it })
+        }
+    }
+
+    @Test
+    fun laterBlocks_doNotPinTheFirstPosition() {
+        // Only the session start is guaranteed. With 10 % and many blocks, a
+        // pinned position 0 would prompt on every block's first cycle — the
+        // shuffle must place at least one block's prompt elsewhere.
+        val schedule = RatingQuotaSchedule(10, Random(5))
+        val blocks = drain(schedule, 100).chunked(10)
+        assertTrue(blocks.drop(1).any { !it.first() })
+    }
 }
