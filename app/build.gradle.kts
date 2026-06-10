@@ -80,6 +80,9 @@ dependencies {
     // PyTorch Mobile (Standard, nicht Lite - für Module.load())
     implementation("org.pytorch:pytorch_android:1.13.1")
 
+    // ONNX Runtime für Speaker ID (SIQAS)
+    implementation(libs.onnxruntime.android)
+
     // Lifecycle & ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
@@ -102,6 +105,8 @@ dependencies {
     
     // Testing
     testImplementation(libs.junit)
+    // ONNX Runtime JVM-Variante für Paritäts-Unit-Tests auf dem Host
+    testImplementation(libs.onnxruntime.jvm)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
