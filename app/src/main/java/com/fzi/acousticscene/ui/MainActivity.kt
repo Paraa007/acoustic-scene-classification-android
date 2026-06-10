@@ -181,38 +181,12 @@ class MainActivity : AppCompatActivity() {
      * it. The service will promote itself to foreground and start loading the
      * picked models. The config is passed via [RecordingEngineHolder] — same
      * process, so no serialization needed.
+     *
+     * Only the recovery flow uses this — every UI-triggered command goes through
+     * MainViewModel.sendServiceCommand instead.
      */
-    fun applySessionConfigViaService(config: SessionConfig) {
+    private fun applySessionConfigViaService(config: SessionConfig) {
         RecordingEngineHolder.pendingConfig = config
         launchServiceWithAction(ClassificationService.ACTION_APPLY_CONFIG)
     }
-
-    /** Public so LiveRecordingFragment can ask the foreground service to start. */
-    fun startClassificationService() {
-        launchServiceWithAction(ClassificationService.ACTION_START)
-    }
-
-    fun stopClassificationService() {
-        // Use stopService() rather than startService(ACTION_STOP): on Android 12+
-        // a foreground-service start from the background throws
-        // ForegroundServiceStartNotAllowedException. stopService() reliably
-        // triggers ClassificationService.onDestroy(), which already runs the
-        // full teardown (WakeLock release, alarm cancel, stopForeground).
-        val intent = Intent(this, ClassificationService::class.java)
-        stopService(intent)
-    }
-
-    fun pauseClassificationService(autoResumeAfterMs: Long?) {
-        RecordingEngineHolder.pendingPauseAutoResumeMs = autoResumeAfterMs
-        launchServiceWithAction(ClassificationService.ACTION_PAUSE)
-    }
-
-    fun resumeClassificationService() {
-        launchServiceWithAction(ClassificationService.ACTION_RESUME)
-    }
-
-    fun clearRecordingResults() {
-        launchServiceWithAction(ClassificationService.ACTION_CLEAR_RESULTS)
-    }
-
 }

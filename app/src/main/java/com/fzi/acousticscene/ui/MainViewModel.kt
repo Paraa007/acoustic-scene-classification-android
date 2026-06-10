@@ -22,7 +22,6 @@ import com.fzi.acousticscene.service.ClassificationService
 import com.fzi.acousticscene.ui.common.AppState
 import com.fzi.acousticscene.ui.common.UiState
 import com.fzi.acousticscene.ui.wizard.WizardViewState
-import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -231,18 +230,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearError() {
         RecordingEngineHolder.mutableUiState.update {
             it.copy(errorMessage = null, appState = AppState.Ready)
-        }
-    }
-
-    fun exportPredictions(onComplete: (File?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val file = predictionRepository.exportToCsvFile()
-                onComplete(file)
-            } catch (e: Exception) {
-                Log.e(TAG, "Export failed", e)
-                onComplete(null)
-            }
         }
     }
 
