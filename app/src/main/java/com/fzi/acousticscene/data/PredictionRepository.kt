@@ -3,18 +3,13 @@ package com.fzi.acousticscene.data
 import android.content.Context
 import android.util.Log
 import com.fzi.acousticscene.model.PredictionRecord
+import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.realOnly
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
-import java.lang.reflect.Type
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -78,6 +73,20 @@ class PredictionRepository private constructor(private val context: Context) {
                 val loaded: List<PredictionRecord> = gson.fromJson(json, type)
                 predictions.clear()
                 predictions.addAll(loaded)
+                // Gson umgeht Kotlins Null-Checks: der lenient SceneClass-Deserializer
+                // mappt unbekannte Enum-Namen auf null, und auch recordingMode kann
+                // aus einem manipulierten/alten Blob als null ankommen. Solche Records
+                // crashen sonst beim ersten Feldzugriff (z. B. getStatistics).
+                @Suppress("USELESS_CAST", "SENSELESS_COMPARISON")
+                predictions.removeAll {
+                    (it.sceneClass as SceneClass?) == null || (it.recordingMode as RecordingMode?) == null
+                }
+                // Restore-/Legacy-Blobs können größer als das Limit sein — einmalig
+                // auf MAX_PREDICTIONS stutzen (älteste zuerst raus), sonst hält und
+                // serialisiert die App dauerhaft eine überlange Liste.
+                if (predictions.size > MAX_PREDICTIONS) {
+                    predictions.subList(0, predictions.size - MAX_PREDICTIONS).clear()
+                }
                 Log.d(TAG, "Loaded ${predictions.size} predictions from storage")
             }
         } catch (e: Exception) {
@@ -98,6 +107,14 @@ class PredictionRepository private constructor(private val context: Context) {
         }
     }
     
+    /**
+     * True wenn ein Record mit dieser ID existiert. EvaluationActivity prüft das,
+     * bevor sie ein User-Label schreibt — der Record kann gelöscht worden sein,
+     * während die Bewertungs-Notification noch offen war.
+     */
+    @Synchronized
+    fun exists(predictionId: Long): Boolean = predictions.any { it.id == predictionId }
+
     /**
      * Updates an existing prediction with user evaluation data
      */
@@ -120,13 +137,14 @@ class PredictionRepository private constructor(private val context: Context) {
      */
     @Synchronized
     fun addPrediction(record: PredictionRecord) {
-        // Sicherheitslimit prüfen
-        if (predictions.size >= MAX_PREDICTIONS) {
+        // Sicherheitslimit: while statt if — eine über dem Limit geladene Liste
+        // würde mit if pro Add nur um eins schrumpfen und nie aufs Limit zurückfallen.
+        while (predictions.size >= MAX_PREDICTIONS) {
             // Älteste entfernen
             predictions.removeAt(0)
             Log.w(TAG, "Max predictions reached, removing oldest")
         }
-        
+
         predictions.add(record)
         saveToPrefs()
         Log.d(TAG, "Added prediction: ${record.sceneClass.label} (${(record.confidence * 100).toInt()}%)")
@@ -228,7 +246,11 @@ class PredictionRepository private constructor(private val context: Context) {
      *
      * Pause-Records werden ausgeschlossen — sie tragen Placeholder-Klassifikation
      * (TRANSIT_VEHICLES, confidence 0) und würden den Export verfälschen.
+     *
+     * Kanonischer CSV-Builder der App — der einzige UI-Export (HistoryActivity)
+     * soll hierüber laufen, damit dynamische Spalten (allinone_*) nie verloren gehen.
      */
+    @Synchronized
     fun exportToCsvString(records: List<PredictionRecord> = predictions): String {
         val real = records.realOnly()
         val allInOneModelNames: List<String> = real
@@ -244,59 +266,6 @@ class PredictionRepository private constructor(private val context: Context) {
             sb.appendLine(record.toCsvRow(allInOneModelNames.takeIf { it.isNotEmpty() }))
         }
         return sb.toString()
-    }
-    
-    /**
-     * Exports predictions as CSV file
-     * @param modelName Optional model name to include in filename
-     * @return File object of the created file
-     */
-    suspend fun exportToCsvFile(modelName: String? = null): File = withContext(Dispatchers.IO) {
-        // Calculate start and end time of predictions
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
-        val timestamp = dateFormat.format(Date())
-
-        // Get model name from first prediction if not provided
-        val model = modelName
-            ?: predictions.firstOrNull()?.modelName?.replace(".pt", "")
-            ?: "model1"
-
-        // Format: recording_[MODEL_NAME]_[TIMESTAMP].csv
-        val fileName = "recording_${model}_${timestamp}.csv"
-        val file = File(context.getExternalFilesDir(null), fileName)
-
-        file.writeText(exportToCsvString())
-        Log.d(TAG, "Exported ${predictions.size} predictions to ${file.absolutePath}")
-
-        file
-    }
-
-    /**
-     * Exports a specific package as CSV file
-     * @param records List of prediction records to export
-     * @return File object of the created file
-     */
-    suspend fun exportPackageToCsvFile(records: List<PredictionRecord>): File = withContext(Dispatchers.IO) {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
-        val startTime = records.firstOrNull()?.timestamp ?: System.currentTimeMillis()
-        val timestamp = dateFormat.format(Date(startTime))
-
-        // Get model name from first prediction. ALL-IN-ONE sessions use a compact marker.
-        val first = records.firstOrNull()
-        val model = if (first?.allInOneResults != null && first.allInOneResults.isNotEmpty()) {
-            "allinone_${first.allInOneResults.size}models"
-        } else {
-            first?.modelName?.replace(".pt", "") ?: "model1"
-        }
-
-        // Format: recording_[MODEL_NAME]_[TIMESTAMP].csv
-        val fileName = "recording_${model}_${timestamp}.csv"
-        val file = File(context.getExternalFilesDir(null), fileName)
-
-        file.writeText(exportToCsvString(records))
-
-        Log.d(TAG, "Exported ${records.size} predictions to ${file.absolutePath}")
-        file
     }
     
     // --- Session-Namen Persistenz ---
@@ -331,6 +300,7 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Setzt einen benutzerdefinierten Namen für eine Session
      */
+    @Synchronized
     fun setSessionName(sessionStartTime: Long, name: String) {
         sessionNames[sessionStartTime] = name
         saveSessionNames()
@@ -340,6 +310,7 @@ class PredictionRepository private constructor(private val context: Context) {
     /**
      * Gibt den benutzerdefinierten Namen einer Session zurück, oder null
      */
+    @Synchronized
     fun getSessionName(sessionStartTime: Long): String? {
         return sessionNames[sessionStartTime]
     }
@@ -348,6 +319,7 @@ class PredictionRepository private constructor(private val context: Context) {
      * Löst den Anzeigenamen einer Session auf:
      * Custom Name falls vorhanden, sonst "Session #X" (chronologisch, älteste = 1)
      */
+    @Synchronized
     fun resolveSessionDisplayName(sessionStartTime: Long, allSessionStartTimes: List<Long>): String {
         sessionNames[sessionStartTime]?.let { return it }
         val sorted = allSessionStartTimes.sorted()
