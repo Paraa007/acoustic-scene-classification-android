@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Waveform pulse line for the Acoustic Scene Classification tile on the
+    feature hub. Same stroke style as ic_check_circle / ic_lock (1.8dp,
+    accent_green, round caps) so the hub tiles match the Mode Select tiles.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M3,12 L6.2,12 L9.2,6.5 L12.4,17.5 L15.2,9.5 L17.2,12 L21,12" />
+</vector>

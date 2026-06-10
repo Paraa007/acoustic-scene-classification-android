@@ -2,9 +2,30 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/modeSelectFragment">
+    app:startDestination="@id/featureHubFragment">
 
-    <!-- Entry point — picks Test vs Config mode. Runs on every app start. -->
+    <!-- Root of the umbrella app ("FZI Audio Suite") — one tile per feature.
+         Session-agnostic; system back from here exits the app. -->
+    <fragment
+        android:id="@+id/featureHubFragment"
+        android:name="com.fzi.acousticscene.ui.entry.FeatureHubFragment"
+        android:label="FeatureHub">
+        <action
+            android:id="@+id/action_hub_to_mode_select"
+            app:destination="@id/modeSelectFragment" />
+        <action
+            android:id="@+id/action_hub_to_speakerid_placeholder"
+            app:destination="@id/speakerIdPlaceholderFragment" />
+    </fragment>
+
+    <!-- Placeholder until the SIQAS port lands. -->
+    <fragment
+        android:id="@+id/speakerIdPlaceholderFragment"
+        android:name="com.fzi.speakerid.SpeakerIdPlaceholderFragment"
+        android:label="SpeakerIdPlaceholder" />
+
+    <!-- Acoustic Scene Classification entry — picks Test vs Config mode.
+         Reached from the feature hub; the flow from here is unchanged. -->
     <fragment
         android:id="@+id/modeSelectFragment"
         android:name="com.fzi.acousticscene.ui.entry.ModeSelectFragment"
