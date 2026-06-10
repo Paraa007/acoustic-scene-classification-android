@@ -526,11 +526,11 @@ class HistoryActivity : AppCompatActivity() {
     private fun exportPackageCsv(records: List<PredictionRecord>) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val csvContent = StringBuilder()
-                csvContent.appendLine(PredictionRecord.getCsvHeader())
-                records.forEach { record ->
-                    csvContent.appendLine(record.toCsvRow())
-                }
+                // Über den kanonischen Builder im Repository. Die handgebaute
+                // Header/Zeilen-Schleife, die hier stand, kannte die dynamischen
+                // allinone_*-Spalten nicht — ALL-IN-ONE-Sessions exportierten
+                // aus der History deshalb ohne ihre Modell-Vergleichsdaten.
+                val csvContent = repository.exportToCsvString(records)
 
                 val timeFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
                 val startTime = timeFormat.format(Date(records.first().timestamp))
@@ -542,7 +542,7 @@ class HistoryActivity : AppCompatActivity() {
                 // damit nicht automatisch teilbar.
                 val exportDir = File(getExternalFilesDir(null), "csv_exports").apply { mkdirs() }
                 val file = File(exportDir, fileName)
-                file.writeText(csvContent.toString())
+                file.writeText(csvContent)
 
                 withContext(Dispatchers.Main) {
                     shareCsvFile(file)
