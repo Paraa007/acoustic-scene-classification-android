@@ -97,7 +97,21 @@ class MelSpectrogramProcessor(
         val totalTime = t5 - totalStartTime
         Log.d(TAG, "PERF: Log transformation: ${t5 - t4}ms")
         Log.d(TAG, "PERF: Total Mel-Spectrogram computation: ${totalTime}ms")
-        
+
+        // NaN/Inf-Wächter: korrupter Audio-Input (z. B. Garbage-Samples nach
+        // Permission-Entzug) pflanzt sich sonst still bis in den Softmax fort und
+        // liefert eine scheinbar valide Klassifikation (Index 0, 0 % Konfidenz).
+        // Lieber hier hart scheitern — ModelInference.computeLogMel fängt die
+        // Exception und verwirft den Zyklus sauber.
+        for (row in logMelSpectrogram) {
+            for (v in row) {
+                if (!v.isFinite()) {
+                    Log.w(TAG, "Non-finite value in log-mel spectrogram — dropping cycle")
+                    throw IllegalStateException("Non-finite value in log-mel spectrogram")
+                }
+            }
+        }
+
         return logMelSpectrogram
     }
 

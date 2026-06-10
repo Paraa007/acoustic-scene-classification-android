@@ -3,6 +3,7 @@ package com.fzi.acousticscene.ui.history
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -535,7 +536,12 @@ class HistoryActivity : AppCompatActivity() {
                 val startTime = timeFormat.format(Date(records.first().timestamp))
                 val endTime = timeFormat.format(Date(records.last().timestamp))
                 val fileName = "package_${startTime}_TO_${endTime}.csv"
-                val file = File(getExternalFilesDir(null), fileName)
+                // Eigener Unterordner statt Wurzel von getExternalFilesDir: der
+                // FileProvider gibt nur noch csv_exports/ frei (file_provider_paths.xml).
+                // Landet später etwas anderes im External-Files-Verzeichnis, ist es
+                // damit nicht automatisch teilbar.
+                val exportDir = File(getExternalFilesDir(null), "csv_exports").apply { mkdirs() }
+                val file = File(exportDir, fileName)
                 file.writeText(csvContent.toString())
 
                 withContext(Dispatchers.Main) {
@@ -565,7 +571,10 @@ class HistoryActivity : AppCompatActivity() {
             startActivity(Intent.createChooser(shareIntent, getString(R.string.share_csv)))
             Toast.makeText(this, R.string.csv_exported, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.share_failed, e.message), Toast.LENGTH_LONG).show()
+            // Exception-Details gehören ins Log, nicht in den Toast — e.message
+            // kann auf manchen ROMs absolute Pfade oder Provider-Authorities tragen.
+            Log.w("HistoryActivity", "CSV share failed", e)
+            Toast.makeText(this, R.string.share_failed, Toast.LENGTH_LONG).show()
         }
     }
 

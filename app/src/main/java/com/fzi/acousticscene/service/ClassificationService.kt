@@ -1,5 +1,6 @@
 package com.fzi.acousticscene.service
 
+import android.Manifest
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -10,6 +11,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -17,9 +19,12 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.ui.MainActivity
+import com.fzi.acousticscene.ui.common.AppState
 import com.fzi.acousticscene.R
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -206,7 +211,32 @@ class ClassificationService : Service() {
      */
     private fun ensureForegroundStarted() {
         if (isRunning) return
+        // Defense-in-Depth zum UI-Gate im Wizard: ohne RECORD_AUDIO darf ein
+        // Microphone-FGS auf Android 14+ nicht starten (SecurityException).
+        // Dieser Pfad fängt Reste wie den Recovery-Restart, nachdem der User
+        // die Permission in den Systemeinstellungen entzogen hat.
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e(TAG, "RECORD_AUDIO not granted — refusing to start recording service")
+            failStartWithError("Microphone permission missing — grant it in system settings")
+            return
+        }
         startForegroundClassification()
+    }
+
+    /**
+     * Bricht einen Service-Start sauber ab: Fehlerzustand für die UI setzen,
+     * eventuelle Teil-Initialisierung zurückrollen, Service beenden.
+     */
+    private fun failStartWithError(message: String) {
+        RecordingEngineHolder.mutableUiState.update {
+            it.copy(appState = AppState.Error(message), errorMessage = message)
+        }
+        isRunning = false
+        stopKeepAliveAlarm()
+        releaseWakeLock()
+        stopSelf()
     }
     
     override fun onBind(intent: Intent?): IBinder {
@@ -258,7 +288,16 @@ class ClassificationService : Service() {
         startKeepAliveAlarm()
 
         // Starte Foreground Service mit Notification (HIGH Priority!)
-        startForeground(NOTIFICATION_ID, createNotification("Classification running..."))
+        try {
+            startForeground(NOTIFICATION_ID, createNotification("Classification running..."))
+        } catch (e: Exception) {
+            // Android 14+: SecurityException, wenn die Mikrofon-Permission zwischen
+            // Check und Start entzogen wurde; ForegroundServiceStartNotAllowedException
+            // bei Background-Start-Restriktionen. Beides darf den Prozess nicht reißen.
+            Log.e(TAG, "startForeground failed — aborting session start", e)
+            failStartWithError("Recording could not start: ${e.javaClass.simpleName}")
+            return
+        }
 
         // Benachrichtige Listener
         serviceListener?.onClassificationStarted()
@@ -283,15 +322,23 @@ class ClassificationService : Service() {
             )
 
             alarmManager?.let { am ->
-                // setExactAndAllowWhileIdle funktioniert auch im Doze-Mode!
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // Ab API 31 kann der User SCHEDULE_EXACT_ALARM in den System-
+                // einstellungen entziehen; setExactAndAllowWhileIdle wirft dann
+                // SecurityException. Ungenauer Alarm statt gar keinem — der
+                // WakeLock bleibt der primäre Mechanismus, der Alarm ist Backup.
+                // (Auf API 33+ ist USE_EXACT_ALARM aus dem Manifest auto-granted.)
+                val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                        am.canScheduleExactAlarms()
+                if (canExact) {
+                    // setExactAndAllowWhileIdle funktioniert auch im Doze-Mode!
                     am.setExactAndAllowWhileIdle(
                         AlarmManager.ELAPSED_REALTIME_WAKEUP,
                         SystemClock.elapsedRealtime() + ALARM_INTERVAL_MS,
                         keepAlivePendingIntent!!
                     )
                 } else {
-                    am.setExact(
+                    Log.w(TAG, "Exact alarms not permitted — falling back to inexact keep-alive")
+                    am.setAndAllowWhileIdle(
                         AlarmManager.ELAPSED_REALTIME_WAKEUP,
                         SystemClock.elapsedRealtime() + ALARM_INTERVAL_MS,
                         keepAlivePendingIntent!!

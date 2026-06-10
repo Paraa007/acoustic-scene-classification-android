@@ -1,5 +1,6 @@
 package com.fzi.acousticscene.ml
 
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.ExecutorService
@@ -21,6 +22,7 @@ object ComputationDispatcher {
      * Shuts down the underlying thread pool. After this call the dispatcher
      * rejects new work — only call from test teardown or process exit.
      */
+    @VisibleForTesting
     fun shutdown() {
         dispatcher.close()
     }

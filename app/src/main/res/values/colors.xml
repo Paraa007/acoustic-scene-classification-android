@@ -14,7 +14,6 @@
 
     <!-- Accent (forest green, used sparingly) -->
     <color name="accent_green">#3C6E57</color>
-    <color name="accent_green_dark">#2A5340</color>
     <color name="accent_green_light">#5E9070</color>
     <color name="accent_soft">#E8EFEA</color>
     <color name="accent_line">#B7CCC0</color>
@@ -22,25 +21,19 @@
 
     <!-- Test-acc-missing red (light) -->
     <color name="accent_red">#B1463F</color>
-    <color name="accent_red_soft">#F4DADA</color>
 
     <!-- Soft tints of status_info — mode badge (Test variant) -->
     <color name="info_soft">#E6EDF3</color>
     <color name="info_line">#B9CCDB</color>
 
     <!-- Dev/info blue stays available for legacy widgets -->
-    <color name="accent_blue">#3C6E57</color>
-    <color name="accent_blue_dark">#2A5340</color>
-    <color name="accent_blue_light">#5E9070</color>
 
     <!-- Text -->
     <color name="text_primary">#1C1D1F</color>
     <color name="text_secondary">#6A6B6E</color>
-    <color name="text_disabled">#9A9B9E</color>
     <color name="text_faint">#9B9CA0</color>
 
     <!-- Status -->
-    <color name="status_success">#3C6E57</color>
     <color name="status_warning">#C28D5E</color>
     <color name="status_error">#B1463F</color>
     <color name="status_info">#5C86A8</color>
@@ -60,22 +53,15 @@
 
     <!-- Material aliases -->
     <color name="primary">#3C6E57</color>
-    <color name="primary_dark">#2A5340</color>
-    <color name="accent">#3C6E57</color>
     <color name="background">#F3F2EF</color>
     <color name="surface">#FFFFFF</color>
     <color name="error">#B1463F</color>
     <color name="on_primary">#FFFFFF</color>
-    <color name="on_background">#1C1D1F</color>
     <color name="on_surface">#1C1D1F</color>
     <color name="on_error">#FFFFFF</color>
 
     <!-- Status indicator (live recording state) -->
-    <color name="status_idle">#9A9B9E</color>
-    <color name="status_recording">#BB6F66</color>
-    <color name="status_processing">#C28D5E</color>
 
     <!-- Dialogs -->
     <color name="dialog_surface">#FFFFFF</color>
-    <color name="dialog_surface_light">#F3F2EF</color>
 </resources>

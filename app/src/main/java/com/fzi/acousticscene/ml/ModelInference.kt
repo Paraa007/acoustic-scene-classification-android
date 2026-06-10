@@ -2,6 +2,7 @@ package com.fzi.acousticscene.ml
 
 import android.content.Context
 import android.util.Log
+import com.fzi.acousticscene.BuildConfig
 import com.fzi.acousticscene.audio.MelSpectrogramProcessor
 import com.fzi.acousticscene.ml.ComputationDispatcher
 import com.fzi.acousticscene.model.ClassificationResult
@@ -24,11 +25,11 @@ import java.io.FileOutputStream
  * MelSpectrogram is computed on Android (not in the model).
  *
  * @param context Android Context
- * @param modelAssetPath Full path to model in assets (e.g., "user_model/model1.pt")
+ * @param modelAssetPath Full path to model in assets (e.g., "dev_models/model1.pt")
  */
 class ModelInference(
     private val context: Context,
-    private var modelAssetPath: String = "user_model/model1.pt"
+    private var modelAssetPath: String
 ) {
     companion object {
         private const val TAG = "ModelInference"
@@ -37,6 +38,23 @@ class ModelInference(
         private const val INPUT_AUDIO_SIZE = SAMPLE_RATE_HZ * STANDARD_AUDIO_SECONDS
         private const val N_MELS = 256
         private const val EXPECTED_TIME_FRAMES = 641 // For 10 seconds audio
+
+        // Modell-Pfade kommen heute ausschließlich aus assets.list() und sind
+        // vertrauenswürdig. Die Validierung ist Defense-in-Depth für den Tag, an
+        // dem jemand nutzergesteuerte Pfade (Download, Share-Intent) anschließt:
+        // Module.load() deserialisiert nativ — ein präparierter Pfad wäre dann
+        // ein RCE-Vektor (siehe _security_review SEC-002/SEC-003).
+        private val ASSET_PATH_RULE = Regex("^[A-Za-z0-9_./-]+\\.pt$")
+
+        private fun requireValidAssetPath(path: String) {
+            require(ASSET_PATH_RULE.matches(path) && !path.contains("..")) {
+                "Invalid model asset path: $path"
+            }
+        }
+    }
+
+    init {
+        requireValidAssetPath(modelAssetPath)
     }
 
     // Extract model name from path
@@ -55,6 +73,7 @@ class ModelInference(
      * @param newPath Full path to model in assets (e.g., "dev_models/model2.pt")
      */
     fun setModelPath(newPath: String) {
+        requireValidAssetPath(newPath)
         if (newPath != modelAssetPath) {
             // Free the native PyTorch module of the previous path before swapping —
             // otherwise the old C++ allocation stays around until GC happens.
@@ -77,8 +96,11 @@ class ModelInference(
 
             Log.d(TAG, "Loading model from assets: $modelAssetPath")
 
-            // Create cache file name from full path (replace / with _)
-            val cacheFileName = modelAssetPath.replace("/", "_")
+            // Create cache file name from full path (replace / with _). The
+            // versionCode prefix invalidates the cache on every app update —
+            // otherwise a model shipped with the same filename but new weights
+            // would keep serving the stale copy until the user clears the cache.
+            val cacheFileName = "v${BuildConfig.VERSION_CODE}_" + modelAssetPath.replace("/", "_")
             val modelFile = File(context.cacheDir, cacheFileName)
 
             // Always copy if path changed or file doesn't exist

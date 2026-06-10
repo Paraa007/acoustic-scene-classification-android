@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nur der CSV-Export-Unterordner ist über den FileProvider erreichbar.
+  path="." würde das gesamte External-Files-Verzeichnis freigeben — landet
+  dort später z. B. ein Modell-Dump oder Crash-Log, wäre der ohne Code-Änderung
+  per content://-URI teilbar.
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-files-path
         name="external_files"
-        path="." />
+        path="csv_exports" />
 </paths>

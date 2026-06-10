@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
@@ -81,7 +82,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     private val recordAudioPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
-                startRecordingSession()
+                ensureNotificationsThenStart()
             } else if (!shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
                 // Second denial (or "Don't ask again"): system will no longer
                 // surface the prompt, so point the user at app settings.
@@ -170,7 +171,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             ctx, Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
         if (granted) {
-            startRecordingSession()
+            ensureNotificationsThenStart()
             return
         }
         if (shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
@@ -189,6 +190,32 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             return
         }
         recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    // POST_NOTIFICATIONS is runtime-gated from API 33. Without the grant the
+    // FGS status, evaluation-prompt and recovery notifications are silently
+    // suppressed — recording itself still works, so the callback starts the
+    // session regardless of the user's answer.
+    private val notificationsPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            startRecordingSession()
+        }
+
+    private fun ensureNotificationsThenStart() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            startRecordingSession()
+            return
+        }
+        val granted = ContextCompat.checkSelfPermission(
+            requireContext(), Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            startRecordingSession()
+            return
+        }
+        // Permanently denied requests resolve immediately without a dialog, so
+        // launching unconditionally is safe and needs no extra state.
+        notificationsPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     private fun startRecordingSession() {

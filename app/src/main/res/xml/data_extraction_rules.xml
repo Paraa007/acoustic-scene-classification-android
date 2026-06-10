@@ -9,10 +9,14 @@
         <exclude domain="sharedpref" path="predictions_prefs.xml"/>
         <exclude domain="sharedpref" path="last_config_prefs.xml"/>
         <exclude domain="sharedpref" path="quickstart_slots_v2.xml"/>
+        <exclude domain="sharedpref" path="active_session_store.xml"/>
+        <exclude domain="sharedpref" path="model_display_names.xml"/>
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="predictions_prefs.xml"/>
         <exclude domain="sharedpref" path="last_config_prefs.xml"/>
         <exclude domain="sharedpref" path="quickstart_slots_v2.xml"/>
+        <exclude domain="sharedpref" path="active_session_store.xml"/>
+        <exclude domain="sharedpref" path="model_display_names.xml"/>
     </device-transfer>
 </data-extraction-rules>

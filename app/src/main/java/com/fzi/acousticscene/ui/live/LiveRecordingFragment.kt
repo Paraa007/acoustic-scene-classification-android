@@ -667,22 +667,6 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         }
     }
 
-    private fun showPauseDurationPicker() {
-        val options = listOf(
-            ModernDialogHelper.PauseDurationOption(getString(R.string.pause_picker_no_timer), null),
-            ModernDialogHelper.PauseDurationOption("5 min", 5L * 60_000L),
-            ModernDialogHelper.PauseDurationOption("10 min", 10L * 60_000L),
-            ModernDialogHelper.PauseDurationOption("30 min", 30L * 60_000L),
-            ModernDialogHelper.PauseDurationOption("1 h", 60L * 60_000L)
-        )
-        ModernDialogHelper.showPauseDurationDialog(
-            context = requireContext(),
-            title = getString(R.string.pause_picker_title),
-            subtitle = getString(R.string.pause_picker_subtitle),
-            options = options
-        ) { picked -> viewModel.pauseSession(picked.durationMs) }
-    }
-
     private fun renderEvaluationCard(state: UiState) {
         val pending = state.pendingEvaluation
         if (pending == null) {

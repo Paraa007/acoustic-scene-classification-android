@@ -68,14 +68,21 @@ object ModelMetadataRegistry {
         return try {
             val type = object : TypeToken<List<Entry>>() {}.type
             val entries: List<Entry> = gson.fromJson(raw, type) ?: emptyList()
-            entries.associate { entry ->
-                entry.modelFilename to ModelMetadata(
-                    modelFilename = entry.modelFilename,
-                    trainingSeconds = entry.trainingSeconds,
+            // Gson umgeht Kotlins Null-Checks: fehlt model_filename oder
+            // training_seconds im JSON, stehen hier nulls in non-null-Feldern.
+            // Solche Einträge fallen raus statt später beim Zugriff zu crashen.
+            entries.mapNotNull { entry ->
+                val filename = entry.modelFilename ?: return@mapNotNull null
+                val seconds = entry.trainingSeconds ?: return@mapNotNull null
+                filename to ModelMetadata(
+                    modelFilename = filename,
+                    trainingSeconds = seconds,
                     testAccuracy = entry.testAccuracy
                 )
-            }
-        } catch (e: JsonSyntaxException) {
+            }.toMap()
+        } catch (e: Exception) {
+            // Bewusst breiter als JsonSyntaxException: auch Typ-Mismatches und
+            // andere Gson-Überraschungen sollen nur das leere Mapping liefern.
             Log.e(TAG, "model_metadata.json is malformed", e)
             emptyMap()
         }
@@ -83,9 +90,10 @@ object ModelMetadataRegistry {
 
     // JSON schema. Matches v2 spec exactly:
     //   { "model_filename": "...", "training_seconds": 10, "test_accuracy": 0.92 }
+    // Felder nullable, weil Gson fehlende Keys still als null setzt.
     private data class Entry(
-        @SerializedName("model_filename") val modelFilename: String,
-        @SerializedName("training_seconds") val trainingSeconds: Int,
+        @SerializedName("model_filename") val modelFilename: String?,
+        @SerializedName("training_seconds") val trainingSeconds: Int?,
         @SerializedName("test_accuracy") val testAccuracy: Double?
     )
 }
