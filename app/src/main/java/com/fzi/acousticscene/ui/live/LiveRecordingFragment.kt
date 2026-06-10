@@ -80,6 +80,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private lateinit var statusLabel: TextView
     private lateinit var stopwatch: ConcentricStopwatchView
     private lateinit var modelCardsContainer: LinearLayout
+    private lateinit var blindHint: TextView
     private lateinit var volumeChart: VolumeLineChartView
     private lateinit var tempChart: MetricLineChartView
     private lateinit var cpuChart: MetricLineChartView
@@ -152,6 +153,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         statusLabel = view.findViewById(R.id.liveStatusLabel)
         stopwatch = view.findViewById(R.id.liveStopwatch)
         modelCardsContainer = view.findViewById(R.id.liveModelCardsContainer)
+        blindHint = view.findViewById(R.id.liveBlindHint)
         volumeChart = view.findViewById(R.id.liveVolumeChart)
         tempChart = view.findViewById(R.id.liveTempChart)
         cpuChart = view.findViewById(R.id.liveCpuChart)
@@ -316,6 +318,17 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
 
         updateMetricCharts(state)
 
+        // Anti-bias blinding gate (interval mode): while the current cycle is
+        // earmarked for a "Rate now" prompt, none of its class-bearing UI may
+        // render — across ALL model cards. Bars freeze on the previous cycle,
+        // the slice strip shows neutral circles, and the hint tile explains
+        // why. Timer, volume and device metrics above keep updating; they
+        // carry no class information. Once the rating resolves (submit, skip
+        // or 5-min expiry) blindCycleActive flips false and the held results,
+        // still sitting in liveResultsByModel, paint on the next render.
+        val blind = state.blindCycleActive
+        blindHint.visibility = if (blind) View.VISIBLE else View.GONE
+
         ensureCards(config)
         for (model in config.modelNames) {
             val card = cardsByModel[model] ?: continue
@@ -324,12 +337,12 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             for (sub in activeMethods) {
                 val section = card.methodSections[sub] ?: continue
                 val result = perMethod[sub]
-                if (result != null) {
+                if (result != null && !blind) {
                     section.bars.setProbabilities(result.allProbabilities)
                 }
                 if (sub == LongSubMode.AVERAGE && section.sliceCells != null) {
                     val slices = state.perSecondResultsByModel[model].orEmpty()
-                    updateSliceStrip(section.sliceCells, slices)
+                    updateSliceStrip(section.sliceCells, slices, blind)
                 }
             }
         }
@@ -367,10 +380,15 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
      * that slice classified as and laying its emoji inside the circle. Empty
      * slots (not yet filled in this cycle) read as dashed hairline circles.
      * The newest filled cell gets an accent border so the live edge is visible.
+     *
+     * [blind] = anti-bias mode: filled cells render as neutral grey circles
+     * without emoji or accent ring, so the strip still shows recording
+     * progress but leaks no class information for a to-be-rated cycle.
      */
     private fun updateSliceStrip(
         cells: List<View>,
-        slices: List<com.fzi.acousticscene.model.ClassificationResult?>
+        slices: List<com.fzi.acousticscene.model.ClassificationResult?>,
+        blind: Boolean
     ) {
         val ctx = requireContext()
         val newestIdx = slices.indexOfLast { it != null }
@@ -380,6 +398,13 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             val slice = slices.getOrNull(i)
             if (slice == null) {
                 cell.background = emptySliceBackground(ctx)
+                emojiView.text = ""
+            } else if (blind) {
+                cell.background = filledSliceBackground(
+                    ctx,
+                    ContextCompat.getColor(ctx, R.color.text_faint),
+                    isLiveEdge = false
+                )
                 emojiView.text = ""
             } else {
                 cell.background = filledSliceBackground(

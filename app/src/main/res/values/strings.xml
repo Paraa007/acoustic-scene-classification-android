@@ -498,6 +498,8 @@
     <string name="eval_match">Match</string>
     <string name="eval_differs">Different</string>
     <string name="eval_your_pick">Your pick</string>
+    <!-- Live screen, shown in place of the prediction while a cycle waits for its rating. -->
+    <string name="live_blind_hint">🔒 Hidden until you rate</string>
 
     <!-- v2 Config Welcome (slide 03) — two-line variant of the app title. -->
     <string name="welcome_title_two_line">Acoustic Scene\nClassification</string>

@@ -39,6 +39,7 @@ import com.fzi.acousticscene.ui.live.EvaluationActivity
 import com.fzi.acousticscene.ui.live.EvaluationPromptBus
 import com.fzi.acousticscene.ui.common.PendingEvaluation
 import com.fzi.acousticscene.ui.common.UiState
+import com.fzi.acousticscene.ui.common.withBlindResolved
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,7 +117,10 @@ class RecordingEngine(
     private var pauseStartedAutoResumeMin: Int? = null
 
     // "Rate now" quota for the running interval session. Rebuilt on every
-    // start(); 100 % behaves exactly like the pre-quota app.
+    // start(); 100 % behaves exactly like the pre-quota app. Drawn exactly
+    // once per interval cycle, at CYCLE START — the decision must exist before
+    // recording begins so a will-prompt cycle is blinded from its first
+    // streamed per-second slice (see UiState.blindCycleActive).
     private var ratingQuota = RatingQuotaSchedule(100)
 
     // True while the running session is snapshotted in [ActiveSessionStore]
@@ -129,7 +133,10 @@ class RecordingEngine(
             EvaluationPromptBus.dismissals.collect { dismissedId ->
                 state.update { s ->
                     if (s.pendingEvaluation?.predictionId == dismissedId) {
-                        s.copy(pendingEvaluation = null)
+                        // Rating resolved (submit/skip/timeout in the activity)
+                        // → lift the anti-bias blind, the live screen may show
+                        // the cycle's prediction again.
+                        s.withBlindResolved(dismissedId).copy(pendingEvaluation = null)
                     } else s
                 }
             }
@@ -271,7 +278,10 @@ class RecordingEngine(
                 sessionVolumeMeanSampleCount = 0,
                 allInOneResults = emptyMap(),
                 lastCycleComputeMs = 0L,
-                sessionComputeMs = 0L
+                sessionComputeMs = 0L,
+                pendingEvaluation = null,
+                blindCycleActive = false,
+                blindPredictionId = null
             )
         }
 
@@ -343,12 +353,33 @@ class RecordingEngine(
             // at cycle start; the deltas after the cycle yield cpuUsagePercent.
             val cpuTimeAtCycleStartMs = Process.getElapsedCpuTime()
             val wallAtCycleStartMs = SystemClock.elapsedRealtime()
+            // Quota gate, drawn BEFORE recording begins (one draw per interval
+            // cycle): a cycle that will raise the rating prompt is blinded for
+            // its entire lifetime, including the in-flight per-second slices —
+            // deciding only after the cycle would leak the streamed results.
+            // Quota-skipped cycles prompt nothing and render normally.
+            val willPrompt = config.category == RecordingCategory.INTERVAL &&
+                    ratingQuota.shouldPrompt()
             val frameSegments = frameSegmentsFor(config)
             state.update {
+                // This update retargets the blind to the new cycle. If the
+                // previous prompt cycle's rating is still open (interval pause
+                // shorter than the 5-min window, or a late expiry job), its
+                // results are still sitting in the live maps and would paint
+                // the moment the old blind is dropped — wipe them so the
+                // unrated prediction never surfaces. The pendingEvaluation
+                // (rating card + History exclusion) stays untouched.
+                val carryingBlind = it.blindCycleActive && it.blindPredictionId != null
                 it.copy(
                     frameSegments = frameSegments,
                     frameElapsedMs = 0L,
-                    recordingProgress = 0f
+                    recordingProgress = 0f,
+                    blindCycleActive = willPrompt,
+                    blindPredictionId = null,
+                    liveResultsByModel = if (carryingBlind) emptyMap() else it.liveResultsByModel,
+                    perSecondResultsByModel = if (carryingBlind) emptyMap() else it.perSecondResultsByModel,
+                    perSecondResults = if (carryingBlind) List(10) { null } else it.perSecondResults,
+                    runningAverageResult = if (carryingBlind) null else it.runningAverageResult
                 )
             }
 
@@ -357,7 +388,7 @@ class RecordingEngine(
                 RecordingCategory.INTERVAL -> runIntervalCycle(config)
             }
 
-            if (cycleResult != null) {
+            val record: PredictionRecord? = if (cycleResult != null) {
                 persistCycle(
                     config = config,
                     outcome = cycleResult,
@@ -365,17 +396,28 @@ class RecordingEngine(
                     batteryTempC = getBatteryTemperatureC(),
                     cpuUsagePercent = computeCpuUsagePercent(cpuTimeAtCycleStartMs, wallAtCycleStartMs)
                 )
+            } else null
+            if (cycleResult == null) {
+                // Failed cycle: nothing was persisted, nothing to hide. The
+                // quota draw is consumed regardless — exactly one per cycle.
+                if (willPrompt) {
+                    state.update { it.copy(blindCycleActive = false, blindPredictionId = null) }
+                }
+                continue
             }
-            if (cycleResult == null) continue
 
-            if (config.category == RecordingCategory.INTERVAL && isRunning) {
+            if (config.category == RecordingCategory.INTERVAL) {
                 val pauseMs = config.intervalPause?.pauseMs ?: 0L
-                if (pauseMs > 0L) {
-                    // Quota gate: skipped cycles keep their prediction record,
-                    // they just never raise the rating prompt.
-                    if (ratingQuota.shouldPrompt()) {
-                        sendIntervalEvaluationNotification(cycleResult)
-                    }
+                val promptNow = willPrompt && record != null && isRunning && pauseMs > 0L
+                if (promptNow) {
+                    sendIntervalEvaluationNotification(record!!)
+                } else if (willPrompt) {
+                    // Drawn to prompt but the prompt can't fire (session just
+                    // ended, persist failed, or zero-pause interval) — lift the
+                    // blind, there is no rating to wait for.
+                    state.update { it.copy(blindCycleActive = false, blindPredictionId = null) }
+                }
+                if (isRunning && pauseMs > 0L) {
                     runIntervalPause(pauseMs)
                 }
             }
@@ -404,6 +446,11 @@ class RecordingEngine(
         }
         pausePending = false
         pendingAutoResumeMs = null
+        // Session end closes the rating window (the Results Summary reveals
+        // everything anyway), so an unresolved blind/pending rating is lifted
+        // here — otherwise the record would stay hidden in History forever.
+        evalDismissJob?.cancel()
+        evalDismissJob = null
         state.update {
             it.copy(
                 appState = AppState.Ready,
@@ -416,7 +463,10 @@ class RecordingEngine(
                 frameElapsedMs = 0L,
                 perSecondResults = List(10) { null },
                 runningAverageResult = null,
-                perSecondResultsByModel = emptyMap()
+                perSecondResultsByModel = emptyMap(),
+                pendingEvaluation = null,
+                blindCycleActive = false,
+                blindPredictionId = null
             )
         }
     }
@@ -640,17 +690,18 @@ class RecordingEngine(
         }
     }
 
+    /** @return the persisted record, or null when no primary result was available. */
     private fun persistCycle(
         config: SessionConfig,
         outcome: CycleOutcome,
         cycleStartedAt: Long,
         batteryTempC: Float?,
         cpuUsagePercent: Float?
-    ) {
+    ): PredictionRecord? {
         val primaryName = config.modelNames.first()
-        val primaryRow = outcome.perModel[primaryName] ?: return
+        val primaryRow = outcome.perModel[primaryName] ?: return null
         val primarySub = ModelTrainingDuration.primaryMethodFor(primaryName)
-        val primaryResult = primaryRow[primarySub] ?: primaryRow.values.firstOrNull() ?: return
+        val primaryResult = primaryRow[primarySub] ?: primaryRow.values.firstOrNull() ?: return null
 
         val mode = effectiveModeFor(config)
         val battery = getBatteryLevel()
@@ -731,7 +782,11 @@ class RecordingEngine(
         }
         updateStatistics()
 
+        // currentResult is updated even for blinded cycles: the live screen
+        // uses its identity purely as a "new cycle landed" signal for the
+        // battery/CPU metric charts, which carry no class information.
         state.update { it.copy(currentResult = primaryResult, errorMessage = null) }
+        return record
     }
 
     private fun accumulateAggregate(
@@ -947,32 +1002,36 @@ class RecordingEngine(
         predictionRepository.addPrediction(record)
     }
 
-    private fun sendIntervalEvaluationNotification(outcome: CycleOutcome) {
-        val record = predictionRepository.getAllPredictions().lastOrNull() ?: return
+    private fun sendIntervalEvaluationNotification(record: PredictionRecord) {
+        // pendingEvaluation is set on BOTH the foreground and the background
+        // path: it drives the in-app rating card, marks the record as blinded
+        // for History, and the dismiss job below guarantees the 5-min expiry
+        // lifts the blind even if the user never opens the evaluation.
+        val deadline = SystemClock.elapsedRealtime() + EvaluationActivity.EVALUATION_TIMEOUT_MS
+        state.update {
+            it.copy(
+                pendingEvaluation = PendingEvaluation(
+                    predictionId = record.id,
+                    modelClass = record.sceneClass,
+                    deadlineElapsedMs = deadline
+                ),
+                // The blind set at cycle start now belongs to this record.
+                blindPredictionId = record.id
+            )
+        }
+        evalDismissJob?.cancel()
+        evalDismissJob = scope.launch {
+            delay(EvaluationActivity.EVALUATION_TIMEOUT_MS)
+            state.update { s ->
+                if (s.pendingEvaluation?.predictionId == record.id) {
+                    // Deadline reached without a rating — reveal everywhere.
+                    s.withBlindResolved(record.id).copy(pendingEvaluation = null)
+                } else s
+            }
+        }
         val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState
             .isAtLeast(Lifecycle.State.STARTED)
-        if (isForeground) {
-            val deadline = SystemClock.elapsedRealtime() + EvaluationActivity.EVALUATION_TIMEOUT_MS
-            state.update {
-                it.copy(
-                    pendingEvaluation = PendingEvaluation(
-                        predictionId = record.id,
-                        modelClass = record.sceneClass,
-                        deadlineElapsedMs = deadline
-                    )
-                )
-            }
-            evalDismissJob?.cancel()
-            evalDismissJob = scope.launch {
-                delay(EvaluationActivity.EVALUATION_TIMEOUT_MS)
-                state.update { s ->
-                    if (s.pendingEvaluation?.predictionId == record.id) {
-                        s.copy(pendingEvaluation = null)
-                    } else s
-                }
-            }
-            return
-        }
+        if (isForeground) return
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             EVALUATION_CHANNEL_ID,
@@ -1003,8 +1062,13 @@ class RecordingEngine(
         notificationManager.notify(EVALUATION_NOTIFICATION_ID, notification)
     }
 
+    /** Skip path (live-screen card). Skipping resolves the rating → reveal. */
     fun dismissPendingEvaluation() {
-        state.update { it.copy(pendingEvaluation = null) }
+        state.update { s ->
+            val resolvedId = s.pendingEvaluation?.predictionId
+            val base = if (resolvedId != null) s.withBlindResolved(resolvedId) else s
+            base.copy(pendingEvaluation = null)
+        }
     }
 
     fun clearError() {

@@ -27,8 +27,10 @@ class RatingQuotaSchedule(
     private var position = 0
 
     /**
-     * Call once per completed interval cycle. Returns whether this cycle
-     * should surface the rating prompt.
+     * Call exactly once per interval cycle, at cycle start. Returns whether
+     * this cycle should surface the rating prompt. The draw happens before
+     * recording begins so the engine can blind the live UI for the whole
+     * cycle (anti-bias); the same decision is reused after persisting.
      */
     fun shouldPrompt(): Boolean {
         if (percent >= 100) return true

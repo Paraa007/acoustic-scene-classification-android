@@ -306,6 +306,22 @@
                     tools:text="3 models" />
             </LinearLayout>
 
+            <!-- Anti-bias blind hint: visible only while the current cycle's
+                 rating is still open. The model cards below freeze on the
+                 previous cycle and the slice strip renders neutral circles. -->
+            <TextView
+                android:id="@+id/liveBlindHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_tile"
+                android:padding="14dp"
+                android:gravity="center"
+                android:text="@string/live_blind_hint"
+                android:textSize="11.5sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="9dp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/liveModelCardsContainer"
                 android:layout_width="match_parent"

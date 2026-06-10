@@ -217,7 +217,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun dismissPendingEvaluation() {
-        RecordingEngineHolder.mutableUiState.update { it.copy(pendingEvaluation = null) }
+        // Prefer the engine path: skipping resolves the rating, which must also
+        // lift the anti-bias blind (ownership-checked there). The direct-state
+        // fallback only runs when no engine exists, i.e. no session either.
+        val engine = RecordingEngineHolder.engineOrNull()
+        if (engine != null) {
+            engine.dismissPendingEvaluation()
+        } else {
+            RecordingEngineHolder.mutableUiState.update { it.copy(pendingEvaluation = null) }
+        }
     }
 
     fun clearError() {

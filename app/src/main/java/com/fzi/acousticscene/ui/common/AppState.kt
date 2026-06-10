@@ -100,6 +100,23 @@ data class UiState(
     // duration.
     val sessionPausedMs: Long = 0L,
     val pendingEvaluation: PendingEvaluation? = null,
+    // Anti-bias blinding (interval mode only). True from the start of a cycle
+    // that the rating quota selected for a "Rate now" prompt until that rating
+    // resolves: submitted/skipped (EvaluationPromptBus), 5-min window expiry,
+    // or session end. While true the live screen must not render any
+    // class-bearing UI for the current cycle (model-card bars, per-second
+    // slice colors, all models) — otherwise the subject can peek at the
+    // prediction before rating. Volume, timers and device metrics stay live;
+    // they carry no class information. The persisted-but-blind record is
+    // identified by [pendingEvaluation]'s predictionId — History excludes it
+    // until the rating resolves.
+    val blindCycleActive: Boolean = false,
+    // Repository id of the record the active blind belongs to. null while the
+    // blinded cycle is still recording (nothing persisted yet). Resolution
+    // paths (dismissal, expiry) must only lift the blind when their prediction
+    // id matches this — an expiring OLD rating must not unblind a NEWER cycle
+    // that is already in flight.
+    val blindPredictionId: Long? = null,
     val isPaused: Boolean = false,
     // When the user pauses with a timer, this holds the SystemClock.elapsedRealtime()
     // deadline at which the session should auto-resume. null = indefinite pause.
@@ -162,3 +179,14 @@ data class UiState(
     val lastCycleComputeMs: Long = 0L,
     val sessionComputeMs: Long = 0L
 )
+
+/**
+ * Lifts the anti-bias blind if — and only if — it belongs to [predictionId].
+ * A resolving OLD rating (dismissal or 5-min expiry arriving late) must never
+ * unblind a newer cycle that is already in flight (blindPredictionId == null)
+ * or pending under a different id.
+ */
+fun UiState.withBlindResolved(predictionId: Long): UiState =
+    if (blindCycleActive && blindPredictionId == predictionId) {
+        copy(blindCycleActive = false, blindPredictionId = null)
+    } else this
