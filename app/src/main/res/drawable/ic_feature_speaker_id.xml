@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Person outline with a small voice arc for the Speaker ID (SIQAS) tile on
+    the feature hub. Same stroke style as ic_check_circle / ic_lock (1.8dp,
+    accent_green, round caps).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Head -->
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.8"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M10.5,8 m-3.2,0 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0" />
+    <!-- Shoulders -->
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M4.5,19.5 C4.5,16 7.2,14 10.5,14 C13.8,14 16.5,16 16.5,19.5" />
+    <!-- Voice arc -->
+    <path
+        android:strokeColor="@color/accent_green"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M17.5,6.5 C19.2,8.2 19.2,10.8 17.5,12.5" />
+</vector>
