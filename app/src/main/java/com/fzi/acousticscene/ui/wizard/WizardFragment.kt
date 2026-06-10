@@ -1207,7 +1207,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
     }
 
     /**
-     * MaterialDatePicker constrained from tomorrow to +62 days. The selection
+     * MaterialDatePicker starting tomorrow, with no upper bound. The selection
      * comes back as UTC midnight of the picked date; we convert to 23:59:59
      * local of that calendar day before it goes into the wizard state, so the
      * engine can compare plain wall clock.
@@ -1218,20 +1218,14 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         val todayUtc = com.google.android.material.datepicker.MaterialDatePicker
             .todayInUtcMilliseconds()
         val firstSelectable = todayUtc + dayMs
-        val lastSelectable = todayUtc + 62 * dayMs
 
+        // Nach hinten offen: Studien-Sessions dürfen beliebig weit in der
+        // Zukunft enden, nur die Untergrenze (morgen) bleibt.
         val constraints = com.google.android.material.datepicker.CalendarConstraints.Builder()
             .setStart(firstSelectable)
-            .setEnd(lastSelectable)
             .setValidator(
-                com.google.android.material.datepicker.CompositeDateValidator.allOf(
-                    listOf(
-                        com.google.android.material.datepicker.DateValidatorPointForward
-                            .from(firstSelectable),
-                        com.google.android.material.datepicker.DateValidatorPointBackward
-                            .before(lastSelectable + dayMs)
-                    )
-                )
+                com.google.android.material.datepicker.DateValidatorPointForward
+                    .from(firstSelectable)
             )
             .build()
 
@@ -1252,7 +1246,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             .datePicker()
             .setTitleText(R.string.wizard_end_date_picker_title)
             .setCalendarConstraints(constraints)
-            .setSelection(preselect.coerceIn(firstSelectable, lastSelectable))
+            .setSelection(preselect.coerceAtLeast(firstSelectable))
             .build()
         picker.addOnPositiveButtonClickListener { selectionUtcMidnight ->
             // UTC midnight → same calendar day, 23:59:59 in the local zone.
