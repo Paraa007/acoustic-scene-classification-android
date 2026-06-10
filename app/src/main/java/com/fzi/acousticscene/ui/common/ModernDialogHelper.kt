@@ -28,6 +28,7 @@ import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.slider.Slider
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -726,6 +727,61 @@ object ModernDialogHelper {
             m > 0 -> "${m} min"
             else -> "${s}s"
         }
+    }
+
+    /**
+     * Pause-duration dialog for the live screen: slider from 0 to 12 h in
+     * 15-minute steps, 0 = no auto-resume timer. The session keeps recording
+     * while the dialog is open; the pause starts only when the user confirms.
+     * Cancel (or tapping outside) closes without pausing.
+     */
+    fun showPauseSliderDialog(
+        context: Context,
+        onConfirm: (durationMs: Long?) -> Unit
+    ): Dialog {
+        val dialog = Dialog(context, R.style.ModernDialog)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_pause_slider)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        val durationDisplay = dialog.findViewById<TextView>(R.id.pauseDialogDuration)
+        val slider = dialog.findViewById<Slider>(R.id.pauseDialogSlider)
+        slider.addOnChangeListener { _, value, _ ->
+            durationDisplay.text = formatPauseSteps(context, value.toInt())
+        }
+        durationDisplay.text = formatPauseSteps(context, slider.value.toInt())
+
+        dialog.findViewById<MaterialButton>(R.id.pauseDialogCancelButton).setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.findViewById<MaterialButton>(R.id.pauseDialogConfirmButton).setOnClickListener {
+            val steps = slider.value.toInt()
+            val durationMs: Long? = if (steps <= 0) null else steps * 15L * 60_000L
+            dialog.dismiss()
+            onConfirm(durationMs)
+        }
+
+        dialog.show()
+        return dialog
+    }
+
+    /**
+     * Slider steps are 15-min increments from 0 up to 48 (= 12 h).
+     * 0    → "No timer (manual resume)"
+     * 1..3 → "X min"
+     * 4..  → "Xh" or "Xh Ymin"
+     */
+    private fun formatPauseSteps(context: Context, steps: Int): String {
+        val totalMinutes = steps * 15
+        if (totalMinutes <= 0) return context.getString(R.string.pause_picker_no_timer)
+        if (totalMinutes < 60) return "$totalMinutes min"
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        return if (minutes == 0) "$hours h" else "$hours h $minutes min"
     }
 
     /**
