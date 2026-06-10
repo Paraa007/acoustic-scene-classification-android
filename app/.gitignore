@@ -28,6 +28,9 @@ CLAUDE.md
 *.safetensors
 app/src/main/assets/dev_models/
 app/src/main/assets/user_model/
+# Whitelist: SIQAS speaker-id ONNX models (tracked via Git LFS, see .gitattributes)
+!src/main/assets/speakerid/models/*.onnx
+!src/main/assets/speakerid/models/*.onnx.data
 
 # Build outputs / APKs / AABs / native libs — large and reproducible
 app/build/

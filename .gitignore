@@ -90,6 +90,10 @@ maestro_screenshots/
 !docs/img/*.jpg
 !docs/img/*.jpeg
 
+# Whitelist: SIQAS speaker-id ONNX models (tracked via Git LFS, see .gitattributes)
+!app/src/main/assets/speakerid/models/*.onnx
+!app/src/main/assets/speakerid/models/*.onnx.data
+
 # Audio recordings / samples — large, never commit
 *.wav
 *.mp3
