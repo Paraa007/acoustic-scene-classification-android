@@ -718,6 +718,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
      * recording (i.e. Continuous), so the slider starts at 5 min and never hits 0.
      */
     private fun renderIntervalPause(state: WizardViewState) {
+        val ctx = requireContext()
         val stepValues = INTERVAL_PAUSE_STEP_MINUTES
         val maxSteps = stepValues.lastIndex
         val current = state.intervalPause?.pauseMinutes
@@ -726,6 +727,25 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             if (i >= 0) i else stepValues.lastIndex
         } ?: stepValues.indexOf(15)
         val tickLabels = listOf("5min", "1h", "2h", "3h")
+
+        // The preview line under the rating slider depends on BOTH sliders
+        // (pause cadence × rating percent). It is created up front and updated
+        // locally while either thumb is dragged, so the text stays live during
+        // the gesture without a ViewModel round-trip — committing mid-drag
+        // would rebuild this step and kill the drag (see addSliderStep).
+        var previewPauseMinutes = current ?: stepValues[initialSteps]
+        var previewRatingPercent = state.ratingPercent
+        val previewLine = TextView(ctx).apply {
+            text = ratingQuotaPreview(previewPauseMinutes, previewRatingPercent)
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            setPadding(dp(4f), 0, dp(4f), dp(8f))
+        }
+        fun refreshPreview() {
+            previewLine.text = ratingQuotaPreview(previewPauseMinutes, previewRatingPercent)
+        }
+
         addSliderStep(
             eyebrowRes = R.string.wizard_interval_pause_eyebrow,
             hintRes = R.string.wizard_interval_pause_hint,
@@ -733,7 +753,11 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             maxSteps = maxSteps,
             tickLabels = tickLabels,
             stepValuesMinutes = stepValues,
-            onChange = { steps ->
+            onDrag = { steps ->
+                previewPauseMinutes = stepValues[steps]
+                refreshPreview()
+            },
+            onCommit = { steps ->
                 viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(stepValues[steps]))
             }
         )
@@ -743,15 +767,29 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(stepValues[initialSteps]))
         }
 
-        addRatingQuotaSection(state, fallbackPauseMinutes = stepValues[initialSteps])
+        addRatingQuotaSection(
+            state,
+            previewLine = previewLine,
+            onRatingDrag = { percent ->
+                previewRatingPercent = percent
+                refreshPreview()
+            }
+        )
     }
 
     /**
      * Rating-quota block below the interval slider: hairline divider, a second
      * slider card in the same visual language (10–100 % in steps of 10), and a
-     * live preview line that translates the percent into study terms.
+     * live preview line that translates the percent into study terms. The
+     * [previewLine] is built by [renderIntervalPause] (it depends on the pause
+     * slider too) and only attached here; [onRatingDrag] refreshes it locally
+     * while the thumb moves.
      */
-    private fun addRatingQuotaSection(state: WizardViewState, fallbackPauseMinutes: Int) {
+    private fun addRatingQuotaSection(
+        state: WizardViewState,
+        previewLine: TextView,
+        onRatingDrag: (Int) -> Unit
+    ) {
         val ctx = requireContext()
 
         // Divider between the two slider cards.
@@ -775,17 +813,11 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             minSteps = 1,
             tickLabels = listOf("10%", "40%", "70%", "100%"),
             stepDisplayFormatter = { steps -> "${steps * 10}%" },
-            onChange = { steps -> viewModel.wizardSetRatingPercent(steps * 10) }
+            onDrag = { steps -> onRatingDrag(steps * 10) },
+            onCommit = { steps -> viewModel.wizardSetRatingPercent(steps * 10) }
         )
 
-        val pauseMinutes = state.intervalPause?.pauseMinutes ?: fallbackPauseMinutes
-        contentRoot.addView(TextView(ctx).apply {
-            text = ratingQuotaPreview(pauseMinutes, state.ratingPercent)
-            textSize = 11f
-            typeface = Typeface.MONOSPACE
-            setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
-            setPadding(dp(4f), 0, dp(4f), dp(8f))
-        })
+        contentRoot.addView(previewLine)
     }
 
     /**
@@ -816,6 +848,19 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
      * with big duration display, slider, tick rail. Returns the slider so the
      * caller can update its enabled state independently (Session-Duration uses
      * that to grey the slider when "Stop manually" is active).
+     *
+     * Commit discipline: [onCommit] pushes the value into the ViewModel, which
+     * re-emits the wizard state and makes [render] rebuild the whole step
+     * (contentRoot.removeAllViews()). Doing that mid-drag tears the slider out
+     * from under the active gesture — the parent cancels the touch target with
+     * a synthetic ACTION_CANCEL at (0,0), which kills the drag and snaps the
+     * value to the minimum. So while a touch gesture is tracked, value changes
+     * only update local views (the big display and the optional [onDrag]
+     * preview hook); [onCommit] fires once, when the gesture ends. Material's
+     * Slider brackets plain track-taps in the same start/stop-tracking
+     * callbacks, so taps commit too. Value changes outside a gesture
+     * (keyboard, accessibility actions) never see start-tracking and commit
+     * immediately.
      */
     private fun addSliderStep(
         eyebrowRes: Int,
@@ -827,7 +872,8 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         displayOverride: String? = null,
         stepValuesMinutes: List<Int>? = null,
         stepDisplayFormatter: ((Int) -> String)? = null,
-        onChange: (Int) -> Unit
+        onDrag: ((Int) -> Unit)? = null,
+        onCommit: (Int) -> Unit
     ): Slider {
         // Minutes represented by a slider position: a lookup when the steps are
         // non-uniform (interval pause), otherwise the plain 15-min grid.
@@ -913,11 +959,27 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             )
             lp.topMargin = dp(10f)
             layoutParams = lp
-            addOnChangeListener { _, v, _ ->
+            var gestureActive = false
+            addOnChangeListener { _, v, fromUser ->
                 val steps = v.toInt()
                 durationDisplay.text = displayAt(steps)
-                onChange(steps)
+                onDrag?.invoke(steps)
+                // Non-touch user input (keyboard / accessibility) has no
+                // gesture to wait for — commit right away. Double commits of
+                // the same value are absorbed by the StateFlow's equality
+                // dedup, so this can't trigger an extra rebuild.
+                if (fromUser && !gestureActive) onCommit(steps)
             }
+            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: Slider) {
+                    gestureActive = true
+                }
+
+                override fun onStopTrackingTouch(slider: Slider) {
+                    gestureActive = false
+                    onCommit(slider.value.toInt())
+                }
+            })
         }
         card.addView(slider)
 
@@ -1004,7 +1066,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
                 dateSelected -> state.sessionDuration.label
                 else -> null
             },
-            onChange = { steps ->
+            onCommit = { steps ->
                 val minutes = steps * 15
                 viewModel.wizardSetSessionDuration(SessionDuration.fromMinutes(minutes))
             }
