@@ -51,6 +51,14 @@
             android:textColor="@color/text_secondary"
             android:background="@drawable/bg_meta_pill" />
 
+        <!-- Persistent mode badge, top-end of the toolbar. -->
+        <include
+            android:id="@+id/screenModeBadge"
+            layout="@layout/view_mode_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="7dp" />
+
     </LinearLayout>
 
     <!-- Summary strip: total recordings -->

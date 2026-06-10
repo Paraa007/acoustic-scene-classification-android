@@ -19,15 +19,21 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
+import com.fzi.acousticscene.data.ActiveSessionRegistry
+import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SessionConfig
+import com.fzi.acousticscene.model.realOnly
 import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.common.AppState
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.ui.common.UiState
 import com.fzi.acousticscene.ui.views.BarDistributionView
+import com.fzi.acousticscene.ui.views.ChartPoint
 import com.fzi.acousticscene.ui.views.ConcentricStopwatchView
+import com.fzi.acousticscene.ui.views.MetricLineChartView
 import com.fzi.acousticscene.ui.views.VolumeLineChartView
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
@@ -74,7 +80,10 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private lateinit var statusLabel: TextView
     private lateinit var stopwatch: ConcentricStopwatchView
     private lateinit var modelCardsContainer: LinearLayout
+    private lateinit var blindHint: TextView
     private lateinit var volumeChart: VolumeLineChartView
+    private lateinit var tempChart: MetricLineChartView
+    private lateinit var cpuChart: MetricLineChartView
     private lateinit var configLabel: TextView
     private lateinit var pauseResumeButton: MaterialButton
     private lateinit var stopButton: MaterialButton
@@ -114,6 +123,13 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private var hasAutoStarted = false
     private var stopInFlight = false
 
+    // Device-metric charts refresh once per finished cycle, keyed off the
+    // identity of state.currentResult (the engine swaps it in right after the
+    // record is persisted). false until the first render so re-attaching to a
+    // running session backfills from the repository immediately.
+    private var metricChartsPrimed = false
+    private var lastChartedResult: Any? = null
+
     private data class ModelCardViews(
         val container: LinearLayout,
         val methodSections: MutableMap<LongSubMode, MethodSectionViews> = mutableMapOf()
@@ -127,6 +143,7 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
         isReentry = arguments?.getBoolean(ARG_REENTRY, false) == true
         if (isReentry) {
             // Re-attaching to a session that's already running — never trigger the
@@ -136,7 +153,20 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         statusLabel = view.findViewById(R.id.liveStatusLabel)
         stopwatch = view.findViewById(R.id.liveStopwatch)
         modelCardsContainer = view.findViewById(R.id.liveModelCardsContainer)
+        blindHint = view.findViewById(R.id.liveBlindHint)
         volumeChart = view.findViewById(R.id.liveVolumeChart)
+        tempChart = view.findViewById(R.id.liveTempChart)
+        cpuChart = view.findViewById(R.id.liveCpuChart)
+        tempChart.configure(
+            unitSuffix = "°C",
+            yRangeMode = MetricLineChartView.YRangeMode.AUTO_PADDED,
+            lineColor = ContextCompat.getColor(requireContext(), R.color.status_warning)
+        )
+        cpuChart.configure(
+            unitSuffix = "%",
+            yRangeMode = MetricLineChartView.YRangeMode.ZERO_BASED,
+            lineColor = ContextCompat.getColor(requireContext(), R.color.status_info)
+        )
         configLabel = view.findViewById(R.id.liveConfigLabel)
         pauseResumeButton = view.findViewById(R.id.livePauseResumeButton)
         stopButton = view.findViewById(R.id.liveStopButton)
@@ -286,6 +316,19 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             volumeChart.submitSample(state.currentVolume, state.frameElapsedMs)
         }
 
+        updateMetricCharts(state)
+
+        // Anti-bias blinding gate (interval mode): while the current cycle is
+        // earmarked for a "Rate now" prompt, none of its class-bearing UI may
+        // render — across ALL model cards. Bars freeze on the previous cycle,
+        // the slice strip shows neutral circles, and the hint tile explains
+        // why. Timer, volume and device metrics above keep updating; they
+        // carry no class information. Once the rating resolves (submit, skip
+        // or 5-min expiry) blindCycleActive flips false and the held results,
+        // still sitting in liveResultsByModel, paint on the next render.
+        val blind = state.blindCycleActive
+        blindHint.visibility = if (blind) View.VISIBLE else View.GONE
+
         ensureCards(config)
         for (model in config.modelNames) {
             val card = cardsByModel[model] ?: continue
@@ -294,15 +337,42 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             for (sub in activeMethods) {
                 val section = card.methodSections[sub] ?: continue
                 val result = perMethod[sub]
-                if (result != null) {
+                if (result != null && !blind) {
                     section.bars.setProbabilities(result.allProbabilities)
                 }
                 if (sub == LongSubMode.AVERAGE && section.sliceCells != null) {
                     val slices = state.perSecondResultsByModel[model].orEmpty()
-                    updateSliceStrip(section.sliceCells, slices)
+                    updateSliceStrip(section.sliceCells, slices, blind)
                 }
             }
         }
+    }
+
+    /**
+     * Repaints the battery-temp + CPU charts from the running session's
+     * persisted records. Cheap gate: the repository is only queried when a new
+     * cycle record landed (state.currentResult identity changed) or on the
+     * first render after (re-)attaching, which doubles as the backfill path
+     * when the user walks back into an already-running session.
+     */
+    private fun updateMetricCharts(state: UiState) {
+        if (metricChartsPrimed && state.currentResult === lastChartedResult) return
+        metricChartsPrimed = true
+        lastChartedResult = state.currentResult
+
+        val sessionStart = ActiveSessionRegistry.get()?.sessionStartTime ?: return
+        val records = PredictionRepository.getInstance(requireContext())
+            .getAllPredictions()
+            .filter { it.sessionStartTime == sessionStart }
+            .realOnly()
+            .sortedBy { it.timestamp }
+
+        tempChart.setPoints(records.mapNotNull { r ->
+            r.batteryTempC?.let { ChartPoint((r.timestamp - sessionStart) / 1000f, it) }
+        })
+        cpuChart.setPoints(records.mapNotNull { r ->
+            r.cpuUsagePercent?.let { ChartPoint((r.timestamp - sessionStart) / 1000f, it) }
+        })
     }
 
     /**
@@ -310,10 +380,15 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
      * that slice classified as and laying its emoji inside the circle. Empty
      * slots (not yet filled in this cycle) read as dashed hairline circles.
      * The newest filled cell gets an accent border so the live edge is visible.
+     *
+     * [blind] = anti-bias mode: filled cells render as neutral grey circles
+     * without emoji or accent ring, so the strip still shows recording
+     * progress but leaks no class information for a to-be-rated cycle.
      */
     private fun updateSliceStrip(
         cells: List<View>,
-        slices: List<com.fzi.acousticscene.model.ClassificationResult?>
+        slices: List<com.fzi.acousticscene.model.ClassificationResult?>,
+        blind: Boolean
     ) {
         val ctx = requireContext()
         val newestIdx = slices.indexOfLast { it != null }
@@ -323,6 +398,13 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             val slice = slices.getOrNull(i)
             if (slice == null) {
                 cell.background = emptySliceBackground(ctx)
+                emojiView.text = ""
+            } else if (blind) {
+                cell.background = filledSliceBackground(
+                    ctx,
+                    ContextCompat.getColor(ctx, R.color.text_faint),
+                    isLiveEdge = false
+                )
                 emojiView.text = ""
             } else {
                 cell.background = filledSliceBackground(

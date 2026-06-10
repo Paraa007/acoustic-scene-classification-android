@@ -18,9 +18,11 @@ import com.fzi.acousticscene.data.LastConfigStore
 import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.ModelConfig
 import com.fzi.acousticscene.model.ModelMetadataRegistry
+import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.ui.MainViewModel
 import com.fzi.acousticscene.ui.common.ActiveSessionBanner
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.history.HistoryActivity
 import com.fzi.acousticscene.ui.live.LiveRecordingFragment
 import com.google.android.material.button.MaterialButton
@@ -45,6 +47,11 @@ class WelcomeFragment : Fragment(R.layout.fragment_welcome) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // This hub is the Config-mode entry point (behind the password gate) —
+        // remember the choice for every screen behind it, then show the badge.
+        ModeBadge.record(SessionMode.CONFIG)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
 
         // Back row (chevron + "Back" label) returns to Mode Select. System back
         // is mirrored via OnBackPressedCallback so the hardware key matches the

@@ -120,6 +120,10 @@ class QuickstartRepository private constructor(context: Context) {
         val sessionDurationMin: Int? = null,
         val schemaVersion: Int = 1,
         val mode: String? = null,
+        // v4 — nullable so older slots (and Gson's Unsafe instantiation)
+        // read back as null and fall to the defaults on load.
+        val sessionEndDateMillis: Long? = null,
+        val ratingPercent: Int? = null,
         // v2 legacy
         val intervalPause: String? = null,
         val sessionDuration: String? = null
@@ -144,6 +148,7 @@ class QuickstartRepository private constructor(context: Context) {
                     intervalPause = resolveLongInterval(p),
                     intervalMethodsByModel = methods,
                     sessionDuration = resolveSessionDuration(p),
+                    ratingPercent = p.ratingPercent ?: 100,
                     mode = p.mode?.let { runCatching { SessionMode.valueOf(it) }.getOrNull() }
                         ?: SessionMode.TEST
                 )
@@ -164,7 +169,9 @@ class QuickstartRepository private constructor(context: Context) {
                 intervalPauseMin = slot.config.intervalPause?.pauseMinutes,
                 sessionDurationMin = slot.config.sessionDuration.totalMinutes,
                 schemaVersion = 3,
-                mode = slot.config.mode.name
+                mode = slot.config.mode.name,
+                sessionEndDateMillis = slot.config.sessionDuration.endDateMillis,
+                ratingPercent = slot.config.ratingPercent
             )
         }
         prefs.edit().putString(KEY, gson.toJson(payload)).apply()
@@ -178,6 +185,7 @@ class QuickstartRepository private constructor(context: Context) {
     }
 
     private fun resolveSessionDuration(p: Persisted): SessionDuration {
+        p.sessionEndDateMillis?.let { return SessionDuration.untilDate(it) }
         if (p.schemaVersion >= 3) {
             return p.sessionDurationMin?.let { SessionDuration.fromMinutes(it) }
                 ?: SessionDuration.MANUAL

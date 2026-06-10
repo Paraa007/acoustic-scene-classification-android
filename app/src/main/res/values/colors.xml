@@ -24,6 +24,10 @@
     <color name="accent_red">#B1463F</color>
     <color name="accent_red_soft">#F4DADA</color>
 
+    <!-- Soft tints of status_info — mode badge (Test variant) -->
+    <color name="info_soft">#E6EDF3</color>
+    <color name="info_line">#B9CCDB</color>
+
     <!-- Dev/info blue stays available for legacy widgets -->
     <color name="accent_blue">#3C6E57</color>
     <color name="accent_blue_dark">#2A5340</color>

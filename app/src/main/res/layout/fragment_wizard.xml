@@ -63,6 +63,14 @@
                 android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
+
+        <!-- Persistent mode badge, top-end of the wizard chrome. -->
+        <include
+            android:id="@+id/screenModeBadge"
+            layout="@layout/view_mode_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="11dp" />
     </LinearLayout>
 
     <!-- 4-segment progress bar -->

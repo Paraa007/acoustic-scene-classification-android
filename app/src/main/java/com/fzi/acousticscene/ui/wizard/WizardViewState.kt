@@ -27,6 +27,7 @@ data class WizardViewState(
     val intervalPause: LongInterval? = null,
     val intervalMethodsByModel: Map<String, Set<LongSubMode>> = emptyMap(),
     val sessionDuration: SessionDuration = SessionDuration.DEFAULT,
+    val ratingPercent: Int = 100,
     val intent: WizardIntent = WizardIntent.StartRecording
 ) {
     /**
@@ -71,6 +72,7 @@ data class WizardViewState(
             intervalPause = intervalPause,
             intervalMethodsByModel = intervalMethodsByModel,
             sessionDuration = sessionDuration,
+            ratingPercent = ratingPercent,
             mode = if (isTestSession) SessionMode.TEST else SessionMode.CONFIG
         )
     }

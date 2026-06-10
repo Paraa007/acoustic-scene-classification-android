@@ -20,6 +20,12 @@ data class SessionConfig(
     val intervalMethodsByModel: Map<String, Set<LongSubMode>> = emptyMap(),
     val sessionDuration: SessionDuration = SessionDuration.DEFAULT,
     /**
+     * Interval mode only: how many recordings (in percent, 10–100 in steps of
+     * 10) should ask for a "Rate now" evaluation. 100 keeps the historic
+     * behavior of prompting after every cycle. Ignored for Continuous.
+     */
+    val ratingPercent: Int = 100,
+    /**
      * Which app entry point this config was created from. TEST configs come
      * from a tester tapping a quickstart slot; CONFIG configs come from a
      * developer running the wizard manually.

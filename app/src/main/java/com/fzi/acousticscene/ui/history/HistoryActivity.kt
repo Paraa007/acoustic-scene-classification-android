@@ -18,18 +18,23 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.data.ActiveSessionRegistry
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
+import com.fzi.acousticscene.data.RecordingEngineHolder
 import com.fzi.acousticscene.model.LongSubMode
 import com.fzi.acousticscene.model.PredictionRecord
 import com.fzi.acousticscene.model.RecordingMode
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionMode
 import com.fzi.acousticscene.model.realOnly
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.ThemeHelper
@@ -40,6 +45,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -117,6 +124,10 @@ class HistoryActivity : AppCompatActivity() {
 
         repository = PredictionRepository.getInstance(this)
 
+        // Persistent mode badge — may be reached from a notification, so the
+        // helper falls back to the running session's mode when needed.
+        ModeBadge.bind(findViewById(R.id.screenModeBadge))
+
         // Normal toolbar views
         recyclerView = findViewById(R.id.historyRecyclerView)
         emptyStateText = findViewById(R.id.emptyStateText)
@@ -185,7 +196,22 @@ class HistoryActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        loadHistory()
+        // Anti-bias blind: while a "Rate now" rating is open, its record stays
+        // out of History entirely (list, detail dialog, aggregates — see
+        // loadHistory). The pending id lives in the engine's process-wide
+        // state, so this collector reloads whenever it changes: prompt fired,
+        // rating submitted/skipped, or the 5-min window expired. Because
+        // repeatOnLifecycle restarts the flow on every return to STARTED, the
+        // first emission also covers the initial load and any change that
+        // happened while this screen was in the background.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                RecordingEngineHolder.uiState
+                    .map { it.pendingEvaluation?.predictionId }
+                    .distinctUntilChanged()
+                    .collect { loadHistory() }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -317,7 +343,14 @@ class HistoryActivity : AppCompatActivity() {
     // --- Existing functionality ---
 
     private fun loadHistory() {
-        val rawPredictions = repository.getAllPredictions().sortedBy { it.timestamp }
+        // A record whose rating prompt is still unresolved is invisible here —
+        // the subject must not peek at the prediction before rating it. The id
+        // comes from the engine's published state (no persistence): once the
+        // rating resolves or the process restarts, the record simply reappears.
+        val pendingBlindId = RecordingEngineHolder.uiState.value.pendingEvaluation?.predictionId
+        val rawPredictions = repository.getAllPredictions()
+            .filterNot { pendingBlindId != null && it.id == pendingBlindId }
+            .sortedBy { it.timestamp }
         val predictions = applyModeFilter(rawPredictions)
         val packages = groupIntoPackages(predictions)
 

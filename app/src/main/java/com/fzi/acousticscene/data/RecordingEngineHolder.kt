@@ -53,6 +53,17 @@ object RecordingEngineHolder {
     @Volatile var pendingPauseAutoResumeMs: Long? = null
 
     /**
+     * Set by MainActivity when it restarts an interrupted interval session from
+     * the recovery notification. The engine consumes it in start(): it keeps
+     * the original sessionStartTime (so all records stay in one session block)
+     * and writes a synthetic pause record covering the gap since the last
+     * persisted cycle.
+     */
+    data class ResumeInfo(val originalSessionStartTime: Long, val gapSec: Long)
+
+    @Volatile var pendingResume: ResumeInfo? = null
+
+    /**
      * The recording engine lives at process scope, not service scope. The
      * service is the only thing that *drives* it via intents, but the engine
      * itself outlives stop/start cycles so that:

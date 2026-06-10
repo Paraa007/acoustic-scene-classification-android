@@ -42,6 +42,11 @@ object LastConfigStore {
         // carry the minute field at all.
         val schemaVersion: Int = 1,
         val mode: String? = null,
+        // v4 fields — both nullable so v3 payloads (and Gson's Unsafe
+        // instantiation, which skips Kotlin defaults) read back as null and
+        // get mapped to their defaults on load.
+        val sessionEndDateMillis: Long? = null,
+        val ratingPercent: Int? = null,
         // v2 legacy fields — kept nullable for backward read.
         val intervalPause: String? = null,
         val sessionDuration: String? = null
@@ -54,7 +59,9 @@ object LastConfigStore {
             intervalPauseMin = config.intervalPause?.pauseMinutes,
             sessionDurationMin = config.sessionDuration.totalMinutes,
             schemaVersion = 3,
-            mode = config.mode.name
+            mode = config.mode.name,
+            sessionEndDateMillis = config.sessionDuration.endDateMillis,
+            ratingPercent = config.ratingPercent
         )
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
@@ -79,6 +86,7 @@ object LastConfigStore {
                 intervalPause = intervalPause,
                 intervalMethodsByModel = methods,
                 sessionDuration = sessionDuration,
+                ratingPercent = p.ratingPercent ?: 100,
                 mode = p.mode?.let { runCatching { SessionMode.valueOf(it) }.getOrNull() }
                     ?: SessionMode.CONFIG
             )
@@ -111,6 +119,8 @@ object LastConfigStore {
     }
 
     private fun resolveSessionDuration(p: Persisted): SessionDuration {
+        // v4: an end date wins over everything — it's exclusive with minutes.
+        p.sessionEndDateMillis?.let { return SessionDuration.untilDate(it) }
         // v3: schemaVersion >= 3 tells us null means MANUAL, not "missing"
         if (p.schemaVersion >= 3) {
             return p.sessionDurationMin?.let { SessionDuration.fromMinutes(it) }

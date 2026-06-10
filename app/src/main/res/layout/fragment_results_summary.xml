@@ -23,9 +23,9 @@
             android:paddingTop="20dp"
             android:paddingBottom="12dp">
 
-            <!-- Header: eyebrow chip -->
+            <!-- Header: eyebrow chip on the left, persistent mode badge top-end -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
@@ -47,6 +47,18 @@
                     android:fontFamily="monospace"
                     android:letterSpacing="0.14"
                     android:textStyle="bold" />
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/screenModeBadge"
+                    layout="@layout/view_mode_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
             </LinearLayout>
 
             <!-- Meta tiles row: minutes · recordings · pauses -->

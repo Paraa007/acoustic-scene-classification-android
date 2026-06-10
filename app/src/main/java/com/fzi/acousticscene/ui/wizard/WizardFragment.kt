@@ -37,6 +37,7 @@ import com.fzi.acousticscene.model.SessionDuration
 import com.fzi.acousticscene.model.WizardIntent
 import com.fzi.acousticscene.model.WizardStep
 import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.ModernDialogHelper
 import com.fzi.acousticscene.util.BatteryOptimizationHelper
 import com.fzi.acousticscene.util.stripModelSuffix
@@ -96,6 +97,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
         headerText = view.findViewById(R.id.wizardHeader)
         subHeader = view.findViewById(R.id.wizardSubheader)
         stepLabel = view.findViewById(R.id.wizardStepLabel)
@@ -740,6 +742,73 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         if (state.intervalPause == null) {
             viewModel.wizardSetIntervalPause(LongInterval.fromMinutes(stepValues[initialSteps]))
         }
+
+        addRatingQuotaSection(state, fallbackPauseMinutes = stepValues[initialSteps])
+    }
+
+    /**
+     * Rating-quota block below the interval slider: hairline divider, a second
+     * slider card in the same visual language (10–100 % in steps of 10), and a
+     * live preview line that translates the percent into study terms.
+     */
+    private fun addRatingQuotaSection(state: WizardViewState, fallbackPauseMinutes: Int) {
+        val ctx = requireContext()
+
+        // Divider between the two slider cards.
+        contentRoot.addView(View(ctx).apply {
+            setBackgroundColor(ContextCompat.getColor(ctx, R.color.hairline))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)
+            ).apply {
+                topMargin = dp(4f)
+                bottomMargin = dp(14f)
+            }
+        })
+
+        // Slider positions 1..10 → 10 %..100 %.
+        val initialSteps = (state.ratingPercent.coerceIn(10, 100)) / 10
+        addSliderStep(
+            eyebrowRes = R.string.wizard_rating_quota_eyebrow,
+            hintRes = R.string.wizard_rating_quota_hint,
+            initialSteps = initialSteps,
+            maxSteps = 10,
+            minSteps = 1,
+            tickLabels = listOf("10%", "40%", "70%", "100%"),
+            stepDisplayFormatter = { steps -> "${steps * 10}%" },
+            onChange = { steps -> viewModel.wizardSetRatingPercent(steps * 10) }
+        )
+
+        val pauseMinutes = state.intervalPause?.pauseMinutes ?: fallbackPauseMinutes
+        contentRoot.addView(TextView(ctx).apply {
+            text = ratingQuotaPreview(pauseMinutes, state.ratingPercent)
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            setPadding(dp(4f), 0, dp(4f), dp(8f))
+        })
+    }
+
+    /**
+     * "Every recording · ≈ 24 ratings/day" (100 %) or
+     * "≈ every 3rd recording · ≈ 8 ratings/day". A cycle is the 10 s recording
+     * plus the picked pause, so the per-day count follows from the interval.
+     */
+    private fun ratingQuotaPreview(pauseMinutes: Int, ratingPercent: Int): String {
+        val cycleMinutes = pauseMinutes + 10.0 / 60.0
+        val recordingsPerDay = 24 * 60 / cycleMinutes
+        val ratingsPerDay = Math.round(recordingsPerDay * ratingPercent / 100.0)
+        val perDay = if (ratingsPerDay == 1L) "≈ 1 rating/day" else "≈ $ratingsPerDay ratings/day"
+        if (ratingPercent >= 100) return "Every recording · $perDay"
+        val nth = Math.round(100.0 / ratingPercent).toInt().coerceAtLeast(2)
+        return "≈ every ${ordinal(nth)} recording · $perDay"
+    }
+
+    /** 2 → "2nd", 3 → "3rd", 4..10 → "Nth". Range here never hits 11–13. */
+    private fun ordinal(n: Int): String = when (n % 10) {
+        1 -> "${n}st"
+        2 -> "${n}nd"
+        3 -> "${n}rd"
+        else -> "${n}th"
     }
 
     /**
@@ -757,11 +826,16 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         minSteps: Int = 0,
         displayOverride: String? = null,
         stepValuesMinutes: List<Int>? = null,
+        stepDisplayFormatter: ((Int) -> String)? = null,
         onChange: (Int) -> Unit
     ): Slider {
         // Minutes represented by a slider position: a lookup when the steps are
         // non-uniform (interval pause), otherwise the plain 15-min grid.
         fun minutesAt(step: Int): Int = stepValuesMinutes?.getOrNull(step) ?: (step * 15)
+        // Big display text for a slider position. Defaults to the minute label;
+        // non-minute sliders (rating percent) pass their own formatter.
+        fun displayAt(step: Int): String =
+            stepDisplayFormatter?.invoke(step) ?: formatMinutesLabel(minutesAt(step))
         val ctx = requireContext()
         val card = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -802,7 +876,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             typeface = Typeface.MONOSPACE
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
-            text = displayOverride ?: formatMinutesLabel(minutesAt(initialSteps))
+            text = displayOverride ?: displayAt(initialSteps)
         }
         headerRow.addView(durationDisplay)
         card.addView(headerRow)
@@ -841,7 +915,7 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             layoutParams = lp
             addOnChangeListener { _, v, _ ->
                 val steps = v.toInt()
-                durationDisplay.text = formatMinutesLabel(minutesAt(steps))
+                durationDisplay.text = displayAt(steps)
                 onChange(steps)
             }
         }
@@ -911,6 +985,9 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
         val initialSteps = (currentMin ?: 30).coerceIn(minSteps * 15, maxSteps * 15) / 15
         val tickLabels = listOf("15min", "3h", "6h", "9h", "12h")
         val manualSelected = state.sessionDuration.isManual
+        val endDateMillis = state.sessionDuration.endDateMillis
+        val dateSelected = endDateMillis != null
+        val isInterval = state.category == RecordingCategory.INTERVAL
 
         val slider = addSliderStep(
             eyebrowRes = R.string.wizard_session_duration_eyebrow,
@@ -919,60 +996,33 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             maxSteps = maxSteps,
             tickLabels = tickLabels,
             minSteps = minSteps,
-            // When manual is active the big display reads "Stop manually" instead
-            // of a stale duration, mirroring the greyed-out slider below.
-            displayOverride = if (manualSelected) {
-                getString(R.string.wizard_session_duration_stop_manually)
-            } else null,
+            // When manual or a calendar date is active the big display reads
+            // that choice instead of a stale duration, mirroring the greyed-out
+            // slider below.
+            displayOverride = when {
+                manualSelected -> getString(R.string.wizard_session_duration_stop_manually)
+                dateSelected -> state.sessionDuration.label
+                else -> null
+            },
             onChange = { steps ->
                 val minutes = steps * 15
                 viewModel.wizardSetSessionDuration(SessionDuration.fromMinutes(minutes))
             }
         )
 
-        slider.isEnabled = !manualSelected
-        slider.alpha = if (manualSelected) 0.4f else 1f
+        val sliderActive = !manualSelected && !dateSelected
+        slider.isEnabled = sliderActive
+        slider.alpha = if (sliderActive) 1f else 0.4f
 
-        // Wide outlined "Stop manually" button below the slider. When active
-        // (manual mode) the button uses the accent_soft fill + accent border;
-        // otherwise it stays plain outlined.
+        // Below the slider: "Stop manually", and for Interval sessions a second
+        // "Pick end date" choice next to it. Slider / manual / date are mutually
+        // exclusive; the active one carries the accent fill + border.
         val ctx = requireContext()
-        val manualBtn = MaterialButton(
-            ctx,
-            null,
-            com.google.android.material.R.attr.materialButtonOutlinedStyle
-        ).apply {
-            text = getString(R.string.wizard_session_duration_stop_manually)
-            textSize = 14.5f
-            isAllCaps = false
-            setTextColor(
-                ContextCompat.getColor(
-                    ctx,
-                    if (manualSelected) R.color.accent_green else R.color.text_primary
-                )
-            )
-            strokeColor = ContextCompat.getColorStateList(
-                ctx,
-                if (manualSelected) R.color.accent_green else R.color.border_subtle
-            )
-            backgroundTintList = ContextCompat.getColorStateList(
-                ctx,
-                if (manualSelected) R.color.accent_soft else R.color.surface_dark
-            )
-            cornerRadius = dp(13f)
-            icon = ContextCompat.getDrawable(ctx, R.drawable.ic_stop_square)
-            iconSize = dp(18f)
-            iconTint = ContextCompat.getColorStateList(
-                ctx,
-                if (manualSelected) R.color.accent_green else R.color.text_primary
-            )
-            iconPadding = dp(10f)
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(50f)
-            )
-            lp.topMargin = dp(6f)
-            layoutParams = lp
-            setOnClickListener {
+        val manualBtn = makeDurationChoiceButton(
+            label = getString(R.string.wizard_session_duration_stop_manually),
+            iconRes = R.drawable.ic_stop_square,
+            selected = manualSelected,
+            onClick = {
                 // Toggle: tapping the active "Stop manually" choice deselects it
                 // and drops the user back on the slider's default (30 min) so
                 // they're not stuck in manual mode without a back-button trip.
@@ -982,8 +1032,232 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
                     viewModel.wizardSetSessionDuration(SessionDuration.manual())
                 }
             }
+        )
+
+        if (!isInterval) {
+            // Continuous: unchanged — single full-width button.
+            manualBtn.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(50f)
+            ).apply { topMargin = dp(6f) }
+            contentRoot.addView(manualBtn)
+            return
         }
-        contentRoot.addView(manualBtn)
+
+        val dateBtn = makeDurationChoiceButton(
+            label = getString(R.string.wizard_pick_end_date),
+            iconRes = null,
+            selected = dateSelected,
+            onClick = { showEndDatePicker(endDateMillis) }
+        )
+        val buttonRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(6f) }
+        }
+        manualBtn.layoutParams = LinearLayout.LayoutParams(0, dp(50f), 1f)
+        dateBtn.layoutParams = LinearLayout.LayoutParams(0, dp(50f), 1f).apply {
+            marginStart = dp(8f)
+        }
+        buttonRow.addView(manualBtn)
+        buttonRow.addView(dateBtn)
+        contentRoot.addView(buttonRow)
+
+        if (endDateMillis != null) {
+            addEndDateChip(state, endDateMillis)
+        }
+    }
+
+    /**
+     * Shared styling for the duration-choice buttons (Stop manually / Pick end
+     * date). Selected = accent_soft fill + accent border, matching the rest of
+     * the step. Caller sets layoutParams.
+     */
+    private fun makeDurationChoiceButton(
+        label: String,
+        iconRes: Int?,
+        selected: Boolean,
+        onClick: () -> Unit
+    ): MaterialButton {
+        val ctx = requireContext()
+        return MaterialButton(
+            ctx,
+            null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle
+        ).apply {
+            text = label
+            textSize = 14.5f
+            isAllCaps = false
+            setTextColor(
+                ContextCompat.getColor(
+                    ctx,
+                    if (selected) R.color.accent_green else R.color.text_primary
+                )
+            )
+            strokeColor = ContextCompat.getColorStateList(
+                ctx,
+                if (selected) R.color.accent_green else R.color.border_subtle
+            )
+            backgroundTintList = ContextCompat.getColorStateList(
+                ctx,
+                if (selected) R.color.accent_soft else R.color.surface_dark
+            )
+            cornerRadius = dp(13f)
+            if (iconRes != null) {
+                icon = ContextCompat.getDrawable(ctx, iconRes)
+                iconSize = dp(18f)
+                iconTint = ContextCompat.getColorStateList(
+                    ctx,
+                    if (selected) R.color.accent_green else R.color.text_primary
+                )
+                iconPadding = dp(10f)
+            }
+            setOnClickListener { onClick() }
+        }
+    }
+
+    /**
+     * MaterialDatePicker constrained from tomorrow to +62 days. The selection
+     * comes back as UTC midnight of the picked date; we convert to 23:59:59
+     * local of that calendar day before it goes into the wizard state, so the
+     * engine can compare plain wall clock.
+     */
+    private fun showEndDatePicker(currentEndMillis: Long?) {
+        val utc = java.util.TimeZone.getTimeZone("UTC")
+        val dayMs = 86_400_000L
+        val todayUtc = com.google.android.material.datepicker.MaterialDatePicker
+            .todayInUtcMilliseconds()
+        val firstSelectable = todayUtc + dayMs
+        val lastSelectable = todayUtc + 62 * dayMs
+
+        val constraints = com.google.android.material.datepicker.CalendarConstraints.Builder()
+            .setStart(firstSelectable)
+            .setEnd(lastSelectable)
+            .setValidator(
+                com.google.android.material.datepicker.CompositeDateValidator.allOf(
+                    listOf(
+                        com.google.android.material.datepicker.DateValidatorPointForward
+                            .from(firstSelectable),
+                        com.google.android.material.datepicker.DateValidatorPointBackward
+                            .before(lastSelectable + dayMs)
+                    )
+                )
+            )
+            .build()
+
+        // Pre-select the already-chosen date (local end-of-day → UTC midnight).
+        val preselect = currentEndMillis?.let { endLocal ->
+            val local = java.util.Calendar.getInstance().apply { timeInMillis = endLocal }
+            java.util.Calendar.getInstance(utc).apply {
+                clear()
+                set(
+                    local.get(java.util.Calendar.YEAR),
+                    local.get(java.util.Calendar.MONTH),
+                    local.get(java.util.Calendar.DAY_OF_MONTH)
+                )
+            }.timeInMillis
+        } ?: firstSelectable
+
+        val picker = com.google.android.material.datepicker.MaterialDatePicker.Builder
+            .datePicker()
+            .setTitleText(R.string.wizard_end_date_picker_title)
+            .setCalendarConstraints(constraints)
+            .setSelection(preselect.coerceIn(firstSelectable, lastSelectable))
+            .build()
+        picker.addOnPositiveButtonClickListener { selectionUtcMidnight ->
+            // UTC midnight → same calendar day, 23:59:59 in the local zone.
+            val sel = java.util.Calendar.getInstance(utc).apply {
+                timeInMillis = selectionUtcMidnight
+            }
+            val endOfDayLocal = java.util.Calendar.getInstance().apply {
+                clear()
+                set(
+                    sel.get(java.util.Calendar.YEAR),
+                    sel.get(java.util.Calendar.MONTH),
+                    sel.get(java.util.Calendar.DAY_OF_MONTH),
+                    23, 59, 59
+                )
+            }.timeInMillis
+            viewModel.wizardSetSessionDuration(SessionDuration.untilDate(endOfDayLocal))
+        }
+        picker.show(parentFragmentManager, "end_date_picker")
+    }
+
+    /**
+     * Dismissible card under the buttons while a date is picked:
+     * "Ends: Tue, Jul 7, 2026 (≈ 4 weeks, ~1,300 recordings)". The ✕ clears
+     * back to the slider's 30-min default.
+     */
+    private fun addEndDateChip(state: WizardViewState, endDateMillis: Long) {
+        val ctx = requireContext()
+        val card = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14f), dp(12f), dp(10f), dp(12f))
+            background = makeBorderedRect(
+                fill = ContextCompat.getColor(ctx, R.color.accent_soft),
+                stroke = ContextCompat.getColor(ctx, R.color.accent_line),
+                strokeWidthPx = dp(1f),
+                cornerRadiusPx = dp(13f).toFloat()
+            )
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(10f) }
+        }
+
+        val now = System.currentTimeMillis()
+        val days = Math.ceil((endDateMillis - now) / 86_400_000.0).toInt().coerceAtLeast(1)
+        val span = if (days < 14) {
+            if (days == 1) "≈ 1 day" else "≈ $days days"
+        } else {
+            val weeks = Math.round(days / 7.0)
+            if (weeks == 1L) "≈ 1 week" else "≈ $weeks weeks"
+        }
+        val recordings = estimateRecordings(days, state.intervalPause?.pauseMinutes ?: 30)
+        card.addView(TextView(ctx).apply {
+            text = getString(
+                R.string.wizard_end_date_chip,
+                SessionDuration.formatEndDateLong(endDateMillis),
+                span,
+                recordings
+            )
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_primary))
+            layoutParams = LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+            )
+        })
+        card.addView(TextView(ctx).apply {
+            text = "✕"
+            textSize = 15f
+            setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+            setPadding(dp(10f), dp(4f), dp(10f), dp(4f))
+            isClickable = true
+            isFocusable = true
+            contentDescription = getString(R.string.cancel)
+            setOnClickListener {
+                viewModel.wizardSetSessionDuration(SessionDuration.fromMinutes(30))
+            }
+        })
+        contentRoot.addView(card)
+    }
+
+    /**
+     * Rough recording count for the chip: cycles per day from the interval
+     * (10 s recording + pause) times the day count, rounded to a tidy figure
+     * with a thousands separator ("1,300").
+     */
+    private fun estimateRecordings(days: Int, pauseMinutes: Int): String {
+        val cycleMinutes = pauseMinutes + 10.0 / 60.0
+        val raw = Math.round(days * 24 * 60 / cycleMinutes)
+        val rounded = when {
+            raw >= 1000 -> raw / 100 * 100
+            raw >= 100 -> raw / 10 * 10
+            else -> raw
+        }
+        return String.format(java.util.Locale.US, "%,d", rounded)
     }
 
     private fun renderSummary(state: WizardViewState) {
@@ -1164,7 +1438,9 @@ class WizardFragment : Fragment(R.layout.fragment_wizard) {
             gravity = Gravity.BOTTOM
             setPadding(0, dp(6f), 0, 0)
         }
-        if (state.sessionDuration.isManual) {
+        if (state.sessionDuration.isManual || state.sessionDuration.hasEndDate) {
+            // "Stop manually" or the date variant ("Until Jul 7, 2026") — both
+            // render their label directly instead of a slider-step value.
             valueRow.addView(TextView(ctx).apply {
                 text = state.sessionDuration.label
                 textSize = 14f

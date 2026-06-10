@@ -20,6 +20,7 @@ import com.fzi.acousticscene.model.RecordingCategory
 import com.fzi.acousticscene.model.SceneClass
 import com.fzi.acousticscene.model.SessionConfig
 import com.fzi.acousticscene.ui.MainViewModel
+import com.fzi.acousticscene.ui.common.ModeBadge
 import com.fzi.acousticscene.ui.common.UiState
 import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
@@ -36,6 +37,7 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
         val state = viewModel.uiState.value
         val config = state.sessionConfig
         if (config != null) {

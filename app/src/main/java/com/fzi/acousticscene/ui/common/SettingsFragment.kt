@@ -52,6 +52,7 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ModeBadge.bind(view.findViewById(R.id.screenModeBadge))
         view.findViewById<ImageButton>(R.id.settingsBack).setOnClickListener {
             findNavController().popBackStack()
         }

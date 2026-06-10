@@ -5,7 +5,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -15,6 +17,7 @@ import com.fzi.acousticscene.R
 import com.fzi.acousticscene.audio.AudioRecorder
 import com.fzi.acousticscene.audio.RecordingState
 import com.fzi.acousticscene.data.ActiveSessionRegistry
+import com.fzi.acousticscene.data.ActiveSessionStore
 import com.fzi.acousticscene.data.PredictionRepository
 import com.fzi.acousticscene.data.PredictionStatistics
 import com.fzi.acousticscene.data.RecordingEngineHolder
@@ -36,6 +39,7 @@ import com.fzi.acousticscene.ui.live.EvaluationActivity
 import com.fzi.acousticscene.ui.live.EvaluationPromptBus
 import com.fzi.acousticscene.ui.common.PendingEvaluation
 import com.fzi.acousticscene.ui.common.UiState
+import com.fzi.acousticscene.ui.common.withBlindResolved
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -112,13 +116,27 @@ class RecordingEngine(
     private var pauseStartedWallClockMs: Long = 0L
     private var pauseStartedAutoResumeMin: Int? = null
 
+    // "Rate now" quota for the running interval session. Rebuilt on every
+    // start(); 100 % behaves exactly like the pre-quota app. Drawn exactly
+    // once per interval cycle, at CYCLE START — the decision must exist before
+    // recording begins so a will-prompt cycle is blinded from its first
+    // streamed per-second slice (see UiState.blindCycleActive).
+    private var ratingQuota = RatingQuotaSchedule(100)
+
+    // True while the running session is snapshotted in [ActiveSessionStore]
+    // (interval + calendar end date). Cleared together with the store.
+    @Volatile private var trackInterruption = false
+
     init {
         updateStatistics()
         scope.launch {
             EvaluationPromptBus.dismissals.collect { dismissedId ->
                 state.update { s ->
                     if (s.pendingEvaluation?.predictionId == dismissedId) {
-                        s.copy(pendingEvaluation = null)
+                        // Rating resolved (submit/skip/timeout in the activity)
+                        // → lift the anti-bias blind, the live screen may show
+                        // the cycle's prediction again.
+                        s.withBlindResolved(dismissedId).copy(pendingEvaluation = null)
                     } else s
                 }
             }
@@ -202,14 +220,35 @@ class RecordingEngine(
             return
         }
 
+        // Recovery restart? Keep the original session identity so the resumed
+        // cycles land in the same session block as the pre-crash ones.
+        val resume = RecordingEngineHolder.pendingResume
+        RecordingEngineHolder.pendingResume = null
+
         isRunning = true
         isPaused = false
         pausePending = false
         pendingAutoResumeMs = null
         stopReasonAuto = false
-        sessionStartTime = System.currentTimeMillis()
+        pauseStartedAutoResumeMin = null
+        sessionStartTime = resume?.originalSessionStartTime ?: System.currentTimeMillis()
         sessionResumeWallClockMs = SystemClock.elapsedRealtime()
         sessionElapsedAtPauseMs = 0L
+        ratingQuota = RatingQuotaSchedule(config.ratingPercent)
+
+        // A deliberate new start supersedes any stale interruption snapshot.
+        ActiveSessionStore.clear(context)
+        trackInterruption = config.category == RecordingCategory.INTERVAL &&
+                config.sessionDuration.endDateMillis != null
+        if (trackInterruption) {
+            ActiveSessionStore.save(
+                context = context,
+                config = config,
+                sessionStartTime = sessionStartTime,
+                plannedEndMillis = config.sessionDuration.endDateMillis!!,
+                lastCycleTimestamp = System.currentTimeMillis()
+            )
+        }
 
         ActiveSessionRegistry.register(
             ActiveSessionRegistry.Entry(
@@ -239,14 +278,33 @@ class RecordingEngine(
                 sessionVolumeMeanSampleCount = 0,
                 allInOneResults = emptyMap(),
                 lastCycleComputeMs = 0L,
-                sessionComputeMs = 0L
+                sessionComputeMs = 0L,
+                pendingEvaluation = null,
+                blindCycleActive = false,
+                blindPredictionId = null
             )
+        }
+
+        // The downtime between the interruption and this restart goes into the
+        // CSV as a regular synthetic pause row, so the session's timeline stays
+        // gap-free for analysis.
+        if (resume != null && resume.gapSec >= 1) {
+            persistPauseRecord(resume.gapSec * 1000L)
         }
 
         sessionTimerJob?.cancel()
         sessionTimerJob = scope.launch {
             val total = config.sessionDuration.totalMs
+            val endWallMs = config.sessionDuration.endDateMillis
             while (isActive && isRunning) {
+                // Calendar deadline is wall clock — checked even while paused,
+                // unlike the elapsed-based window below.
+                if (endWallMs != null && System.currentTimeMillis() >= endWallMs) {
+                    stopReasonAuto = true
+                    isRunning = false
+                    Log.d(TAG, "Session end date reached — soft stop scheduled")
+                    break
+                }
                 if (!isPaused) {
                     val elapsed = sessionElapsedAtPauseMs +
                             (SystemClock.elapsedRealtime() - sessionResumeWallClockMs)
@@ -291,12 +349,37 @@ class RecordingEngine(
             if (!isRunning) break
 
             val cycleStartedAt = System.currentTimeMillis()
+            // Device-metric snapshots for this cycle: app CPU time + wall time
+            // at cycle start; the deltas after the cycle yield cpuUsagePercent.
+            val cpuTimeAtCycleStartMs = Process.getElapsedCpuTime()
+            val wallAtCycleStartMs = SystemClock.elapsedRealtime()
+            // Quota gate, drawn BEFORE recording begins (one draw per interval
+            // cycle): a cycle that will raise the rating prompt is blinded for
+            // its entire lifetime, including the in-flight per-second slices —
+            // deciding only after the cycle would leak the streamed results.
+            // Quota-skipped cycles prompt nothing and render normally.
+            val willPrompt = config.category == RecordingCategory.INTERVAL &&
+                    ratingQuota.shouldPrompt()
             val frameSegments = frameSegmentsFor(config)
             state.update {
+                // This update retargets the blind to the new cycle. If the
+                // previous prompt cycle's rating is still open (interval pause
+                // shorter than the 5-min window, or a late expiry job), its
+                // results are still sitting in the live maps and would paint
+                // the moment the old blind is dropped — wipe them so the
+                // unrated prediction never surfaces. The pendingEvaluation
+                // (rating card + History exclusion) stays untouched.
+                val carryingBlind = it.blindCycleActive && it.blindPredictionId != null
                 it.copy(
                     frameSegments = frameSegments,
                     frameElapsedMs = 0L,
-                    recordingProgress = 0f
+                    recordingProgress = 0f,
+                    blindCycleActive = willPrompt,
+                    blindPredictionId = null,
+                    liveResultsByModel = if (carryingBlind) emptyMap() else it.liveResultsByModel,
+                    perSecondResultsByModel = if (carryingBlind) emptyMap() else it.perSecondResultsByModel,
+                    perSecondResults = if (carryingBlind) List(10) { null } else it.perSecondResults,
+                    runningAverageResult = if (carryingBlind) null else it.runningAverageResult
                 )
             }
 
@@ -305,15 +388,36 @@ class RecordingEngine(
                 RecordingCategory.INTERVAL -> runIntervalCycle(config)
             }
 
-            if (cycleResult != null) {
-                persistCycle(config, cycleResult, cycleStartedAt)
+            val record: PredictionRecord? = if (cycleResult != null) {
+                persistCycle(
+                    config = config,
+                    outcome = cycleResult,
+                    cycleStartedAt = cycleStartedAt,
+                    batteryTempC = getBatteryTemperatureC(),
+                    cpuUsagePercent = computeCpuUsagePercent(cpuTimeAtCycleStartMs, wallAtCycleStartMs)
+                )
+            } else null
+            if (cycleResult == null) {
+                // Failed cycle: nothing was persisted, nothing to hide. The
+                // quota draw is consumed regardless — exactly one per cycle.
+                if (willPrompt) {
+                    state.update { it.copy(blindCycleActive = false, blindPredictionId = null) }
+                }
+                continue
             }
-            if (cycleResult == null) continue
 
-            if (config.category == RecordingCategory.INTERVAL && isRunning) {
+            if (config.category == RecordingCategory.INTERVAL) {
                 val pauseMs = config.intervalPause?.pauseMs ?: 0L
-                if (pauseMs > 0L) {
-                    sendIntervalEvaluationNotification(cycleResult)
+                val promptNow = willPrompt && record != null && isRunning && pauseMs > 0L
+                if (promptNow) {
+                    sendIntervalEvaluationNotification(record!!)
+                } else if (willPrompt) {
+                    // Drawn to prompt but the prompt can't fire (session just
+                    // ended, persist failed, or zero-pause interval) — lift the
+                    // blind, there is no rating to wait for.
+                    state.update { it.copy(blindCycleActive = false, blindPredictionId = null) }
+                }
+                if (isRunning && pauseMs > 0L) {
                     runIntervalPause(pauseMs)
                 }
             }
@@ -334,8 +438,19 @@ class RecordingEngine(
         sessionTimerJob?.cancel()
         audioRecorder.stopRecording()
         ActiveSessionRegistry.unregister()
+        // Normal exit (user stop, soft stop, error) — drop the interruption
+        // snapshot so no recovery prompt fires for a session that ended cleanly.
+        if (trackInterruption) {
+            trackInterruption = false
+            ActiveSessionStore.clear(context)
+        }
         pausePending = false
         pendingAutoResumeMs = null
+        // Session end closes the rating window (the Results Summary reveals
+        // everything anyway), so an unresolved blind/pending rating is lifted
+        // here — otherwise the record would stay hidden in History forever.
+        evalDismissJob?.cancel()
+        evalDismissJob = null
         state.update {
             it.copy(
                 appState = AppState.Ready,
@@ -348,7 +463,10 @@ class RecordingEngine(
                 frameElapsedMs = 0L,
                 perSecondResults = List(10) { null },
                 runningAverageResult = null,
-                perSecondResultsByModel = emptyMap()
+                perSecondResultsByModel = emptyMap(),
+                pendingEvaluation = null,
+                blindCycleActive = false,
+                blindPredictionId = null
             )
         }
     }
@@ -572,15 +690,18 @@ class RecordingEngine(
         }
     }
 
+    /** @return the persisted record, or null when no primary result was available. */
     private fun persistCycle(
         config: SessionConfig,
         outcome: CycleOutcome,
-        cycleStartedAt: Long
-    ) {
+        cycleStartedAt: Long,
+        batteryTempC: Float?,
+        cpuUsagePercent: Float?
+    ): PredictionRecord? {
         val primaryName = config.modelNames.first()
-        val primaryRow = outcome.perModel[primaryName] ?: return
+        val primaryRow = outcome.perModel[primaryName] ?: return null
         val primarySub = ModelTrainingDuration.primaryMethodFor(primaryName)
-        val primaryResult = primaryRow[primarySub] ?: primaryRow.values.firstOrNull() ?: return
+        val primaryResult = primaryRow[primarySub] ?: primaryRow.values.firstOrNull() ?: return null
 
         val mode = effectiveModeFor(config)
         val battery = getBatteryLevel()
@@ -638,6 +759,8 @@ class RecordingEngine(
             allInOneResults = allInOne,
             volumeMean = outcome.volume.mean,
             volumePeak = outcome.volume.peak,
+            batteryTempC = batteryTempC,
+            cpuUsagePercent = cpuUsagePercent,
             modelsSelected = config.modelNames,
             recordingCategory = config.category,
             continuousMethodsByModel = if (config.category == RecordingCategory.CONTINUOUS) {
@@ -647,13 +770,23 @@ class RecordingEngine(
                 config.intervalMethodsByModel.takeIf { it.isNotEmpty() }
             } else null,
             sessionDurationPlanned = config.sessionDuration,
+            ratingPercent = if (config.category == RecordingCategory.INTERVAL) {
+                config.ratingPercent
+            } else null,
             perSecondVolumes = outcome.perSecondVolumes,
             sessionMode = config.mode
         )
         predictionRepository.addPrediction(record)
+        if (trackInterruption) {
+            ActiveSessionStore.updateLastCycle(context, System.currentTimeMillis())
+        }
         updateStatistics()
 
+        // currentResult is updated even for blinded cycles: the live screen
+        // uses its identity purely as a "new cycle landed" signal for the
+        // battery/CPU metric charts, which carry no class information.
         state.update { it.copy(currentResult = primaryResult, errorMessage = null) }
+        return record
     }
 
     private fun accumulateAggregate(
@@ -847,6 +980,8 @@ class RecordingEngine(
             pauseDurationSec = durationMs / 1000L,
             volumeMean = 0f,
             volumePeak = 0f,
+            // batteryTempC / cpuUsagePercent stay null on pause records — a 0
+            // would read as a real measurement (see PredictionRecord).
             perSecondVolumes = FloatArray(10),
             modelsSelected = config?.modelNames,
             recordingCategory = config?.category,
@@ -859,37 +994,44 @@ class RecordingEngine(
             sessionDurationPlanned = config?.sessionDuration,
             longIntervalMinutes = config?.intervalPause?.pauseMinutes,
             pauseAutoResumeMin = pauseStartedAutoResumeMin,
+            ratingPercent = if (config?.category == RecordingCategory.INTERVAL) {
+                config.ratingPercent
+            } else null,
             sessionMode = config?.mode
         )
         predictionRepository.addPrediction(record)
     }
 
-    private fun sendIntervalEvaluationNotification(outcome: CycleOutcome) {
-        val record = predictionRepository.getAllPredictions().lastOrNull() ?: return
+    private fun sendIntervalEvaluationNotification(record: PredictionRecord) {
+        // pendingEvaluation is set on BOTH the foreground and the background
+        // path: it drives the in-app rating card, marks the record as blinded
+        // for History, and the dismiss job below guarantees the 5-min expiry
+        // lifts the blind even if the user never opens the evaluation.
+        val deadline = SystemClock.elapsedRealtime() + EvaluationActivity.EVALUATION_TIMEOUT_MS
+        state.update {
+            it.copy(
+                pendingEvaluation = PendingEvaluation(
+                    predictionId = record.id,
+                    modelClass = record.sceneClass,
+                    deadlineElapsedMs = deadline
+                ),
+                // The blind set at cycle start now belongs to this record.
+                blindPredictionId = record.id
+            )
+        }
+        evalDismissJob?.cancel()
+        evalDismissJob = scope.launch {
+            delay(EvaluationActivity.EVALUATION_TIMEOUT_MS)
+            state.update { s ->
+                if (s.pendingEvaluation?.predictionId == record.id) {
+                    // Deadline reached without a rating — reveal everywhere.
+                    s.withBlindResolved(record.id).copy(pendingEvaluation = null)
+                } else s
+            }
+        }
         val isForeground = ProcessLifecycleOwner.get().lifecycle.currentState
             .isAtLeast(Lifecycle.State.STARTED)
-        if (isForeground) {
-            val deadline = SystemClock.elapsedRealtime() + EvaluationActivity.EVALUATION_TIMEOUT_MS
-            state.update {
-                it.copy(
-                    pendingEvaluation = PendingEvaluation(
-                        predictionId = record.id,
-                        modelClass = record.sceneClass,
-                        deadlineElapsedMs = deadline
-                    )
-                )
-            }
-            evalDismissJob?.cancel()
-            evalDismissJob = scope.launch {
-                delay(EvaluationActivity.EVALUATION_TIMEOUT_MS)
-                state.update { s ->
-                    if (s.pendingEvaluation?.predictionId == record.id) {
-                        s.copy(pendingEvaluation = null)
-                    } else s
-                }
-            }
-            return
-        }
+        if (isForeground) return
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             EVALUATION_CHANNEL_ID,
@@ -920,8 +1062,13 @@ class RecordingEngine(
         notificationManager.notify(EVALUATION_NOTIFICATION_ID, notification)
     }
 
+    /** Skip path (live-screen card). Skipping resolves the rating → reveal. */
     fun dismissPendingEvaluation() {
-        state.update { it.copy(pendingEvaluation = null) }
+        state.update { s ->
+            val resolvedId = s.pendingEvaluation?.predictionId
+            val base = if (resolvedId != null) s.withBlindResolved(resolvedId) else s
+            base.copy(pendingEvaluation = null)
+        }
     }
 
     fun clearError() {
@@ -945,6 +1092,34 @@ class RecordingEngine(
         bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
     } catch (_: Exception) {
         -1
+    }
+
+    /**
+     * Battery temperature in °C, read from the sticky ACTION_BATTERY_CHANGED
+     * intent (EXTRA_TEMPERATURE carries tenths of a degree). Returns null when
+     * the intent or the extra is unavailable (-1 sentinel or missing).
+     */
+    private fun getBatteryTemperatureC(): Float? = try {
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val tenths = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
+        if (tenths == -1) null else tenths / 10f
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * This app's own CPU usage across the cycle, in percent of wall time on a
+     * single-core scale: delta of [Process.getElapsedCpuTime] (CPU time used by
+     * this process across all its threads) divided by the elapsed wall time,
+     * times 100. Because multiple threads can burn CPU in parallel, the value
+     * can exceed 100 on multi-core devices. Returns null when the wall-time
+     * delta is non-positive.
+     */
+    private fun computeCpuUsagePercent(cpuTimeAtStartMs: Long, wallAtStartMs: Long): Float? {
+        val wallDeltaMs = SystemClock.elapsedRealtime() - wallAtStartMs
+        if (wallDeltaMs <= 0L) return null
+        val cpuDeltaMs = Process.getElapsedCpuTime() - cpuTimeAtStartMs
+        return cpuDeltaMs * 100f / wallDeltaMs
     }
 
     /**

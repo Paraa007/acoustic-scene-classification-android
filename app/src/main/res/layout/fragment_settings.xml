@@ -40,6 +40,19 @@
                 android:textSize="23sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Persistent mode badge, top-end of the header. -->
+            <include
+                android:id="@+id/screenModeBadge"
+                layout="@layout/view_mode_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" />
         </LinearLayout>
 
         <!-- Appearance section -->

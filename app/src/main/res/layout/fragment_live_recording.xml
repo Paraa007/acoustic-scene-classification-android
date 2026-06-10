@@ -61,6 +61,14 @@
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
+
+        <!-- Persistent mode badge, top-end of the status header. -->
+        <include
+            android:id="@+id/screenModeBadge"
+            layout="@layout/view_mode_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="9dp" />
     </LinearLayout>
 
     <!-- Loading / status banner — only shown when the models are not ready -->
@@ -298,6 +306,22 @@
                     tools:text="3 models" />
             </LinearLayout>
 
+            <!-- Anti-bias blind hint: visible only while the current cycle's
+                 rating is still open. The model cards below freeze on the
+                 previous cycle and the slice strip renders neutral circles. -->
+            <TextView
+                android:id="@+id/liveBlindHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_tile"
+                android:padding="14dp"
+                android:gravity="center"
+                android:text="@string/live_blind_hint"
+                android:textSize="11.5sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="9dp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/liveModelCardsContainer"
                 android:layout_width="match_parent"
@@ -356,8 +380,80 @@
                 <com.fzi.acousticscene.ui.views.VolumeLineChartView
                     android:id="@+id/liveVolumeChart"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="180dp"
                     android:layout_marginTop="9dp" />
+            </LinearLayout>
+
+            <!-- ============================================================
+                 Battery-temperature chart tile (one point per cycle)
+                 ============================================================ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_tile"
+                android:padding="14dp"
+                android:layout_marginTop="11dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/live_chart_battery_temp"
+                    android:textAllCaps="true"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.1" />
+
+                <com.fzi.acousticscene.ui.views.MetricLineChartView
+                    android:id="@+id/liveTempChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="100dp"
+                    android:layout_marginTop="9dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/chart_caption_battery_temp"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_faint" />
+            </LinearLayout>
+
+            <!-- ============================================================
+                 App-CPU chart tile (one point per cycle)
+                 ============================================================ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_tile"
+                android:padding="14dp"
+                android:layout_marginTop="11dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/live_chart_app_cpu"
+                    android:textAllCaps="true"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.1" />
+
+                <com.fzi.acousticscene.ui.views.MetricLineChartView
+                    android:id="@+id/liveCpuChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="100dp"
+                    android:layout_marginTop="9dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/chart_caption_app_cpu"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_faint" />
             </LinearLayout>
 
             <!-- ============================================================

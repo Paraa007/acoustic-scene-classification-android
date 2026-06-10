@@ -498,6 +498,8 @@
     <string name="eval_match">Match</string>
     <string name="eval_differs">Different</string>
     <string name="eval_your_pick">Your pick</string>
+    <!-- Live screen, shown in place of the prediction while a cycle waits for its rating. -->
+    <string name="live_blind_hint">🔒 Hidden until you rate</string>
 
     <!-- v2 Config Welcome (slide 03) — two-line variant of the app title. -->
     <string name="welcome_title_two_line">Acoustic Scene\nClassification</string>
@@ -517,6 +519,20 @@
     <string name="live_section_models_count">%1$d models</string>
     <string name="live_section_models_count_one">1 model</string>
     <string name="live_audio_level">Audio Level</string>
+
+    <!-- Device-metric charts (battery temperature + app CPU) on the live screen
+         and in the History session-detail dialog. The captions spell out what
+         each chart measures so testers don't have to guess the unit. -->
+    <string name="live_chart_battery_temp">Battery temp</string>
+    <string name="live_chart_app_cpu">App CPU</string>
+    <string name="chart_caption_battery_temp">Battery temperature in °C</string>
+    <string name="chart_caption_app_cpu">CPU usage of this app in % (relative to one core)</string>
+    <string name="metric_chart_waiting">Waiting for data…</string>
+    <string name="detail_section_charts">Session charts</string>
+    <string name="detail_chart_volume">Volume</string>
+    <string name="detail_no_temp_cpu_data">No temperature/CPU data for this session.</string>
+    <string name="detail_no_temp_data">No temperature data for this session.</string>
+    <string name="detail_no_cpu_data">No CPU data for this session.</string>
     <string name="live_pause_picker_eyebrow">Paused</string>
     <string name="live_pause_picker_subtitle">How long should the pause last? (0 to 12 h, 15 min steps)</string>
     <string name="live_pause_picker_confirm">Confirm pause</string>
@@ -540,6 +556,12 @@
     <string name="detail_mode_test">TEST MODE</string>
     <string name="detail_mode_config">CONFIG MODE</string>
 
+    <!-- Persistent mode badge - small pill on every screen behind the mode
+         picker so the user always knows which mode they are operating in.
+         Rendered all-caps via textAllCaps. -->
+    <string name="mode_badge_test">Test mode</string>
+    <string name="mode_badge_config">Config mode</string>
+
     <!-- History filter chip row - shown only when History is launched from the
          Config-mode welcome. Default selection is "All". -->
     <string name="history_filter_all">ALL</string>
@@ -554,4 +576,19 @@
     <string name="wizard_session_duration_stop_manually">Stop manually</string>
     <string name="wizard_slider_zero">No pause</string>
     <string name="wizard_section_test_session">Test session</string>
+
+    <!-- Rating quota slider (Interval wizard step) -->
+    <string name="wizard_rating_quota_eyebrow">Rating prompts</string>
+    <string name="wizard_rating_quota_hint">How often should a rating be asked? At 100% every recording asks.</string>
+
+    <!-- Calendar end date (Session-duration wizard step, Interval only) -->
+    <string name="wizard_pick_end_date">Pick end date</string>
+    <string name="wizard_end_date_picker_title">Session runs until</string>
+    <string name="wizard_end_date_chip">Ends: %1$s (%2$s, ~%3$s recordings)</string>
+
+    <!-- Interrupted-session recovery -->
+    <string name="recovery_channel_name">Session Recovery</string>
+    <string name="recovery_channel_description">Tells you when an interrupted study session can be picked up again</string>
+    <string name="recovery_notification_title">Study session was interrupted</string>
+    <string name="recovery_notification_text">Tap to resume the recording where it left off.</string>
 </resources>
