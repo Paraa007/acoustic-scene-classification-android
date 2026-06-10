@@ -85,6 +85,11 @@ maestro_screenshots/
 !app/src/main/res/**/*.svg
 !app/src/main/res/**/*.xml
 
+# Whitelist: README screenshots (tracked via Git LFS, see .gitattributes)
+!docs/img/*.png
+!docs/img/*.jpg
+!docs/img/*.jpeg
+
 # Audio recordings / samples — large, never commit
 *.wav
 *.mp3
