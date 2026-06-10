@@ -11,6 +11,12 @@ import kotlin.random.Random
  * random positions within the block. A fresh shuffled block is built whenever
  * the previous one is used up.
  *
+ * The very first cycle of a session always prompts: one of the first block's
+ * quota slots is pinned to position 0 (the block total stays exact). Without
+ * this, low percentages plus long interval pauses can leave hours without a
+ * single prompt right after starting — indistinguishable from a broken rating
+ * feature when testing a configuration.
+ *
  * 100 % short-circuits to "always prompt" so the historic behavior stays
  * bit-identical. State is in-memory only — one instance per session run.
  */
@@ -25,6 +31,7 @@ class RatingQuotaSchedule(
     private val percent = ratingPercent.coerceIn(0, 100)
     private var block: List<Boolean> = emptyList()
     private var position = 0
+    private var firstBlock = true
 
     /**
      * Call exactly once per interval cycle, at cycle start. Returns whether
@@ -36,16 +43,23 @@ class RatingQuotaSchedule(
         if (percent >= 100) return true
         if (percent <= 0) return false
         if (position >= block.size) {
-            block = buildBlock()
+            block = buildBlock(pinFirst = firstBlock)
+            firstBlock = false
             position = 0
         }
         return block[position++]
     }
 
-    private fun buildBlock(): List<Boolean> {
+    private fun buildBlock(pinFirst: Boolean): List<Boolean> {
         // 10–90 % in steps of 10 → 1..9 prompts per block of 10. Percentages
         // off the grid round to the nearest step.
         val prompts = ((percent + 5) / 10).coerceIn(0, BLOCK_SIZE)
+        if (pinFirst && prompts > 0) {
+            // Session start: spend one quota slot on cycle 1, shuffle the rest.
+            val rest = (List(prompts - 1) { true } + List(BLOCK_SIZE - prompts) { false })
+                .shuffled(random)
+            return listOf(true) + rest
+        }
         return (List(prompts) { true } + List(BLOCK_SIZE - prompts) { false })
             .shuffled(random)
     }
