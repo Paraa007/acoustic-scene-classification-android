@@ -317,6 +317,7 @@
 
     <!-- v2 Live Recording (slide 09) — header, tile labels, inline pause picker. -->
     <string name="live_header_title">Recording</string>
+    <string name="live_header_paused">Paused</string>
     <string name="live_tile_label_elapsed_total">Elapsed / Total</string>
     <string name="live_legend_session">Session</string>
     <string name="live_legend_cycle">Cycle</string>
@@ -337,9 +338,9 @@
     <string name="detail_no_temp_cpu_data">No temperature/CPU data for this session.</string>
     <string name="detail_no_temp_data">No temperature data for this session.</string>
     <string name="detail_no_cpu_data">No CPU data for this session.</string>
-    <string name="live_pause_picker_eyebrow">Paused</string>
+    <string name="pause_dialog_title">Pause session</string>
     <string name="live_pause_picker_subtitle">How long should the pause last? (0 to 12 h, 15 min steps)</string>
-    <string name="live_pause_picker_confirm">Confirm pause</string>
+    <string name="live_pause_picker_confirm">Start pause</string>
 
     <!-- v2 Wizard · Summary (slide 08) -->
     <string name="wizard_summary_runs">Runs: %1$s</string>

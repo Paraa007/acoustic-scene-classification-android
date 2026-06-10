@@ -244,16 +244,18 @@ class PredictionRepository private constructor(private val context: Context) {
      * baut daraus dynamische Spalten `allinone_<model>` am Ende der Zeile.
      * Records ohne ALL-IN-ONE-Daten bekommen leere Zellen in diesen Spalten.
      *
-     * Pause-Records werden ausgeschlossen — sie tragen Placeholder-Klassifikation
-     * (TRANSIT_VEHICLES, confidence 0) und würden den Export verfälschen.
+     * Pause-Records bleiben drin: [PredictionRecord.toCsvRow] schreibt für sie
+     * eine eigene Gap-Zeile (recording_mode = "PAUSE", nur pause_duration_sec
+     * trägt Daten) — Auswertungen filtern sie über genau diese Spalte. Nur der
+     * ALL-IN-ONE-Namens-Scan überspringt sie, weil ihre Klassifikations-Felder
+     * Platzhalter sind.
      *
      * Kanonischer CSV-Builder der App — der einzige UI-Export (HistoryActivity)
      * soll hierüber laufen, damit dynamische Spalten (allinone_*) nie verloren gehen.
      */
     @Synchronized
     fun exportToCsvString(records: List<PredictionRecord> = predictions): String {
-        val real = records.realOnly()
-        val allInOneModelNames: List<String> = real
+        val allInOneModelNames: List<String> = records.realOnly()
             .mapNotNull { it.allInOneResults }
             .flatten()
             .map { it.modelName }
@@ -262,7 +264,7 @@ class PredictionRepository private constructor(private val context: Context) {
 
         val sb = StringBuilder()
         sb.appendLine(PredictionRecord.getCsvHeader(allInOneModelNames.takeIf { it.isNotEmpty() }))
-        real.forEach { record ->
+        records.forEach { record ->
             sb.appendLine(record.toCsvRow(allInOneModelNames.takeIf { it.isNotEmpty() }))
         }
         return sb.toString()

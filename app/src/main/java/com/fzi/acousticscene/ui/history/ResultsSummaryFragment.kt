@@ -79,7 +79,10 @@ class ResultsSummaryFragment : Fragment(R.layout.fragment_results_summary) {
 
     private fun renderHeader(view: View, config: SessionConfig, state: UiState) {
         val minutes = (state.sessionElapsedMs / 60_000L).coerceAtLeast(0L)
-        view.findViewById<TextView>(R.id.resultsMinutes).text = minutes.toString()
+        // Sessions under a minute showed "0" here, which reads like a broken
+        // counter next to a non-zero recording count.
+        view.findViewById<TextView>(R.id.resultsMinutes).text =
+            if (minutes == 0L && state.sessionElapsedMs > 0L) "<1" else minutes.toString()
 
         val recordings = state.cycleCountByModelMethod.values.maxOrNull() ?: 0
         view.findViewById<TextView>(R.id.resultsRecordings).text = recordings.toString()

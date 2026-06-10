@@ -1,5 +1,6 @@
 package com.fzi.acousticscene.ui.live
 
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -39,7 +40,6 @@ import com.fzi.acousticscene.util.SceneClassColors
 import com.fzi.acousticscene.util.stripModelSuffix
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.slider.Slider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -78,6 +78,8 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private var isReentry = false
 
     private lateinit var statusLabel: TextView
+    private lateinit var headerTitle: TextView
+    private lateinit var headerDot: View
     private lateinit var stopwatch: ConcentricStopwatchView
     private lateinit var modelCardsContainer: LinearLayout
     private lateinit var blindHint: TextView
@@ -98,12 +100,9 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private lateinit var sectionModelsCount: TextView
     private lateinit var volumeReadout: TextView
 
-    // Inline pause-duration picker tile views.
-    private lateinit var pausePickerCard: LinearLayout
-    private lateinit var pauseDurationDisplay: TextView
-    private lateinit var pauseSlider: Slider
-    private lateinit var pausePickerCancelButton: MaterialButton
-    private lateinit var pausePickerConfirmButton: MaterialButton
+    // Pause-duration dialog. Held so onDestroyView can dismiss it — a dialog
+    // surviving a config change would leak its window.
+    private var pauseDialog: Dialog? = null
 
     // Persistent in-app evaluation card — only visible while pendingEvaluation
     // is non-null (Interval mode + foreground after a finished cycle).
@@ -151,6 +150,8 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             hasAutoStarted = true
         }
         statusLabel = view.findViewById(R.id.liveStatusLabel)
+        headerTitle = view.findViewById(R.id.liveHeaderTitle)
+        headerDot = view.findViewById(R.id.liveLiveDot)
         stopwatch = view.findViewById(R.id.liveStopwatch)
         modelCardsContainer = view.findViewById(R.id.liveModelCardsContainer)
         blindHint = view.findViewById(R.id.liveBlindHint)
@@ -178,11 +179,6 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         inferenceValue = view.findViewById(R.id.liveInferenceValue)
         sectionModelsCount = view.findViewById(R.id.liveSectionModelsCount)
         volumeReadout = view.findViewById(R.id.liveVolumeReadout)
-        pausePickerCard = view.findViewById(R.id.livePausePickerCard)
-        pauseDurationDisplay = view.findViewById(R.id.livePauseDurationDisplay)
-        pauseSlider = view.findViewById(R.id.livePauseSlider)
-        pausePickerCancelButton = view.findViewById(R.id.livePausePickerCancelButton)
-        pausePickerConfirmButton = view.findViewById(R.id.livePausePickerConfirmButton)
         evaluationCard = view.findViewById(R.id.liveEvaluationCard)
         evaluationTitle = view.findViewById(R.id.liveEvaluationTitle)
         evaluationCountdown = view.findViewById(R.id.liveEvaluationCountdown)
@@ -190,18 +186,6 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         evaluationSkipButton = view.findViewById(R.id.liveEvaluationSkipButton)
         evaluationSkipButton.setOnClickListener { viewModel.dismissPendingEvaluation() }
 
-        // Pause-duration slider: 0–48 steps × 15 min = 0..12 h. Default 13 (~3h 15min)
-        pauseSlider.addOnChangeListener { _, value, _ ->
-            pauseDurationDisplay.text = formatPauseDurationLabel(value.toInt())
-        }
-        pauseDurationDisplay.text = formatPauseDurationLabel(pauseSlider.value.toInt())
-        pausePickerCancelButton.setOnClickListener { hidePausePickerCard() }
-        pausePickerConfirmButton.setOnClickListener {
-            val steps = pauseSlider.value.toInt()
-            val durationMs: Long? = if (steps <= 0) null else steps * 15L * 60_000L
-            hidePausePickerCard()
-            viewModel.pauseSession(durationMs)
-        }
         evaluationOpenButton.setOnClickListener {
             val pending = viewModel.uiState.value.pendingEvaluation ?: return@setOnClickListener
             val intent = Intent(requireContext(), EvaluationActivity::class.java).apply {
@@ -221,16 +205,16 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             }
         )
         pauseResumeButton.setOnClickListener {
-            // Per v2 spec: tapping Pause only opens the duration picker; the
+            // Tapping Pause opens the duration dialog front and center; the
             // session keeps running and pausePending stays false until the user
-            // hits Confirm inside the picker tile. Hitting the button again
+            // hits "Start pause" inside the dialog. Hitting the button again
             // while the request is already on its way (pausePending, frame
             // closing) acts as a Resume so the user can back out cleanly.
             val state = viewModel.uiState.value
             if (state.isPaused || state.pausePending) {
                 viewModel.resumeSession()
             } else {
-                showPausePickerCard()
+                showPauseDialog()
             }
         }
         stopButton.setOnClickListener {
@@ -251,7 +235,16 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         evaluationCountdownJob = null
         pauseCountdownJob?.cancel()
         pauseCountdownJob = null
+        pauseDialog?.dismiss()
+        pauseDialog = null
         super.onDestroyView()
+    }
+
+    private fun showPauseDialog() {
+        if (pauseDialog?.isShowing == true) return
+        pauseDialog = ModernDialogHelper.showPauseSliderDialog(requireContext()) { durationMs ->
+            viewModel.pauseSession(durationMs)
+        }
     }
 
     private fun handleBack() {
@@ -269,6 +262,13 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
 
     private fun render(state: UiState) {
         if (stopInFlight) return
+        // The back arrow only renders when pressing it would do something.
+        // During an active recording on the normal wizard path handleBack() is
+        // a no-op, so the arrow disappears instead of sitting there dead. On
+        // re-entry it stays: there it pops to the hub and the session keeps
+        // running in the foreground service.
+        backButton.visibility =
+            if (isReentry || !viewModel.isClassifying()) View.VISIBLE else View.GONE
         val config = state.sessionConfig ?: run {
             // No active config — bail back to whichever home is on the stack so
             // the user never lands on a recording screen with nothing to record.
@@ -311,6 +311,14 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         pauseResumeButton.text = getString(
             if (state.isPaused || state.pausePending) R.string.live_resume else R.string.live_pause
         )
+
+        // Header mirrors the pause state — "Recording" with a bright green dot
+        // would contradict the paused status line right below it.
+        val paused = state.isPaused || state.pausePending
+        headerTitle.text = getString(
+            if (paused) R.string.live_header_paused else R.string.live_header_title
+        )
+        headerDot.alpha = if (paused) 0.35f else 1f
 
         if (!state.isPaused) {
             volumeChart.submitSample(state.currentVolume, state.frameElapsedMs)
@@ -723,31 +731,6 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density).toInt()
-
-    private fun hidePausePickerCard() {
-        pausePickerCard.visibility = View.GONE
-    }
-
-    private fun showPausePickerCard() {
-        pausePickerCard.visibility = View.VISIBLE
-        pauseDurationDisplay.text = formatPauseDurationLabel(pauseSlider.value.toInt())
-    }
-
-    /**
-     * Slider steps are 15-min increments from 0 up to 48 (= 12 h).
-     * 0          → "No timer"
-     * 1..3       → "X min"
-     * 4..47      → "Xh Ymin" or "Xh"
-     * 48         → "12 h"
-     */
-    private fun formatPauseDurationLabel(steps: Int): String {
-        val totalMinutes = steps * 15
-        if (totalMinutes <= 0) return getString(R.string.pause_picker_no_timer)
-        if (totalMinutes < 60) return "$totalMinutes min"
-        val hours = totalMinutes / 60
-        val minutes = totalMinutes % 60
-        return if (minutes == 0) "${hours} h" else "${hours} h ${minutes} min"
-    }
 
     private data class Quadruple<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 }
