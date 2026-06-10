@@ -80,7 +80,11 @@ class EvaluationActivity : AppCompatActivity() {
 
         predictionId = savedInstanceState?.getLong(STATE_PREDICTION_ID, -1)
             ?: intent.getLongExtra(EXTRA_PREDICTION_ID, -1)
-        if (predictionId == -1L) {
+        // The record can be deleted while its evaluation notification is still
+        // pending — bail out instead of labelling a record that no longer exists.
+        if (predictionId == -1L ||
+            !PredictionRepository.getInstance(this).exists(predictionId)
+        ) {
             finish()
             return
         }
