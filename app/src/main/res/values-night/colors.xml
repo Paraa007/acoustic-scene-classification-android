@@ -15,7 +15,6 @@
 
     <!-- Accent (forest green, muted for dark bg — no glow) -->
     <color name="accent_green">#4F6859</color>
-    <color name="accent_green_dark">#3B4F44</color>
     <color name="accent_green_light">#62786A</color>
     <color name="accent_soft">#161F1A</color>
     <color name="accent_line">#324339</color>
@@ -23,21 +22,15 @@
 
     <!-- Test-acc-missing red (dark) -->
     <color name="accent_red">#D6584F</color>
-    <color name="accent_red_soft">#3A1F1D</color>
 
     <!-- Dev/info blue stays available -->
-    <color name="accent_blue">#4F6859</color>
-    <color name="accent_blue_dark">#3B4F44</color>
-    <color name="accent_blue_light">#62786A</color>
 
     <!-- Text -->
     <color name="text_primary">#E9E9EA</color>
     <color name="text_secondary">#9A9CA1</color>
-    <color name="text_disabled">#66686D</color>
     <color name="text_faint">#66686D</color>
 
     <!-- Status -->
-    <color name="status_success">#4F6859</color>
     <color name="status_warning">#CE9D70</color>
     <color name="status_error">#D6584F</color>
     <color name="status_info">#6E97B6</color>
@@ -57,22 +50,15 @@
 
     <!-- Material aliases -->
     <color name="primary">#4F6859</color>
-    <color name="primary_dark">#3B4F44</color>
-    <color name="accent">#4F6859</color>
     <color name="background">#0A0A0C</color>
     <color name="surface">#15161A</color>
     <color name="error">#D6584F</color>
     <color name="on_primary">#0E1813</color>
-    <color name="on_background">#E9E9EA</color>
     <color name="on_surface">#E9E9EA</color>
     <color name="on_error">#FFFFFF</color>
 
     <!-- Status indicator (live recording state) -->
-    <color name="status_idle">#66686D</color>
-    <color name="status_recording">#C98179</color>
-    <color name="status_processing">#CE9D70</color>
 
     <!-- Dialogs -->
     <color name="dialog_surface">#15161A</color>
-    <color name="dialog_surface_light">#1E1F23</color>
 </resources>

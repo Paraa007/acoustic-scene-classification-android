@@ -3,154 +3,57 @@
     <string name="app_name_full_display">Acoustic Scene Classification · FZI</string>
 
     <!-- Main UI -->
-    <string name="start_recording">Start Recording</string>
-    <string name="stop_recording">Stop Recording</string>
-    <string name="mode_standard">Standard (10s)</string>
-    <string name="mode_fast">Fast (1s)</string>
-    <string name="mode_long">Every 30 min</string>
-    <string name="mode_avg">Avg (10s, 10×1s)</string>
     <string name="category_continuous">Continuous</string>
     <string name="category_interval">Interval</string>
-    <string name="mode_desc_long">Records 10 s, pauses, then records again. Use it for long-term monitoring.</string>
-    <string name="long_interval_picker_title">Recording interval</string>
-    <string name="long_interval_picker_subtitle">Pick how often to record. Tap an option to start LONG mode with that interval.</string>
-    <string name="long_interval_prompt">Pick how often to record. Tap Every to choose an interval.</string>
-    <string name="long_interval_locked_running">Stop the running session before changing the interval</string>
-    <string name="recording_mode">Recording Mode</string>
-    <string name="loading_model">Loading Model...</string>
-    <string name="model_loaded">Model Loaded</string>
-    <string name="model_error">Model Error</string>
 
     <!-- Status -->
-    <string name="status_idle">Ready</string>
-    <string name="status_recording">Recording</string>
-    <string name="status_processing">Processing</string>
 
     <!-- Scene Labels (9 Classes - DCASE 2025) -->
-    <string name="scene_transit_vehicles">Transit - Vehicles/Outdoor</string>
-    <string name="scene_urban_waiting">Outdoor - Urban &amp; Transit Buildings/Waiting Areas</string>
-    <string name="scene_nature">Outdoor - Nature</string>
-    <string name="scene_social">Indoor - Social Environment</string>
-    <string name="scene_work">Indoor - Work Environment</string>
-    <string name="scene_commercial">Indoor - Commercial/Busy Environment</string>
-    <string name="scene_leisure_sport">Indoor - Leisure/Sports</string>
-    <string name="scene_culture_quiet">Indoor - Culture/Quiet Leisure</string>
-    <string name="scene_unknown">Unknown</string>
 
     <!-- Scene Labels Short (for UI) -->
-    <string name="scene_transit_vehicles_short">Transit/Vehicles</string>
-    <string name="scene_urban_waiting_short">Urban/Waiting</string>
-    <string name="scene_nature_short">Nature</string>
-    <string name="scene_social_short">Social</string>
-    <string name="scene_work_short">Work</string>
-    <string name="scene_commercial_short">Commercial</string>
-    <string name="scene_leisure_sport_short">Leisure/Sports</string>
-    <string name="scene_culture_quiet_short">Culture/Quiet</string>
 
     <!-- UI Labels -->
-    <string name="current_scene">Current Scene</string>
-    <string name="confidence">Confidence</string>
-    <string name="top_predictions">Top Predictions</string>
     <string name="history">History</string>
-    <string name="inference_time">Analysis Time</string>
-    <string name="recording_duration">Recording Duration</string>
-    <string name="model_confidence">Model Confidence</string>
-    <string name="seconds">s</string>
-    <string name="milliseconds">ms</string>
     <string name="app_name_full">Acoustic Scene Classification</string>
-    <string name="timer_countdown">Timer: %1$ds</string>
 
     <!-- Permissions -->
-    <string name="permission_audio_required">Scene classification needs microphone permission</string>
-    <string name="permission_audio_explanation">The app records audio through the microphone to classify the scene. Grant the permission in settings.</string>
-    <string name="permission_denied">Permission Denied</string>
-    <string name="permission_granted">Permission Granted</string>
     <string name="settings">Settings</string>
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
 
     <!-- Errors -->
-    <string name="error_recording">Recording Error</string>
-    <string name="error_inference">Inference Error</string>
-    <string name="error_model_load">Model could not be loaded</string>
-    <string name="error_audio_permission">Microphone permission denied</string>
-    <string name="error_audio_recording">Could not start audio recording</string>
-    <string name="error_processing">Processing Error</string>
 
     <!-- Statistics -->
-    <string name="session_statistics">Session Statistics</string>
-    <string name="average_inference_time">Avg Inference Time</string>
-    <string name="total_classifications">Total Classifications</string>
     <string name="no_history">No classification history available yet</string>
 
     <!-- History -->
-    <string name="save_history">Save History</string>
-    <string name="history_saved">History saved!</string>
-    <string name="history_save_error">Error saving</string>
-    <string name="history_export">Export History</string>
 
     <!-- CSV Export -->
-    <string name="export_csv">CSV Export</string>
     <string name="share_csv">Share CSV</string>
     <string name="csv_exported">CSV exported successfully</string>
     <string name="export_failed">Export failed</string>
-    <string name="share_failed">Share failed: %1$s</string>
+    <string name="share_failed">Share failed</string>
 
     <!-- Statistics -->
-    <string name="statistics">Statistics</string>
-    <string name="clear_predictions">Delete Predictions</string>
-    <string name="clear_predictions_message">What do you want to delete?</string>
-    <string name="clear_all">Delete All</string>
-    <string name="clear_old">Older than 7 days</string>
-    <string name="predictions_cleared">All predictions deleted</string>
-    <string name="old_predictions_cleared">Old predictions deleted</string>
-    <string name="export">Export</string>
-    <string name="clear">Delete</string>
 
     <!-- Navigation -->
     <string name="back">Back</string>
 
     <!-- Welcome Screen -->
-    <string name="start_app">Start App</string>
-    <string name="view_history">View History</string>
-    <string name="welcome_subtitle">Real-time Acoustic Environment Classification</string>
 
-    <string name="select_model">Select Model</string>
-    <string name="model_classes">%1$d Classes</string>
-    <string name="model_info">Model: %1$s (%2$d Classes)</string>
 
     <!-- Multi-Model Evaluation: side-by-side multi-model comparison (Dev only) -->
-    <string name="all_in_one">Multi-Model Evaluation</string>
-    <string name="all_in_one_subtitle_short">Compare multiple models on the same audio</string>
-    <string name="all_in_one_title">Select models to compare</string>
-    <string name="all_in_one_subtitle">Pick at least 2 models. Every recording runs through all of them.</string>
-    <string name="all_in_one_started">Multi-Model Evaluation started with %1$d models</string>
-    <string name="all_in_one_header">Multi-Model · %1$d models</string>
-    <string name="all_in_one_card_title">All models</string>
-    <string name="all_in_one_row_waiting">…</string>
     <string name="all_in_one_comparison_header">Model comparison</string>
-    <string name="all_in_one_primary_title">🧠 %1$s</string>
 
     <!-- Multi-Model Evaluation: training-clip length badges shown next to each model
          row in the per-model sub-mode chooser. -->
-    <string name="model_badge_1s">1s</string>
-    <string name="model_badge_10s">10s</string>
     <string name="session_details">Session Details</string>
-    <string name="model_label">Model</string>
-    <string name="mode_label">Mode</string>
     <string name="close">Close</string>
 
     <!-- Scene Labels (9th Class for experimental models) -->
-    <string name="scene_living_room">Indoor - Living Room</string>
-    <string name="scene_living_room_short">Living Room</string>
 
     <!-- History Screen -->
     <string name="history_title">History</string>
-    <string name="delete_all_history">Delete All</string>
-    <string name="delete_all_confirm">Do you really want to delete all entries?</string>
-    <string name="entry_deleted">Entry deleted</string>
-    <string name="undo">Undo</string>
-    <string name="package_details">Package Details</string>
     <string name="delete_package">Delete Package</string>
     <string name="delete_package_confirm">Do you really want to delete this package?</string>
     <string name="package_deleted">Package deleted</string>
@@ -163,9 +66,6 @@
     <string name="battery_optimization_skip">Skip</string>
     <string name="battery_optimization_continue_anyway">Start anyway</string>
     <!-- Legacy keys kept for any older call sites still referencing them. -->
-    <string name="yes_disable">Yes, Disable</string>
-    <string name="later">Later</string>
-    <string name="battery_warning">Without this setting, recordings can have gaps</string>
     <string name="battery_search_app">Search for \'%1$s\' and select \'Don\'t optimize\'</string>
     <string name="battery_manual_disable">Disable battery optimization manually in settings</string>
 
@@ -178,41 +78,21 @@
     <string name="permission_record_audio_denied_toast">Recording needs microphone access. Tap Start again to retry.</string>
 
     <!-- Dialog labels -->
-    <string name="count">Count</string>
     <string name="distribution">Distribution</string>
-    <string name="battery_drain">Battery Drain</string>
-    <string name="recordings">Recordings</string>
-    <string name="duration">Duration</string>
-    <string name="pause">Pause</string>
-    <string name="start">Start</string>
-    <string name="end">End</string>
     <string name="avg_confidence">Avg Confidence</string>
     <string name="avg_inference">Avg Inference</string>
     <string name="total">Total</string>
-    <string name="today">Today</string>
     <string name="predictions">Predictions</string>
-    <string name="first">First</string>
-    <string name="last">Last</string>
     <string name="detailed_statistics">Detailed Statistics</string>
-    <string name="pause_minutes">Pause: %1$d min until next recording</string>
-    <string name="min">min</string>
-    <string name="volume">Vol</string>
-    <string name="error_init_app">Could not initialize app: %1$s</string>
-    <string name="export_email_body">The exported predictions are attached.\n\nTotal: %1$d predictions</string>
 
     <!-- Per-Second Analysis Card (AVERAGE mode) -->
-    <string name="per_second_analysis">Per-Second Analysis</string>
     <string name="per_second_clips_title">Per-Second Clips (1s)</string>
 
     <!-- Volume Graph Card -->
-    <string name="volume_analysis">Volume Analysis</string>
-    <string name="show_live_data">Show Live Data</string>
     <string name="volume_graph_disabled">Toggle switch to enable</string>
     <string name="volume_graph_waiting">Waiting for recording…</string>
 
     <!-- Time Analysis / Live Data Messages -->
-    <string name="live_analysis_late_open">Open this window before recording to see the live analysis</string>
-    <string name="live_analysis_close_warning">Don\'t close this window while a recording is running</string>
 
     <!-- Session Naming -->
     <string name="session_rename">Rename Session</string>
@@ -222,9 +102,7 @@
 
     <!-- Multi-Selection Mode -->
     <string name="n_selected">%1$d selected</string>
-    <string name="select_all">Select All</string>
     <string name="delete_selected">Delete Selected</string>
-    <string name="export_selected">Export Selected</string>
     <string name="delete_selected_confirm">Do you really want to delete %1$d sessions?</string>
     <string name="sessions_deleted">%1$d sessions deleted</string>
 
@@ -233,11 +111,9 @@
     <string name="dark_mode">Dark Mode</string>
 
     <!-- Recent Predictions -->
-    <string name="recent_predictions">Last Predictions</string>
 
     <!-- Settings Screen -->
     <string name="settings_appearance">Appearance</string>
-    <string name="settings_theme_description">Switch between light and dark theme</string>
     <string name="settings_about">About</string>
     <string name="settings_app_name_label">App</string>
     <string name="settings_classes_label">Scene Classes</string>
@@ -262,70 +138,29 @@
     <string name="model_info_label_smoothing">Label smoothing</string>
     <string name="model_info_val_accuracy">Val accuracy</string>
     <string name="model_info_test_accuracy">Test accuracy</string>
-    <string name="model_info_test_balanced_accuracy">Balanced accuracy</string>
-    <string name="model_info_test_macro_f1">Macro F1</string>
-    <string name="model_info_test_weighted_f1">Weighted F1</string>
-    <string name="model_info_test_macro_precision">Macro precision</string>
-    <string name="model_info_test_macro_recall">Macro recall</string>
-    <string name="model_info_test_weighted_precision">Weighted precision</string>
-    <string name="model_info_test_weighted_recall">Weighted recall</string>
     <string name="model_info_val_test_diff">Val − test gap</string>
     <string name="model_info_best_epoch">Best epoch</string>
-    <string name="model_info_total_epochs">Total epochs</string>
     <string name="model_info_train_val_gap">Train − val gap</string>
     <string name="model_info_run_id">Run ID</string>
-    <string name="recording_active_other_mode">A recording is already running in another mode. Stop it first.</string>
-    <string name="cannot_delete_while_recording">You can\'t delete sessions while a recording is running. Stop it first.</string>
 
     <!-- Evaluation Notification -->
     <string name="evaluation_title">Environment Rating</string>
     <string name="evaluation_channel_name">Rating Notifications</string>
     <string name="evaluation_channel_description">Notifications for rating environment classifications</string>
-    <string name="evaluation_question">Which environment was it actually?</string>
-    <string name="evaluation_submit">Send</string>
     <string name="evaluation_skip">Skip</string>
     <string name="evaluation_inapp_action">Rate now</string>
-    <string name="evaluation_inapp_message">New recording ready to rate</string>
     <string name="evaluation_timeout">%1$d:%2$02d</string>
-    <string name="evaluation_tap_to_rate">Tap to rate</string>
 
     <!-- Distribution Comparison -->
-    <string name="model_predictions">Model Predictions</string>
     <string name="user_evaluations">User Ratings</string>
     <string name="no_user_evaluations">No user ratings available</string>
     <string name="n_of_m_evaluated">%1$d/%2$d rated</string>
 
     <!-- Pause/Resume + Active session -->
-    <string name="pause_recording">Pause</string>
-    <string name="resume_recording">Resume</string>
-    <string name="user_paused">Paused</string>
-    <string name="user_paused_with_minutes">Paused · %1$d min remaining</string>
-    <string name="user_paused_with_mmss">Paused · %1$s remaining</string>
-    <string name="user_paused_auto_resume">Paused · auto-resume in %1$s</string>
-    <string name="pause_mmss">Pause: %1$s until next recording</string>
-    <string name="active_session_badge">● ACTIVE</string>
 
     <!-- Pause duration picker (opens when the user hits Pause in LONG mode) -->
-    <string name="pause_duration_title">Pause duration</string>
-    <string name="pause_duration_subtitle">Pick how long to pause. With a timer, the session resumes on its own.</string>
-    <string name="pause_duration_no_timer">No timer (pause until Resume)</string>
-    <string name="pause_duration_15_min">15 minutes</string>
-    <string name="pause_duration_30_min">30 minutes</string>
-    <string name="pause_duration_1_hour">1 hour</string>
-    <string name="pause_duration_2_hours">2 hours</string>
-    <string name="pause_duration_4_hours">4 hours</string>
-    <string name="pause_duration_8_hours">8 hours</string>
-    <string name="pause_duration_16_hours">16 hours</string>
 
     <!-- LONG Sub-Mode Chooser (Dev Mode: evaluate a 10s recording with multiple methods) -->
-    <string name="long_submodes_title">Evaluation methods</string>
-    <string name="long_sub_standard">Standard</string>
-    <string name="long_sub_fast">Fast</string>
-    <string name="long_sub_average">Avg</string>
-    <string name="long_sub_hint_combined">Standard = full 10 s · Fast = middle 1 s · Avg = 10 × 1 s → Ø</string>
-    <string name="long_sub_label_standard">Standard (10 s)</string>
-    <string name="long_sub_label_fast">Fast (middle 1 s)</string>
-    <string name="long_sub_label_average">Avg (10 × 1 s)</string>
     <string name="history_method_comparison">Method comparison</string>
     <string name="history_pauses_header">Pauses (%1$d · %2$s)</string>
     <string name="history_pause_row">Pause: %1$s</string>
@@ -340,34 +175,20 @@
     <string name="wizard_next">Next</string>
     <string name="wizard_start">Start</string>
     <string name="wizard_step_label">Step %1$d of %2$d</string>
-    <string name="wizard_models_hint">Pick at least one model</string>
     <string name="wizard_category_continuous_hint">Recordings run back-to-back</string>
     <string name="wizard_category_interval_hint">One recording, then a pause, then again</string>
-    <string name="wizard_summary_title">Summary</string>
     <string name="wizard_summary_models">Models</string>
     <string name="wizard_summary_category">Mode</string>
     <string name="wizard_summary_pause">Interval</string>
     <string name="wizard_summary_session">Session duration</string>
 
     <!-- Session Duration -->
-    <string name="session_duration_5min">5 min</string>
-    <string name="session_duration_15min">15 min</string>
-    <string name="session_duration_30min">30 min</string>
-    <string name="session_duration_1h">1 h</string>
-    <string name="session_duration_3h">3 h</string>
-    <string name="session_duration_6h">6 h</string>
-    <string name="session_duration_12h">12 h</string>
-    <string name="session_duration_manual">Stop manually</string>
 
     <!-- Live Recording -->
-    <string name="live_show_live_data">Show Live Data</string>
     <string name="live_pause">Pause</string>
     <string name="live_resume">Resume</string>
     <string name="live_stop">Stop</string>
-    <string name="live_volume_label">Volume</string>
     <string name="live_loading_models">Loading models…</string>
-    <string name="pause_picker_title">Pause for how long?</string>
-    <string name="pause_picker_subtitle">Pick a timer or pause without a limit. The current cycle finishes before the pause begins.</string>
     <string name="pause_picker_no_timer">No timer (manual resume)</string>
 
     <!-- Active-session banner shown on the hub screens while a recording runs -->
@@ -378,13 +199,11 @@
     <string name="active_banner_open">Open running session</string>
 
     <!-- Results Summary -->
-    <string name="results_summary_title">Session ended</string>
     <string name="results_back_home">Back to home</string>
     <string name="results_open_history">Open history</string>
 
     <!-- Mode Select (v2) -->
     <string name="mode_select_title">Choose how you want to use the app</string>
-    <string name="mode_select_subtitle">Pick whichever fits. One runs the session, the other sets it up.</string>
     <string name="mode_select_test_title">Test mode</string>
     <string name="mode_select_test_chip">Open</string>
     <string name="mode_select_test_desc">For users</string>
@@ -394,7 +213,6 @@
 
     <!-- Password Gate -->
     <string name="password_title">Developer access</string>
-    <string name="password_subtitle">Configuration overwrites the session testers run. Password required.</string>
     <string name="password_label">Password</string>
     <string name="password_unlock">Unlock configuration</string>
     <string name="password_wrong">Wrong password. Try again.</string>
@@ -402,13 +220,10 @@
     <string name="password_hide">Hide password</string>
 
     <!-- Config Welcome (chip + tile) -->
-    <string name="welcome_chip_config">Config mode</string>
     <string name="welcome_configure_test">Configure test mode</string>
 
     <!-- Test Welcome -->
-    <string name="test_welcome_chip">Test mode</string>
     <string name="test_welcome_header">Quick starts</string>
-    <string name="test_welcome_subtitle_used">Tap one to start a recording. %1$d of %2$d slots used</string>
     <string name="test_welcome_empty_state">No quick starts yet. Ask the developer to set one up.</string>
     <string name="test_welcome_slot_empty">Empty slot</string>
     <string name="test_welcome_footer">Set up by the developer</string>
@@ -417,11 +232,6 @@
     <string name="test_welcome_slot_deleted">Quick start %1$d deleted</string>
 
     <!-- Slot descriptions (derived) -->
-    <string name="slot_desc_recording">%1$s recording</string>
-    <string name="slot_desc_fast">%1$s, fast mode</string>
-    <string name="slot_desc_averaging">%1$s, averaging</string>
-    <string name="slot_desc_interval">%1$s, every %2$s</string>
-    <string name="slot_desc_manual_stop">Stops on tap</string>
 
     <!-- Quickstart slot save flow -->
     <string name="quickstart_saved_to_slot">Saved to slot %1$d</string>
@@ -441,7 +251,6 @@
     <string name="results_meta_pauses">PAUSES</string>
     <string name="results_section_model_reports">Model Reports</string>
     <string name="results_most_frequent">MOST FREQUENT</string>
-    <string name="results_avg_volume">AVG VOLUME</string>
     <string name="results_cycles_count">%1$d cycles</string>
 
     <!-- v2 History -->
@@ -497,7 +306,6 @@
     <string name="eval_done">Done</string>
     <string name="eval_match">Match</string>
     <string name="eval_differs">Different</string>
-    <string name="eval_your_pick">Your pick</string>
     <!-- Live screen, shown in place of the prediction while a cycle waits for its rating. -->
     <string name="live_blind_hint">🔒 Hidden until you rate</string>
 
@@ -506,18 +314,14 @@
 
     <!-- v2 Wizard · Session Duration (slide 07) — two-line label inside the
          "Stop manually" tile in the grid. -->
-    <string name="session_duration_stop_manually_two_lines">Stop\nmanually</string>
 
     <!-- v2 Live Recording (slide 09) — header, tile labels, inline pause picker. -->
     <string name="live_header_title">Recording</string>
-    <string name="live_cycle_label">CYCLE</string>
     <string name="live_tile_label_elapsed_total">Elapsed / Total</string>
     <string name="live_legend_session">Session</string>
     <string name="live_legend_cycle">Cycle</string>
     <string name="live_legend_inference">Inference</string>
     <string name="live_section_predictions">Live Predictions</string>
-    <string name="live_section_models_count">%1$d models</string>
-    <string name="live_section_models_count_one">1 model</string>
     <string name="live_audio_level">Audio Level</string>
 
     <!-- Device-metric charts (battery temperature + app CPU) on the live screen
@@ -536,9 +340,6 @@
     <string name="live_pause_picker_eyebrow">Paused</string>
     <string name="live_pause_picker_subtitle">How long should the pause last? (0 to 12 h, 15 min steps)</string>
     <string name="live_pause_picker_confirm">Confirm pause</string>
-    <string name="live_pause_duration_unlimited">No timer</string>
-    <string name="live_pause_duration_hours_minutes">%1$d h %2$02d min</string>
-    <string name="live_pause_duration_minutes">%1$d min</string>
 
     <!-- v2 Wizard · Summary (slide 08) -->
     <string name="wizard_summary_runs">Runs: %1$s</string>
