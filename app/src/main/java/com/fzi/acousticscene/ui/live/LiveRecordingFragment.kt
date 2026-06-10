@@ -78,6 +78,8 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
     private var isReentry = false
 
     private lateinit var statusLabel: TextView
+    private lateinit var headerTitle: TextView
+    private lateinit var headerDot: View
     private lateinit var stopwatch: ConcentricStopwatchView
     private lateinit var modelCardsContainer: LinearLayout
     private lateinit var blindHint: TextView
@@ -148,6 +150,8 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
             hasAutoStarted = true
         }
         statusLabel = view.findViewById(R.id.liveStatusLabel)
+        headerTitle = view.findViewById(R.id.liveHeaderTitle)
+        headerDot = view.findViewById(R.id.liveLiveDot)
         stopwatch = view.findViewById(R.id.liveStopwatch)
         modelCardsContainer = view.findViewById(R.id.liveModelCardsContainer)
         blindHint = view.findViewById(R.id.liveBlindHint)
@@ -307,6 +311,14 @@ class LiveRecordingFragment : Fragment(R.layout.fragment_live_recording) {
         pauseResumeButton.text = getString(
             if (state.isPaused || state.pausePending) R.string.live_resume else R.string.live_pause
         )
+
+        // Header mirrors the pause state — "Recording" with a bright green dot
+        // would contradict the paused status line right below it.
+        val paused = state.isPaused || state.pausePending
+        headerTitle.text = getString(
+            if (paused) R.string.live_header_paused else R.string.live_header_title
+        )
+        headerDot.alpha = if (paused) 0.35f else 1f
 
         if (!state.isPaused) {
             volumeChart.submitSample(state.currentVolume, state.frameElapsedMs)

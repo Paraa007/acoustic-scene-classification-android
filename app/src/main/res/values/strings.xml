@@ -317,6 +317,7 @@
 
     <!-- v2 Live Recording (slide 09) — header, tile labels, inline pause picker. -->
     <string name="live_header_title">Recording</string>
+    <string name="live_header_paused">Paused</string>
     <string name="live_tile_label_elapsed_total">Elapsed / Total</string>
     <string name="live_legend_session">Session</string>
     <string name="live_legend_cycle">Cycle</string>
