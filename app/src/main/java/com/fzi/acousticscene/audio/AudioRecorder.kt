@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.isActive
 import kotlin.coroutines.coroutineContext
 import kotlin.math.sqrt
@@ -113,11 +114,15 @@ class AudioRecorder(
      * Berechnet den RMS (Root Mean Square) Wert eines Audio-Buffers.
      * RMS ist ein guter Indikator für die "gefühlte" Lautstärke.
      *
+     * Liefert den rohen normalisierten Zielwert — das Low-Pass-Smoothing passiert
+     * atomar am StateFlow im Aufrufer (read-modify-write auf `_volumeFlow.value`
+     * wäre hier eine Race gegen das 0-Setzen in [stopRecording]).
+     *
      * @param buffer Audio-Samples als ShortArray (PCM 16-bit)
      * @param samplesRead Anzahl der gültigen Samples im Buffer
-     * @return Normalisierter Lautstärke-Wert zwischen 0.0 und 1.0
+     * @return Normalisierter Lautstärke-Zielwert zwischen 0.0 und 1.0
      */
-    private fun calculateRmsVolume(buffer: ShortArray, samplesRead: Int): Float {
+    private fun calculateRmsTarget(buffer: ShortArray, samplesRead: Int): Float {
         if (samplesRead <= 0) return 0f
 
         var sum = 0.0
@@ -127,14 +132,7 @@ class AudioRecorder(
         }
         val rms = sqrt(sum / samplesRead)
 
-        // Normalisiere auf 0.0 - 1.0 und wende Smoothing an
-        val targetVolume = (rms / VOLUME_NORMALIZATION_DIVISOR).toFloat().coerceIn(0f, 1f)
-
-        // Low-Pass Filter für weichere Animation (verhindert "Zappeln")
-        val smoothedVolume = _volumeFlow.value * VOLUME_SMOOTHING_FACTOR +
-                targetVolume * (1f - VOLUME_SMOOTHING_FACTOR)
-
-        return smoothedVolume
+        return (rms / VOLUME_NORMALIZATION_DIVISOR).toFloat().coerceIn(0f, 1f)
     }
     
     /**
@@ -192,16 +190,26 @@ class AudioRecorder(
                 val remaining = totalSamples - samplesRead
                 val toRead = minOf(readBuffer.size, remaining)
 
-                val read = recorder.read(readBuffer, 0, toRead)
+                val read = try {
+                    recorder.read(readBuffer, 0, toRead)
+                } catch (e: IllegalStateException) {
+                    // Belt-and-braces: read() auf einem freigegebenen Recorder ist
+                    // auf manchen OEMs ein Crash statt eines Fehler-Codes.
+                    Log.w(TAG, "read() on released recorder — stopping cycle", e)
+                    break
+                }
 
                 if (read > 0) {
                     // Kopiere gelesene Samples in Buffer
                     readBuffer.copyInto(audioBuffer, samplesRead, 0, read)
                     samplesRead += read
 
-                    // Berechne Echtzeit-Lautstärke (für Visualisierung)
-                    val volume = calculateRmsVolume(readBuffer, read)
-                    _volumeFlow.value = volume
+                    // Berechne Echtzeit-Lautstärke (für Visualisierung); Smoothing
+                    // atomar am Flow (Low-Pass gegen "Zappeln" der Balken-UI)
+                    val target = calculateRmsTarget(readBuffer, read)
+                    val volume = _volumeFlow.updateAndGet { previous ->
+                        previous * VOLUME_SMOOTHING_FACTOR + target * (1f - VOLUME_SMOOTHING_FACTOR)
+                    }
                     // Track aggregate stats so the cycle can be tagged with mean/peak.
                     volumeSampleSum += volume
                     volumeSampleCount++
@@ -246,24 +254,44 @@ class AudioRecorder(
             Log.e(TAG, "Error during recording", e)
             emit(RecordingState.Error(e.message ?: "Unknown error"))
         } finally {
-            stopRecording()
+            releaseRecorder()
         }
     }.flowOn(Dispatchers.IO)  // ← KRITISCH: Alles auf IO Thread!
-    
+
     /**
-     * Stoppt die Audio-Aufnahme
+     * Stoppt die Audio-Aufnahme kooperativ: setzt nur das Flag. Die Lese-Schleife
+     * in [startRecording] läuft auf ihrem IO-Thread aus und gibt den Recorder im
+     * finally-Block selbst frei ([releaseRecorder]). So kann ein Stop von einem
+     * fremden Thread nie in ein laufendes read() hinein-releasen (Use-after-free
+     * im Native-Layer auf manchen OEMs).
      */
     fun stopRecording() {
         isRecording = false
         // Setze Lautstärke auf 0 wenn gestoppt
         _volumeFlow.value = 0f
+    }
+
+    /**
+     * Gibt die AudioRecord-Instanz frei. Läuft ausschließlich im finally der
+     * Aufnahme-Flow auf dem IO-Thread, der die Instanz besitzt. stop() nur auf
+     * initialisiertem Recorder (sonst IllegalStateException), release() in einem
+     * eigenen try, damit es auch nach einem stop()-Fehler garantiert läuft.
+     */
+    private fun releaseRecorder() {
+        isRecording = false
+        _volumeFlow.value = 0f
+        val recorder = audioRecord ?: return
+        audioRecord = null
         try {
-            audioRecord?.stop()
-            audioRecord?.release()
+            if (recorder.state == AudioRecord.STATE_INITIALIZED) recorder.stop()
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping recording", e)
         }
-        audioRecord = null
+        try {
+            recorder.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing recorder", e)
+        }
         Log.d(TAG, "Recording stopped")
     }
     
