@@ -64,31 +64,27 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Titel: Box height dp(36); Kivy clippt Label-Texturen nicht,
-             daher Slot mit clipChildren=false und zentriertem wrap-TextView -->
-        <FrameLayout
+        <!-- Titel: .kv-Box dp(36); Kivy clippt Label-Texturen nicht, Android
+             schon (der 36dp-Slot misst den TextView auf AT_MOST 36dp und
+             schneidet die zweite Zeile ab). Daher wrap_content + minHeight,
+             damit "Live Target\nRecording" vollstaendig sichtbar ist. -->
+        <TextView
+            android:id="@+id/labelTitle"
             android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:clipChildren="false"
-            android:clipToPadding="false">
-
-            <TextView
-                android:id="@+id/labelTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:fontFamily="@font/speakerid_dejavu"
-                android:gravity="center_horizontal"
-                android:text="@string/speakerid_target_recorder_title"
-                android:textColor="@color/speakerid_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-        </FrameLayout>
+            android:layout_height="wrap_content"
+            android:minHeight="36dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:text="@string/speakerid_target_recorder_title"
+            android:textColor="@color/speakerid_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/labelSubtitle"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
+            android:minHeight="40dp"
             android:layout_marginTop="12dp"
             android:fontFamily="@font/speakerid_dejavu"
             android:gravity="top|center_horizontal"
@@ -117,11 +113,13 @@
             android:textSize="72sp"
             android:textStyle="bold" />
 
-        <!-- Status Message (height dp(40), halign center) -->
+        <!-- Status Message (.kv height dp(40) als Minimum; Fehlertexte koennen
+             mehrzeilig werden und duerfen nicht clippen) -->
         <TextView
             android:id="@+id/labelStatus"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
+            android:minHeight="40dp"
             android:layout_marginTop="12dp"
             android:fontFamily="@font/speakerid_dejavu"
             android:gravity="center"
