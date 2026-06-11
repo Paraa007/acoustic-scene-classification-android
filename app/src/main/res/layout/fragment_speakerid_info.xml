@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas `src/gui/screens/info/info.kv`.
+
+  Vertikale BoxLayout-Struktur: Header 60dp (Back-Button 90x44dp unten
+  ausgerichtet wie in Kivy, Titel 24sp zentriert, 90dp-Spacer), Logo-Zeile
+  80dp (FZI 0.4 / movisens 0.4 / Spacer 0.2, spacing 20dp), Content-Card
+  (Restflaeche, Radius 20dp, Padding dc.PADDING_SCREEN 20dp, Spacing
+  dc.SPACING_SECTION 15dp) mit Version-Zeile + scrollbarem Text, QR-Button
+  44dp und ausklappbarem QR-Panel 180dp. Root-Padding 12dp, spacing 16dp
+  als Margins (QR-Button traegt marginBottom 16dp, damit der Abstand wie das
+  Kivy-spacing auch bei eingeklapptem Panel bestehen bleibt).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    tools:context="com.fzi.speakerid.ui.info.SpeakerInfoFragment">
+
+    <!-- ─── HEADER (height dp(60), padding [12,0]) ──────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <!-- ModernBackButton: 90x44dp, "← Zurück", 14sp bold, primary auf surface (Pill r=25) -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/speakeridInfoBackButton"
+            style="@style/Speakerid.Button"
+            android:layout_width="90dp"
+            android:layout_height="44dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/speakerid_btn_info_back"
+            android:text="@string/speakerid_info_back"
+            android:textColor="@color/speakerid_primary"
+            android:textSize="14sp" />
+
+        <!-- Titel: root.title, 24sp bold, text_primary, zentriert -->
+        <TextView
+            android:id="@+id/speakeridInfoTitle"
+            style="@style/Speakerid.Text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/speakerid_info_title"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Spacer, um den Titel exakt zu zentrieren (width dp(90)) -->
+        <View
+            android:layout_width="90dp"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+
+    <!-- ─── LOGOS (height dp(80), spacing dp(20), padding [10,0]) ───────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <ImageView
+            android:id="@+id/speakeridInfoFziLogo"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.4"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/speakerid_fzi_logo" />
+
+        <ImageView
+            android:id="@+id/speakeridInfoMovisensLogo"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="20dp"
+            android:layout_weight="0.4"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/speakerid_movisens" />
+
+        <!-- Spacer (size_hint_x: 0.2) -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="20dp"
+            android:layout_weight="0.2" />
+    </LinearLayout>
+
+    <!-- ─── CONTENT CARD (Restflaeche, surface r=20, padding 20, spacing 15) ─ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:background="@drawable/speakerid_bg_info_card"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- App Name & Version (height dp(24), spacing dp(10)) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:clipChildren="false"
+            android:orientation="horizontal">
+
+            <!-- "Version: " + root.versionsnummer, 18sp, secondary, rechtsbuendig -->
+            <TextView
+                android:id="@+id/speakeridInfoVersionLabel"
+                style="@style/Speakerid.Text"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="end|center_vertical"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="18sp"
+                tools:text="Version: 1.0.0" />
+
+            <!-- "| ", 25sp bold, width dp(10) (Kivy-Textur laeuft ohne Clipping ueber) -->
+            <TextView
+                android:id="@+id/speakeridInfoSeparator"
+                style="@style/Speakerid.Text"
+                android:layout_width="10dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:text="@string/speakerid_info_separator"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="25sp"
+                android:textStyle="bold" />
+
+            <!-- "Stand: " + root.datum, 18sp, secondary, linksbuendig -->
+            <TextView
+                android:id="@+id/speakeridInfoDateLabel"
+                style="@style/Speakerid.Text"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:gravity="start|center_vertical"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="18sp"
+                tools:text="Stand: 30.Februar 2026" />
+        </LinearLayout>
+
+        <!-- Scrollbarer Beschreibungstext (bar_width 4, bar_color primary) -->
+        <ScrollView
+            android:id="@+id/speakeridInfoScroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="15dp"
+            android:layout_weight="1"
+            android:scrollbarSize="4dp"
+            android:scrollbarThumbVertical="@drawable/speakerid_info_scrollbar_thumb"
+            android:scrollbars="vertical">
+
+            <!-- root.text, 14sp, secondary, line_height 1.4, padding [5,5] -->
+            <TextView
+                android:id="@+id/speakeridInfoText"
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingMultiplier="1.4"
+                android:padding="5dp"
+                android:text="@string/speakerid_info_text_default"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="14sp" />
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- ─── QR-CODE BUTTON (height dp(44), 14sp bold, primary auf surface r=12) ─ -->
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/speakeridInfoQrButton"
+        style="@style/Speakerid.Button"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/speakerid_btn_info_qr"
+        android:text="@string/speakerid_info_qr_collapsed"
+        android:textColor="@color/speakerid_primary"
+        android:textSize="14sp" />
+
+    <!-- ─── QR-CODE (AUSKLAPPBAR, height dp(180), padding 15, surface r=12) ─ -->
+    <LinearLayout
+        android:id="@+id/speakeridInfoQrPanel"
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:background="@drawable/speakerid_bg_info_qr_panel"
+        android:orientation="vertical"
+        android:padding="15dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/speakeridInfoQrImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/speakerid_qr_code" />
+    </LinearLayout>
+</LinearLayout>

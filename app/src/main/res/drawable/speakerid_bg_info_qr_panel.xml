@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Info-Screen QR-Panel: surface + RoundedRectangle radius dp(12) (info.kv) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_surface" />
+    <corners android:radius="12dp" />
+</shape>

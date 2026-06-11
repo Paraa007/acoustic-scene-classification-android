@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte des SIQAS-Info-Screens - 1:1 aus siqas
+  `src/gui/screens/info/info.kv` bzw. den StringProperty-Defaults in
+  `info.py::InfoScreen`. Trailing Spaces sind Absicht (daher Anfuehrungszeichen).
+-->
+<resources>
+    <!-- StringProperty-Defaults aus info.py (app_info.json existiert im siqas-Repo nicht) -->
+    <string name="speakerid_info_title">Informationen</string>
+    <string name="speakerid_info_version_default">1.0.0</string>
+    <string name="speakerid_info_date_default">30.Februar 2026</string>
+    <string name="speakerid_info_text_default">"SIQAS "</string>
+
+    <!-- Header: ModernBackButton (main.kv) -->
+    <string name="speakerid_info_back">← Zurück</string>
+
+    <!-- Version-Zeile: "Version: " + versionsnummer / "| " / "Stand: " + datum -->
+    <string name="speakerid_info_version_fmt">Version: %1$s</string>
+    <string name="speakerid_info_separator">"| "</string>
+    <string name="speakerid_info_date_fmt">Stand: %1$s</string>
+
+    <!-- QR-Button: "QR-Code " + ("▼" wenn ausgeklappt, sonst "▶") -->
+    <string name="speakerid_info_qr_collapsed">QR-Code ▶</string>
+    <string name="speakerid_info_qr_expanded">QR-Code ▼</string>
+</resources>
