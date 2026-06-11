@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- XML-Attribute der Speakerid-Custom-Views (alle Attr-Namen mit speakerid-Praefix). -->
+<resources>
+    <declare-styleable name="SpeakerIdFlatButton">
+        <!-- flat_button.py button_type: primary | secondary | danger | default -->
+        <attr name="speakeridButtonType" format="enum">
+            <enum name="defaultType" value="0" />
+            <enum name="primary" value="1" />
+            <enum name="secondary" value="2" />
+            <enum name="danger" value="3" />
+        </attr>
+    </declare-styleable>
+
+    <declare-styleable name="SpeakerIdLabeledSlider">
+        <attr name="speakeridSliderLabel" format="string" />
+        <attr name="speakeridSliderMin" format="float" />
+        <attr name="speakeridSliderMax" format="float" />
+        <attr name="speakeridSliderStep" format="float" />
+        <attr name="speakeridSliderValue" format="float" />
+        <!-- printf-Format der Wertanzeige, Default "%.2f" (Kivy fmt "{:.2f}") -->
+        <attr name="speakeridSliderFmt" format="string" />
+    </declare-styleable>
+
+    <declare-styleable name="SpeakerIdLabeledToggle">
+        <attr name="speakeridToggleLabel" format="string" />
+        <attr name="speakeridToggleDescription" format="string" />
+        <attr name="speakeridToggleActive" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="SpeakerIdSegmentedChoice">
+        <attr name="speakeridChoiceLabel" format="string" />
+        <attr name="speakeridChoiceColumns" format="integer" />
+    </declare-styleable>
+
+    <declare-styleable name="SpeakerIdLogoBar">
+        <!-- logo_bar.py logo_width, Default dp(90) -->
+        <attr name="speakeridLogoWidth" format="dimension" />
+        <!-- logo_bar.py hide_narrow: Logos ausblenden wenn Screen < 700dp -->
+        <attr name="speakeridHideNarrow" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="SpeakerIdScreenHeader">
+        <attr name="speakeridHeaderTitle" format="string" />
+    </declare-styleable>
+</resources>

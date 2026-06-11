@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings der geteilten Speakerid-Widgets (Texte exakt aus den siqas-.kv-Dateien). -->
+<resources>
+    <!-- screen_header.kv / main.kv ModernBackButton -->
+    <string name="speakerid_back_button">← Zurück</string>
+</resources>

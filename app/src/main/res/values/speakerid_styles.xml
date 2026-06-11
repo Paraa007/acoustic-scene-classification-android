@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SIQAS-Grundtypografie - Schriftgroessen aus `gui/data/design_constants.py`
+  (FONT_TITLE 20sp, FONT_LABEL 14sp, FONT_BODY 12sp, FONT_SMALL 11sp,
+  FONT_TINY 10sp), Schrift DejaVuSans (siqas-Default-Font).
+-->
+<resources>
+    <style name="Speakerid" />
+
+    <!-- Wurzel-Container eines Screens: Hintergrund = theme bg_color -->
+    <style name="Speakerid.Screen">
+        <item name="android:background">@color/speakerid_bg</item>
+    </style>
+
+    <!-- Karten-Panel (surface + RADIUS_CARD), Hintergrund via Drawable -->
+    <style name="Speakerid.Card">
+        <item name="android:background">@drawable/speakerid_bg_card</item>
+    </style>
+
+    <!-- ===== Text ===== -->
+    <style name="Speakerid.Text">
+        <item name="android:fontFamily">@font/speakerid_dejavu</item>
+        <item name="android:textColor">@color/speakerid_text_primary</item>
+    </style>
+
+    <!-- dc.FONT_TITLE '20sp', i. d. R. bold -->
+    <style name="Speakerid.Text.Title">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- dc.FONT_LABEL '14sp' -->
+    <style name="Speakerid.Text.Label">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- dc.FONT_BODY '12sp' -->
+    <style name="Speakerid.Text.Body">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- dc.FONT_SMALL '11sp' -->
+    <style name="Speakerid.Text.Small">
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <!-- dc.FONT_TINY '10sp' -->
+    <style name="Speakerid.Text.Tiny">
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <!-- Sekundaertext (text_secondary), Groesse je nach Einsatz ergaenzen -->
+    <style name="Speakerid.Text.Secondary">
+        <item name="android:textColor">@color/speakerid_text_secondary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- ===== Button-Basis (FlatButton-Geometrie: HEIGHT_BUTTON dp(42), FONT_BODY, bold) ===== -->
+    <style name="Speakerid.Button">
+        <item name="android:fontFamily">@font/speakerid_dejavu</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">42dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+</resources>

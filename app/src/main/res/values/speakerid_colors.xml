@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SIQAS-Farbpalette - 1:1 aus siqas `src/library/config/colors.py` (Theme "FZI",
+  dem Default von `gui/data/theme.py::ThemeManager`) plus den Fix-Farben aus den
+  Widget-.kv-Dateien. RGBA-Floats wurden exakt nach Hex umgerechnet.
+-->
+<resources>
+    <!-- Theme "FZI" (ThemeRegistry.THEMES["FZI"]) -->
+    <color name="speakerid_bg">#F8F9FA</color>                  <!-- background [248,249,250] -->
+    <color name="speakerid_surface">#FFFFFF</color>             <!-- surface [1,1,1] -->
+    <color name="speakerid_surface_dark">#F0F1F3</color>        <!-- surface_dark [240,241,243] -->
+    <!-- ThemeManager: surface_dim_color ist ein Alias auf surface_dark_color -->
+    <color name="speakerid_surface_dim">#F0F1F3</color>
+    <color name="speakerid_primary">#2FAE7A</color>             <!-- primary (FZI-Gruen) -->
+    <color name="speakerid_secondary">#0E2356</color>           <!-- secondary (Dunkelblau) -->
+    <!-- ThemeManager ueberschreibt accent hart mit [250/255, 204/255, 40/255] -->
+    <color name="speakerid_accent">#FACC28</color>
+    <color name="speakerid_text_primary">#0E2356</color>        <!-- text_primary (Dunkelblau) -->
+    <color name="speakerid_text_secondary">#818085</color>      <!-- text_secondary -->
+    <color name="speakerid_border">#C8D2D7</color>              <!-- border [200,210,215] -->
+    <color name="speakerid_error">#D91A1A</color>               <!-- error [0.85,0.1,0.1] -->
+    <color name="speakerid_shadow">#14000000</color>            <!-- shadow [0,0,0,0.08] -->
+
+    <!-- Fix-Farben aus main.kv / Widget-KVs -->
+    <color name="speakerid_white">#FFFFFF</color>
+    <color name="speakerid_vibrant_green">#00BF40</color>       <!-- TabButton aktiv [0.0,0.75,0.25] -->
+    <color name="speakerid_danger">#BF4D4D</color>              <!-- FlatButton "danger" [0.75,0.3,0.3] -->
+    <color name="speakerid_tab_close_red">#A65959</color>       <!-- Tab-X-Button [0.65,0.35,0.35] -->
+
+    <!-- Sprecher-Palette (Color._PALETTE, Index 0..8) -->
+    <color name="speakerid_palette_0">#33D496</color>
+    <color name="speakerid_palette_1">#61A6FA</color>
+    <color name="speakerid_palette_2">#FFA147</color>
+    <color name="speakerid_palette_3">#F57085</color>
+    <color name="speakerid_palette_4">#A380F5</color>
+    <color name="speakerid_palette_5">#42CFCF</color>
+    <color name="speakerid_palette_6">#8CB3F5</color>
+    <color name="speakerid_palette_7">#D98CE6</color>
+    <color name="speakerid_palette_8">#80D966</color>
+</resources>
