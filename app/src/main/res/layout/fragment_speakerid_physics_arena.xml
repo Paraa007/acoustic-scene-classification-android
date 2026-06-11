@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas `gui/screens/physics_arena/physics_arena.kv`:
+  Root-BoxLayout vertical, padding [12,12], spacing 10, bg_color.
+  Sektionen: Header (50dp) / Arena (weight 1.0) / Buttons (56dp) /
+  Tabelle (weight 0.42).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- ─── HEADER (height dp(50)) ─────────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:orientation="horizontal">
+
+        <!-- ModernBackButton: width dp(90) (Screen-Override), Hoehe dp(44) -->
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="90dp"
+            android:layout_height="44dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/speakerid_btn_physics_back"
+            android:elevation="0dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_back_button"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- "Stimmen: X" - 15sp bold, rechtsbuendig, 1 Zeile (shorten) -->
+            <TextView
+                android:id="@+id/labelVoices"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.35"
+                android:ellipsize="end"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="end|center_vertical"
+                android:singleLine="true"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                tools:text="Stimmen: -" />
+
+            <!-- total_time_str + "\n" + status_text - 12sp, text_secondary -->
+            <TextView
+                android:id="@+id/labelTimeStatus"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.65"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="end|center_vertical"
+                android:maxLines="2"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="12sp"
+                tools:text="Zeit: 00:00\nStandby" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ─── ARENA (size_hint_y 1.0, surface + radius dp(20)) ───────────── -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1"
+        android:background="@drawable/speakerid_bg_physics_panel">
+
+        <com.fzi.speakerid.ui.physicsarena.BubbleArenaView
+            android:id="@+id/bubbleArena"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
+    <!-- ─── BUTTONS (height dp(56), spacing dp(10)) ────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <!-- START/PAUSE (size_hint_x 1) -->
+        <Button
+            android:id="@+id/btnToggle"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/speakerid_btn_physics_primary"
+            android:elevation="0dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_physics_btn_start"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <!-- "AUSWERTUNG →" (size_hint_x 0.55) -->
+        <Button
+            android:id="@+id/btnEval"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="0.55"
+            android:background="@drawable/speakerid_btn_physics_secondary"
+            android:elevation="0dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_physics_btn_evaluation"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- ─── TABELLE (size_hint_y 0.42, padding [10,6]) ─────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="0.42"
+        android:background="@drawable/speakerid_bg_physics_panel"
+        android:orientation="vertical"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="6dp">
+
+        <!-- "{n} Personen identifiziert" - 12sp bold, primary -->
+        <TextView
+            android:id="@+id/labelPersons"
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="start|center_vertical"
+            android:paddingHorizontal="8dp"
+            android:textColor="@color/speakerid_primary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="0 Personen identifiziert" />
+
+        <!-- Spaltenkoepfe (height dp(24), spacing dp(8)) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp">
+
+            <TextView
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:text="@string/speakerid_physics_col_blank"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="9sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="0.35"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_physics_col_identity"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="0.2"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_physics_col_time"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="0.45"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_physics_col_share"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- RecycleView -> RecyclerView, Zeilen fix 40dp -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/arenaTable"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:overScrollMode="never"
+            tools:itemCount="3"
+            tools:listitem="@layout/view_speakerid_physics_arena_row" />
+    </LinearLayout>
+</LinearLayout>

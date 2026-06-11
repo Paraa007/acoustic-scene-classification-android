@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Physics-Arena-Screens - Texte exakt aus siqas
+  `gui/screens/physics_arena/physics_arena.kv` / `physics_arena.py`.
+-->
+<resources>
+    <!-- physics_arena.kv Header: f"Stimmen: {root.active_voices}" -->
+    <string name="speakerid_physics_voices_fmt">Stimmen: %1$s</string>
+    <!-- physics_arena.py: total_time_str Startwert "Zeit: 00:00" -->
+    <string name="speakerid_physics_time_initial">Zeit: 00:00</string>
+    <!-- physics_arena.py _sync_ui: f"Laufzeit: {format_time(total_sec)}" -->
+    <string name="speakerid_physics_runtime_fmt">Laufzeit: %1$s</string>
+    <!-- physics_arena.py _on_recording_status -->
+    <string name="speakerid_physics_status_standby">Standby</string>
+    <string name="speakerid_physics_status_live">Live-Analyse aktiv...</string>
+
+    <!-- Buttons unter der Arena -->
+    <string name="speakerid_physics_btn_start">START</string>
+    <string name="speakerid_physics_btn_pause">PAUSE</string>
+    <string name="speakerid_physics_btn_evaluation">AUSWERTUNG →</string>
+
+    <!-- Tabelle -->
+    <string name="speakerid_physics_persons_fmt">%1$d Personen identifiziert</string>
+    <string name="speakerid_physics_col_blank">" "</string>
+    <string name="speakerid_physics_col_identity">IDENTITÄT</string>
+    <string name="speakerid_physics_col_time">ZEIT</string>
+    <string name="speakerid_physics_col_share">ANTEIL</string>
+    <!-- physics_arena.py _on_clusters_updated: "Target" / f"Sprecher {cid}" -->
+    <string name="speakerid_physics_row_target">Target</string>
+    <string name="speakerid_physics_row_speaker_fmt">Sprecher %1$s</string>
+    <!-- Target-Markierung (ArenaTableRow + bubble_widget.kv): "⁂" -->
+    <string name="speakerid_physics_target_marker">⁂</string>
+</resources>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Port von `<ArenaTableRow@BoxLayout>` aus physics_arena.kv:
+  Zeile 40dp, padding [8,0], spacing 8; Spalten: Marker (40dp) /
+  Identitaet 0.35 / Zeit 0.2 / Prozent 0.15 / Balken 0.25.
+  Aktiv-Hintergrund + Punkt-Tint + Bold/Farben werden im Adapter gesetzt.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="40dp"
+    android:orientation="horizontal"
+    android:paddingHorizontal="8dp">
+
+    <!-- Farb-Indikator / Stern (AnchorLayout 40dp) -->
+    <FrameLayout
+        android:layout_width="40dp"
+        android:layout_height="match_parent">
+
+        <!-- "⁂" nur beim Target (22sp bold, accent) -->
+        <TextView
+            android:id="@+id/rowMarker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:text="@string/speakerid_physics_target_marker"
+            android:textColor="@color/speakerid_accent"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:visibility="invisible"
+            tools:visibility="visible" />
+
+        <!-- 12dp-Farbpunkt sonst -->
+        <View
+            android:id="@+id/rowDot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_gravity="center"
+            android:background="@drawable/speakerid_physics_row_dot" />
+    </FrameLayout>
+
+    <!-- Identitaet (0.35, 15sp, bold bei Target/aktiv) -->
+    <TextView
+        android:id="@+id/rowName"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="8dp"
+        android:layout_weight="0.35"
+        android:fontFamily="@font/speakerid_dejavu"
+        android:gravity="center"
+        android:textColor="@color/speakerid_text_primary"
+        android:textSize="15sp"
+        tools:text="Sprecher 2" />
+
+    <!-- Zeit (0.2, 14sp, text_secondary) -->
+    <TextView
+        android:id="@+id/rowTime"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="8dp"
+        android:layout_weight="0.2"
+        android:fontFamily="@font/speakerid_dejavu"
+        android:gravity="center"
+        android:textColor="@color/speakerid_text_secondary"
+        android:textSize="14sp"
+        tools:text="12.5s" />
+
+    <!-- Anteil-Prozent (0.15, 14sp bold) -->
+    <TextView
+        android:id="@+id/rowPct"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="8dp"
+        android:layout_weight="0.15"
+        android:fontFamily="@font/speakerid_dejavu"
+        android:gravity="center"
+        android:textColor="@color/speakerid_text_primary"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:text="45.0%" />
+
+    <!-- Fortschrittsbalken (0.25, padding [0,19] -> 2dp hoch) -->
+    <com.fzi.speakerid.ui.physicsarena.SpeakerIdPercentBarView
+        android:id="@+id/rowBar"
+        android:layout_width="0dp"
+        android:layout_height="2dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="8dp"
+        android:layout_weight="0.25" />
+</LinearLayout>

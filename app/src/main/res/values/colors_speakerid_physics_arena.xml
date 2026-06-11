@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fix-Farben des Physics-Arena-Screens - RGBA-Floats exakt aus
+  `physics_arena.kv` nach Hex umgerechnet.
+-->
+<resources>
+    <!-- "Stimmen"-Label: [0.2,0.8,0.2] / [1,0.6,0] / [1,0.2,0.2] -->
+    <color name="speakerid_physics_voices_one">#33CC33</color>
+    <color name="speakerid_physics_voices_two">#FF9900</color>
+    <color name="speakerid_physics_voices_many">#FF3333</color>
+    <!-- START/PAUSE-Button bei laufender Aufnahme: [0.85,0.2,0.2] -->
+    <color name="speakerid_physics_record_red">#D93333</color>
+    <!-- Aktive Tabellenzeile: primary_color[:3] + [0.1] -->
+    <color name="speakerid_physics_row_active_bg">#1A2FAE7A</color>
+</resources>

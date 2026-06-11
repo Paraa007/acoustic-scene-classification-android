@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- START-Button (nicht aufnehmend): primary_color, radius RADIUS_BUTTON dp(4) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_primary" />
+    <corners android:radius="4dp" />
+</shape>

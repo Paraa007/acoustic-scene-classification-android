@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ArenaTableRow canvas.before bei is_active: primary[:3]+[0.1], radius RADIUS_CARD dp(8) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_physics_row_active_bg" />
+    <corners android:radius="8dp" />
+</shape>

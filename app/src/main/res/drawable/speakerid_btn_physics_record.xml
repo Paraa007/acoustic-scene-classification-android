@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PAUSE-Button (Aufnahme laeuft): [0.85,0.2,0.2,1], radius RADIUS_BUTTON dp(4) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_physics_record_red" />
+    <corners android:radius="4dp" />
+</shape>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ModernBackButton (main.kv): normal_color surface, pressed_color surface_dark,
+  RoundedRectangle radius dp(25). (Hover existiert auf Touch nicht.)
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_surface_dark" />
+            <corners android:radius="25dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_surface" />
+            <corners android:radius="25dp" />
+        </shape>
+    </item>
+</selector>
