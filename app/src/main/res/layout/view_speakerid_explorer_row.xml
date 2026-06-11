@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Eintrag der Dateiliste — Pendant zur Kivy-`FileListEntry` der
+  FileChooserListView (Zeile 48dp: Icon | Name | Groesse) inklusive der
+  Anpassungen aus explorer.py `_shrink_entry_font`: alle Labels 10sp,
+  kein Shorten, halign 'center', valign 'top', Umbruch an der Breite.
+  Textfarbe = Kivy-Label-Default [1,1,1,1] auf dem grauen
+  Dateiansicht-Hintergrund (0.42, 0.42, 0.50).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="48dp"
+    android:orientation="horizontal"
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="2dp">
+
+    <!-- Ordner-Icon (Atlas 'filechooser_folder'); bei Dateien unsichtbar -->
+    <ImageView
+        android:id="@+id/speakeridExplorerRowIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center_vertical"
+        android:importantForAccessibility="no"
+        android:src="@drawable/speakerid_explorer_folder" />
+
+    <!-- Dateiname (10sp, zentriert, oben, umgebrochen) -->
+    <TextView
+        android:id="@+id/speakeridExplorerRowName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="4dp"
+        android:layout_weight="1"
+        android:fontFamily="@font/speakerid_dejavu"
+        android:gravity="center_horizontal|top"
+        android:textColor="@color/speakerid_white"
+        android:textSize="10sp" />
+
+    <!-- Groesse (Kivy get_nice_size; leer bei Ordnern) -->
+    <TextView
+        android:id="@+id/speakeridExplorerRowSize"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="4dp"
+        android:fontFamily="@font/speakerid_dejavu"
+        android:textColor="@color/speakerid_white"
+        android:textSize="10sp" />
+</LinearLayout>

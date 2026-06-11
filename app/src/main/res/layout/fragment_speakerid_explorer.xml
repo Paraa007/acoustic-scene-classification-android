@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas gui/screens/explorer/explorer.kv (<ExplorerScreen>).
+
+  Wurzel: BoxLayout vertical, padding 8dp, spacing 5dp, bg = theme bg_color.
+  Darueber (wie bei Dashboard/Diarization-Report) die Experten-Tab-Leiste aus
+  main.kv — in Kivy global ueber dem ScreenManager, nur bei expert_lab_active
+  sichtbar; Sichtbarkeit setzt SpeakerExplorerFragment in onResume.
+
+  Zustandsabhaengige kv-Bindings (Hintergruende der Auswahl-Zeilen, Bold/
+  Farben, Sichtbarkeiten, Button-Texte) zieht SpeakerExplorerFragment nach.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- EXPERTEN-TAB-LEISTE (main.kv tab_bar_container, 48dp) -->
+    <com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
+        android:id="@+id/speakeridExplorerTabBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:visibility="gone" />
+
+    <!-- Screen-Inhalt = <ExplorerScreen>-Wurzel (padding 8dp, spacing 5dp) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- ── TOP BAR: 55dp, surface_dim, padding [10, 6], spacing 10 ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:background="@color/speakerid_surface_dim"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="6dp">
+
+            <!-- ModernBackButton (120dp); unsichtbar wenn Experten-Labor
+                 aktiv und selection_mode == "analysis" (Breite 0 -> GONE) -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/speakeridExplorerBackButton"
+                android:layout_width="120dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/speakerid_explorer_back_btn"
+                android:elevation="0dp"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:stateListAnimator="@null"
+                android:text="@string/speakerid_explorer_back"
+                android:textAllCaps="false"
+                android:textColor="@color/speakerid_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- Status-Pfad (immer sichtbar): 10sp, text_secondary,
+                 shorten_from 'left' -> ellipsize="start" -->
+            <TextView
+                android:id="@+id/speakeridExplorerStatusLabel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:ellipsize="start"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center_vertical|start"
+                android:singleLine="true"
+                android:text="@string/speakerid_explorer_status_loading"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="10sp" />
+
+            <!-- Bestaetigen-Button "✓ OK (n)" (130dp, bold; primary wenn
+                 Auswahl vorhanden, sonst surface + text_secondary) -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/speakeridExplorerConfirmButton"
+                android:layout_width="130dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/speakerid_explorer_confirm_btn"
+                android:elevation="0dp"
+                android:enabled="false"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:stateListAnimator="@null"
+                android:textAllCaps="false"
+                android:textColor="@color/speakerid_explorer_confirm_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- ── MODUS-WAHL (nur Experten-Modus, nicht im performance-Mode) ── -->
+        <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+            android:id="@+id/speakeridExplorerModeChoice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:visibility="gone"
+            app:speakeridChoiceColumns="2"
+            app:speakeridChoiceLabel="@string/speakerid_explorer_mode_label" />
+
+        <!-- ── AUSWAHL-ANZEIGE: 40dp, padding [12, 4], spacing 6;
+             bg primary@18% bei Auswahl sonst surface_dim (im Fragment) ── -->
+        <LinearLayout
+            android:id="@+id/speakeridExplorerSelectionRow"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="5dp"
+            android:background="@color/speakerid_surface_dim"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp">
+
+            <TextView
+                android:id="@+id/speakeridExplorerSelectionLabel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center_vertical|start"
+                android:text="@string/speakerid_explorer_no_selection"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="12sp" />
+
+            <!-- "✕" (38dp, 16sp bold, rot abgerundet); ohne Auswahl
+                 opacity 0 + disabled -> INVISIBLE (Platz bleibt) -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/speakeridExplorerClearButton"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/speakerid_explorer_clear_btn"
+                android:elevation="0dp"
+                android:enabled="false"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:stateListAnimator="@null"
+                android:text="@string/speakerid_explorer_clear"
+                android:textAllCaps="false"
+                android:textColor="@color/speakerid_white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="invisible" />
+        </LinearLayout>
+
+        <!-- ── AUSWAHL-KORB (nur Target-Modus): 44dp, padding [10, 5],
+             spacing dc.SPACING_ITEM dp(8); bg secondary@12% bei gefuelltem
+             Korb sonst surface (im Fragment) ── -->
+        <LinearLayout
+            android:id="@+id/speakeridExplorerBasketRow"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="5dp"
+            android:background="@color/speakerid_surface"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/speakeridExplorerBasketLabel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center_vertical|start"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textSize="12sp" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/speakeridExplorerBasketAddButton"
+                android:layout_width="110dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/speakerid_explorer_basket_add_btn"
+                android:elevation="0dp"
+                android:enabled="false"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:stateListAnimator="@null"
+                android:text="@string/speakerid_explorer_basket_add"
+                android:textAllCaps="false"
+                android:textColor="@color/speakerid_white"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <!-- "Löschen" (100dp, FONT_BODY, nicht bold) -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/speakeridExplorerBasketDeleteButton"
+                android:layout_width="100dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/speakerid_explorer_basket_delete_btn"
+                android:elevation="0dp"
+                android:enabled="false"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:stateListAnimator="@null"
+                android:text="@string/speakerid_explorer_basket_delete"
+                android:textAllCaps="false"
+                android:textColor="@color/speakerid_white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- ── HAUPTBEREICH: Seitenleiste (size_hint_x 0.18) + Dateiansicht ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="5dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- Seitenleiste: surface_dim, padding 5dp, spacing 2dp -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.18"
+                android:background="@color/speakerid_surface_dim"
+                android:orientation="vertical"
+                android:padding="5dp">
+
+                <!-- "Schnell-\nzugriff" (38dp, 10sp, text_secondary) -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:fontFamily="@font/speakerid_dejavu"
+                    android:gravity="center_horizontal|bottom"
+                    android:text="@string/speakerid_explorer_sidebar_header"
+                    android:textColor="@color/speakerid_text_secondary"
+                    android:textSize="10sp" />
+
+                <!-- Audio-Ordner (immer sichtbar) -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavAudio"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_audio"
+                    android:textColor="@color/speakerid_text_primary"
+                    android:textSize="11sp" />
+
+                <!-- Android-Ergaenzung: SAF-Picker fuer externe Dateien
+                     (Muster aus TargetSetupFragment), Stil = SidebarNavButton -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavExtern"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_extern"
+                    android:textColor="@color/speakerid_text_primary"
+                    android:textSize="11sp" />
+
+                <!-- Experten-Schnellzugriffe (nur expert_lab_active) -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavAssets"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_assets"
+                    android:textColor="@color/speakerid_text_primary"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavRecordings"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_recordings"
+                    android:textColor="@color/speakerid_text_primary"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavData"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_data"
+                    android:textColor="@color/speakerid_text_primary"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+
+                <!-- "Vergleichs-\nOrdner" (34dp, 10sp, nur Experten-Modus) -->
+                <TextView
+                    android:id="@+id/speakeridExplorerCompareHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="34dp"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/speakerid_dejavu"
+                    android:gravity="center_horizontal|bottom"
+                    android:text="@string/speakerid_explorer_compare_header"
+                    android:textColor="@color/speakerid_text_secondary"
+                    android:textSize="10sp"
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavMsdwild"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_msdwild"
+                    android:textColor="@color/speakerid_accent"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavVoxconverse"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_voxconverse"
+                    android:textColor="@color/speakerid_accent"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/speakeridExplorerNavTruth"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="2dp"
+                    android:background="@drawable/speakerid_explorer_nav_btn"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/speakerid_explorer_nav_truth"
+                    android:textColor="@color/speakerid_accent"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Dateiansicht: Container [0.42, 0.42, 0.50] + FileChooser ->
+                 RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/speakeridExplorerFileList"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="#6B6B80" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

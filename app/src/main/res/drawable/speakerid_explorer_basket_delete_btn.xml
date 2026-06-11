@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  "Löschen"-Button des Auswahl-Korbs aus explorer.kv
+  (background_normal: '', flaches Rechteck):
+  [0.7, 0.25, 0.25, 1] (#B34040) bei nicht-leerem Korb, sonst
+  surface_dark_color.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_surface_dark" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#B34040" />
+        </shape>
+    </item>
+</selector>

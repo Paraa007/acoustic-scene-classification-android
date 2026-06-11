@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Markierung selektierter Eintraege der Dateiliste — Pendant zum
+  Kivy-Atlas-Bild 'filechooser_selected' (halbtransparentes Blau)
+  der FileChooserListView. Farbnaeherung an das Original-Atlas-Asset.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#663D9AE8" />
+    <corners android:radius="4dp" />
+</shape>

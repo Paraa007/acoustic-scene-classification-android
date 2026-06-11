@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Textfarbe des Bestaetigen-Buttons aus explorer.kv:
+  [1,1,1,1] wenn Auswahl vorhanden (Button aktiv), sonst text_secondary.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="@color/speakerid_text_secondary" />
+    <item android:color="@color/speakerid_white" />
+</selector>

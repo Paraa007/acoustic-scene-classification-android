@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  "✕"-Button der Auswahl-Anzeige aus explorer.kv:
+  RoundedRectangle radius dc.RADIUS_CARD dp(8), Farbe [0.7, 0.25, 0.25, 1]
+  (#B34040). Ohne Auswahl ist der Button INVISIBLE (opacity 0), daher
+  braucht es keinen Disabled-Zustand.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#B34040" />
+    <corners android:radius="8dp" />
+</shape>

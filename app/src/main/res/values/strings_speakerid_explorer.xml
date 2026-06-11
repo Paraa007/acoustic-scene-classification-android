@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte 1:1 aus siqas `gui/screens/explorer/explorer.kv` / `explorer.py`.
+  Doppelte Leerzeichen aus den Python-f-Strings sind durch Quoting erhalten.
+-->
+<resources>
+    <!-- Top-Bar (explorer.kv) -->
+    <string name="speakerid_explorer_back">← Zurück</string>
+    <!-- "✓ OK (" + str(len(...)) + ")" -->
+    <string name="speakerid_explorer_confirm">✓ OK (%1$d)</string>
+
+    <!-- Status-Meldungen (explorer.py) -->
+    <string name="speakerid_explorer_status_loading">Lade...</string>
+    <string name="speakerid_explorer_status_path_unreachable">Pfad nicht erreichbar: %1$s</string>
+    <string name="speakerid_explorer_status_analyzing">Analysiere %1$d Datei(en)…</string>
+    <string name="speakerid_explorer_status_target_set">✓ Target gesetzt: %1$s</string>
+    <string name="speakerid_explorer_status_save_error">Fehler beim Speichern: %1$s</string>
+    <string name="speakerid_explorer_status_error">Fehler: %1$s</string>
+    <string name="speakerid_explorer_status_analysis_set">✓ Analyse-Datei gesetzt: %1$s</string>
+
+    <!-- Modus-Wahl (SegmentedChoice) -->
+    <string name="speakerid_explorer_mode_label">Auswahl für:</string>
+    <string name="speakerid_explorer_mode_analysis">Analyse-Audio</string>
+    <string name="speakerid_explorer_mode_target">Zielsprecher</string>
+
+    <!-- Auswahl-Anzeige -->
+    <string name="speakerid_explorer_no_selection">— Keine Datei ausgewählt —</string>
+    <string name="speakerid_explorer_selection_single">"✓  %1$s"</string>
+    <string name="speakerid_explorer_selection_multi">"✓  %1$d Dateien:  %2$s"</string>
+    <string name="speakerid_explorer_clear">✕</string>
+
+    <!-- Auswahl-Korb (nur Target-Modus) -->
+    <string name="speakerid_explorer_basket_label">Auswahl: %1$s</string>
+    <!-- Initialwert der Property (explorer.py: basket_text = "Auswahl leer") -->
+    <string name="speakerid_explorer_basket_empty_initial">Auswahl leer</string>
+    <!-- _refresh_basket_text bei leerem Korb -->
+    <string name="speakerid_explorer_basket_empty">Korb leer</string>
+    <string name="speakerid_explorer_basket_files">%1$d Datei(en): %2$s</string>
+    <string name="speakerid_explorer_basket_add">+ Hinzufügen</string>
+    <string name="speakerid_explorer_basket_delete">Löschen</string>
+
+    <!-- Seitenleiste -->
+    <string name="speakerid_explorer_sidebar_header">Schnell-\nzugriff</string>
+    <string name="speakerid_explorer_nav_audio">Audio</string>
+    <string name="speakerid_explorer_nav_assets">Assets</string>
+    <string name="speakerid_explorer_nav_recordings">Auf-\nnahmen</string>
+    <string name="speakerid_explorer_nav_data">Daten</string>
+    <string name="speakerid_explorer_compare_header">Vergleichs-\nOrdner</string>
+    <string name="speakerid_explorer_nav_msdwild">msdwild\n(WAV)</string>
+    <string name="speakerid_explorer_nav_voxconverse">voxconv.\n(WAV)</string>
+    <string name="speakerid_explorer_nav_truth">Wahrheit\n(RTTM)</string>
+    <!-- Android-Ergaenzung: SAF-Zugriff auf Dateien ausserhalb der App-Sandbox
+         (Muster aus TargetSetupFragment); im Kivy-Original nicht noetig. -->
+    <string name="speakerid_explorer_nav_extern">Extern\n(SAF)</string>
+
+    <!-- Dateiliste -->
+    <string name="speakerid_explorer_parent_dir">../</string>
+    <string name="speakerid_explorer_size_unreadable">--</string>
+</resources>
