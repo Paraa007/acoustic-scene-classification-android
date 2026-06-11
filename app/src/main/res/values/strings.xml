@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Acoustic Scene Classification</string>
+    <string name="app_name">FZI Audio Suite</string>
     <string name="app_name_full_display">Acoustic Scene Classification · FZI</string>
 
     <!-- Main UI -->
