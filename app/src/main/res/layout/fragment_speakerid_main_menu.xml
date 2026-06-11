@@ -25,7 +25,10 @@
         android:layout_weight="0.3"
         android:orientation="vertical">
 
-        <!-- Logos: zentrierte Reihe, Breite min(90 %, 480dp), FZI 0.38 / movisens 0.62, spacing 12dp -->
+        <!-- Logos: zentrierte Reihe, Breite min(0.9, 480/root.width) wie im .kv —
+             Kivy rechnet unitless in PHYSISCHEN Pixeln, d. h. der Cap ist 480 px,
+             nicht 480dp (480dp machte den Logo-Block auf Phones massiv zu gross).
+             Der px-Cap wird im Fragment gesetzt (matchConstraintMaxWidth). -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -40,7 +43,6 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintWidth_max="480dp"
                 app:layout_constraintWidth_percent="0.9">
 
                 <ImageView
@@ -64,7 +66,9 @@
             </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Titel: app.app_title, bold, primary, font min(sp(38), width*0.08) -> autoSize bis 38sp -->
+        <!-- Titel: app.app_title, bold, primary, font min(sp(38), width*0.08) -> autoSize
+             bis 38sp. autoSize fuellt sonst die volle Breite randlos; horizontales
+             Padding (dc.PADDING_SCREEN = 20dp) gibt dem Titel Luft zu den Kanten. -->
         <TextView
             android:id="@+id/speakeridMainMenuTitle"
             style="@style/Speakerid.Text"
@@ -73,6 +77,8 @@
             android:layout_weight="0.35"
             android:gravity="center"
             android:maxLines="1"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:text="@string/speakerid_main_menu_title"
             android:textColor="@color/speakerid_primary"
             android:textStyle="bold"
@@ -139,7 +145,13 @@
             android:orientation="vertical"
             app:layout_constraintGuide_percent="0.95" />
 
-        <!-- "⚙  Einstellungen": Breite min(180dp, 35 %), 14sp bold, text_secondary -->
+        <!-- Drei GETRENNTE Pillen wie im .kv: [Einstellungen][Info]...Spacer...[Experten-Labor].
+             Die woertlichen .kv-Breiten (0.35 + 0.25 + 0.35 = 95 % plus 2x 5 % Padding
+             und 10dp-Spacing) passen auf Phone-Breiten nicht nebeneinander — Info und
+             Experten-Labor ueberlappten und wirkten wie EINE Pille. Daher die Anteile
+             im .kv-Verhaeltnis auf 0.30/0.21/0.30 skaliert (Caps 180/120/180dp bleiben). -->
+
+        <!-- "⚙  Einstellungen": 14sp bold, text_secondary -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/speakeridMainMenuSettingsButton"
             android:layout_width="0dp"
@@ -161,9 +173,9 @@
             app:layout_constraintStart_toStartOf="@id/speakeridMainMenuFooterStartGuide"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintWidth_max="180dp"
-            app:layout_constraintWidth_percent="0.35" />
+            app:layout_constraintWidth_percent="0.30" />
 
-        <!-- "Info": Breite min(120dp, 25 %), spacing 10dp -->
+        <!-- "Info": eigene Pille direkt neben Einstellungen, spacing 10dp -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/speakeridMainMenuInfoButton"
             android:layout_width="0dp"
@@ -186,14 +198,15 @@
             app:layout_constraintStart_toEndOf="@id/speakeridMainMenuSettingsButton"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintWidth_max="120dp"
-            app:layout_constraintWidth_percent="0.25" />
+            app:layout_constraintWidth_percent="0.21" />
 
         <!-- Spacer-Widget aus dem .kv = freier Raum; "Experten-Labor" rechtsbuendig,
-             Breite min(180dp, 35 %) -->
+             per Start-Constraint von Info getrennt (kein Ueberlappen moeglich) -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/speakeridMainMenuExpertButton"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            android:layout_marginStart="10dp"
             android:background="@drawable/speakerid_main_menu_footer_btn"
             android:fontFamily="@font/speakerid_dejavu"
             android:gravity="center"
@@ -209,8 +222,10 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="@id/speakeridMainMenuFooterEndGuide"
             app:layout_constraintHeight_percent="0.44"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toEndOf="@id/speakeridMainMenuInfoButton"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintWidth_max="180dp"
-            app:layout_constraintWidth_percent="0.35" />
+            app:layout_constraintWidth_percent="0.30" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>

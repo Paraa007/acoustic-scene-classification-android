@@ -2,6 +2,7 @@ package com.fzi.speakerid.ui.mainmenu
 
 import android.os.Bundle
 import android.view.View
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
@@ -31,6 +32,12 @@ class SpeakerIdMenuFragment : Fragment(R.layout.fragment_speakerid_main_menu) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val binding = FragmentSpeakeridMainMenuBinding.bind(view)
+
+        // Logo-Reihe: .kv `size_hint: (min(0.9, 480 / root.width), 1)` — Kivy
+        // rechnet unitless in physischen Pixeln, der Cap ist also 480 px
+        // (auf dem Pixel 9 ~183dp), nicht 480dp.
+        (binding.speakeridMainMenuLogoRow.layoutParams as ConstraintLayout.LayoutParams)
+            .matchConstraintMaxWidth = 480
 
         // Hero-Button: on_release: root.start_normal_flow()
         binding.speakeridMainMenuStartButton.setOnClickListener { startNormalFlow() }
