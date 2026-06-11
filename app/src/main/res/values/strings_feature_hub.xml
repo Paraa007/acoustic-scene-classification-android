@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Feature-Hubs (Umbrella-Einstieg der FZI Audio Suite) und des
+  Speaker-ID-Platzhalters — additiv zum Bestands-Code, daher in eigener Datei
+  statt in der unangetasteten acousticscene strings.xml.
+-->
+<resources>
+    <!-- Feature Hub (umbrella app entry) -->
+    <string name="app_suite_name">FZI Audio Suite</string>
+    <string name="feature_hub_subtitle">Choose a feature</string>
+    <string name="feature_hub_asc_title">Acoustic Scene Classification</string>
+    <string name="feature_hub_asc_chip">Ready</string>
+    <string name="feature_hub_asc_desc">Classifies the current acoustic scene</string>
+    <string name="feature_hub_speakerid_title">Speaker ID (SIQAS)</string>
+    <string name="feature_hub_speakerid_chip">In progress</string>
+    <string name="feature_hub_speakerid_desc">Recognizes known speakers</string>
+    <string name="feature_hub_footer">FZI Karlsruhe</string>
+
+    <!-- Speaker ID placeholder -->
+    <string name="speakerid_placeholder_title">Speaker ID (SIQAS)</string>
+    <string name="speakerid_placeholder_message">This feature is still being ported and is not available yet.</string>
+</resources>

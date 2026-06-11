@@ -202,21 +202,6 @@
     <string name="results_back_home">Back to home</string>
     <string name="results_open_history">Open history</string>
 
-    <!-- Feature Hub (umbrella app entry) -->
-    <string name="app_suite_name">FZI Audio Suite</string>
-    <string name="feature_hub_subtitle">Choose a feature</string>
-    <string name="feature_hub_asc_title">Acoustic Scene Classification</string>
-    <string name="feature_hub_asc_chip">Ready</string>
-    <string name="feature_hub_asc_desc">Classifies the current acoustic scene</string>
-    <string name="feature_hub_speakerid_title">Speaker ID (SIQAS)</string>
-    <string name="feature_hub_speakerid_chip">In progress</string>
-    <string name="feature_hub_speakerid_desc">Recognizes known speakers</string>
-    <string name="feature_hub_footer">FZI Karlsruhe</string>
-
-    <!-- Speaker ID placeholder -->
-    <string name="speakerid_placeholder_title">Speaker ID (SIQAS)</string>
-    <string name="speakerid_placeholder_message">This feature is still being ported and is not available yet.</string>
-
     <!-- Mode Select (v2) -->
     <string name="mode_select_title">Choose how you want to use the app</string>
     <string name="mode_select_test_title">Test mode</string>
