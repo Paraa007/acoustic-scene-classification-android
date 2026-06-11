@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von statistics.kv <SpeakerStatsItem@BoxLayout>:
+  Hoehe dp(52), padding dc.PADDING_CARD [15,12], spacing dc.SPACING_ITEM dp(8).
+  Hintergrund (gerade Zeilen) wird im Code gesetzt.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="52dp"
+    android:orientation="horizontal"
+    android:paddingStart="15dp"
+    android:paddingEnd="15dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- AnchorLayout dp(40): Target-Symbol "⁂" ODER 14dp-Farbpunkt -->
+    <FrameLayout
+        android:layout_width="40dp"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/speakeridStatisticsItemTargetMark"
+            style="@style/Speakerid.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/speakerid_accent"
+            android:visibility="gone"
+            android:text="@string/speakerid_statistics_target_indicator" />
+
+        <View
+            android:id="@+id/speakeridStatisticsItemColorDot"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_gravity="center"
+            android:background="@drawable/speakerid_statistics_circle" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/speakeridStatisticsItemName"
+        style="@style/Speakerid.Text"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.4"
+        android:layout_marginStart="8dp"
+        android:gravity="center"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/speakeridStatisticsItemTime"
+        style="@style/Speakerid.Text"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.2"
+        android:layout_marginStart="8dp"
+        android:gravity="center"
+        android:textSize="14sp"
+        android:textColor="@color/speakerid_text_secondary" />
+
+    <!-- Balken (12dp) + Prozentlabel (18dp) -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.4"
+        android:layout_marginStart="8dp"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <com.fzi.speakerid.ui.statistics.SpeakerStatisticsBarView
+            android:id="@+id/speakeridStatisticsItemBar"
+            android:layout_width="match_parent"
+            android:layout_height="12dp" />
+
+        <TextView
+            android:id="@+id/speakeridStatisticsItemPercent"
+            style="@style/Speakerid.Text"
+            android:layout_width="match_parent"
+            android:layout_height="18dp"
+            android:gravity="center_horizontal|bottom"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

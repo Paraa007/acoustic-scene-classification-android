@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas `gui/screens/statistics/statistics.kv` (<StatisticsScreen>):
+  vertikale Box, padding [12,12], spacing 10, bg_color.
+  clipChildren=false, damit ausgefahrene Pie-Slices wie in Kivy ueberstehen.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/speakeridStatisticsRoot"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    tools:context="com.fzi.speakerid.ui.statistics.SpeakerStatisticsFragment">
+
+    <!-- Kopfzeile: ModernBackButton | Spacer | LogoBar (Hoehe dp(60)) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/speakeridStatisticsBackButton"
+            style="@style/Speakerid.Button"
+            android:layout_width="110dp"
+            android:layout_height="44dp"
+            android:background="@drawable/speakerid_statistics_btn_back"
+            android:text="@string/speakerid_back_button"
+            android:textSize="14sp"
+            android:textColor="@color/speakerid_primary" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <com.fzi.speakerid.ui.widgets.SpeakerIdLogoBar
+            android:id="@+id/speakeridStatisticsLogoBar"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+
+    <!-- SummaryCards-Zeile (Hoehe dp(80), spacing dc.SPACING_ITEM dp(8)) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <!-- SummaryCard "SPRECHER" -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="@drawable/speakerid_statistics_bg_card28"
+            android:padding="6dp">
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:gravity="center"
+                android:textSize="18sp"
+                android:textColor="@color/speakerid_primary"
+                android:text="@string/speakerid_statistics_icon_speakers" />
+
+            <TextView
+                android:id="@+id/speakeridStatisticsCardSpeakersValue"
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:text="@string/speakerid_statistics_value_zero" />
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center_horizontal|top"
+                android:textSize="8sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_card_speakers_title" />
+        </LinearLayout>
+
+        <!-- SummaryCard "GESAMT-DAUER" -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical"
+            android:background="@drawable/speakerid_statistics_bg_card28"
+            android:padding="6dp">
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:gravity="center"
+                android:textSize="18sp"
+                android:textColor="@color/speakerid_primary"
+                android:text="@string/speakerid_statistics_icon_time" />
+
+            <TextView
+                android:id="@+id/speakeridStatisticsCardTotalValue"
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:text="@string/speakerid_statistics_value_time_zero" />
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center_horizontal|top"
+                android:textSize="8sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_card_total_title" />
+        </LinearLayout>
+
+        <!-- SummaryCard "STILLE" -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical"
+            android:background="@drawable/speakerid_statistics_bg_card28"
+            android:padding="6dp">
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:gravity="center"
+                android:textSize="18sp"
+                android:textColor="@color/speakerid_primary"
+                android:text="@string/speakerid_statistics_icon_silence" />
+
+            <TextView
+                android:id="@+id/speakeridStatisticsCardSilenceValue"
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:text="@string/speakerid_statistics_value_percent_zero" />
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center_horizontal|top"
+                android:textSize="8sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_card_silence_title" />
+        </LinearLayout>
+
+        <!-- SummaryCard "IDENTIFIZIERT" -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical"
+            android:background="@drawable/speakerid_statistics_bg_card28"
+            android:padding="6dp">
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:gravity="center"
+                android:textSize="18sp"
+                android:textColor="@color/speakerid_primary"
+                android:text="@string/speakerid_statistics_icon_active" />
+
+            <TextView
+                android:id="@+id/speakeridStatisticsCardIdentifiedValue"
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="22dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:text="@string/speakerid_statistics_value_percent_zero" />
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center_horizontal|top"
+                android:textSize="8sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_card_identified_title" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Titel "Sprecher-Auswertung" (font_size min(24sp, width*0.06) -> Code) -->
+    <TextView
+        android:id="@+id/speakeridStatisticsTitle"
+        style="@style/Speakerid.Text"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_marginTop="10dp"
+        android:paddingStart="5dp"
+        android:paddingEnd="5dp"
+        android:gravity="start|bottom"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:text="@string/speakerid_statistics_title" />
+
+    <!-- Pie-Chart-Zeile (Hoehe dp(180)): FlatCard 0.4 + Zusammenfassung 0.6 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.4"
+            android:background="@drawable/speakerid_statistics_bg_card28"
+            android:padding="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <com.fzi.speakerid.ui.statistics.SpeakerStatisticsPieChartView
+                android:id="@+id/speakeridStatisticsPieChart"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.6"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
+
+            <TextView
+                android:id="@+id/speakeridStatisticsTotalLabel"
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="4dp"
+                android:gravity="start|center_vertical"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Gesamt: 00:00" />
+
+            <TextView
+                android:id="@+id/speakeridStatisticsSummaryLabel"
+                style="@style/Speakerid.Text"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="start|center_vertical"
+                android:textSize="11sp"
+                android:textColor="@color/speakerid_text_secondary"
+                tools:text="0% Stille  |  0% erkannt" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Sprecherliste (FlatCard, fuellt den Rest; padding [0,5,0,8]) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical"
+        android:background="@drawable/speakerid_statistics_bg_card28"
+        android:paddingTop="5dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            style="@style/Speakerid.Text"
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:gravity="start|bottom"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/speakerid_text_secondary"
+            android:text="@string/speakerid_statistics_list_title" />
+
+        <!-- Spaltenkopf (Hoehe dp(26), padding [14,0], spacing dp(8)) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="26dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="30dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_col_spacer" />
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.4"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_col_name" />
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.2"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_col_duration" />
+
+            <TextView
+                style="@style/Speakerid.Text"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.4"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_text_secondary"
+                android:text="@string/speakerid_statistics_col_share" />
+        </LinearLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:scrollbars="vertical"
+            android:fillViewport="false">
+
+            <LinearLayout
+                android:id="@+id/speakeridStatisticsListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="1dp"
+                android:paddingEnd="1dp" />
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- "Session beenden & neu starten" (AnchorLayout dp(80), Button 0.9 x dp(52)) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:weightSum="1">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="0.05" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/speakeridStatisticsFinishButton"
+            style="@style/Speakerid.Button"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="0.9"
+            android:gravity="center"
+            android:textSize="13sp"
+            android:textColor="@color/speakerid_white"
+            android:text="@string/speakerid_statistics_finish_button" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="0.05" />
+    </LinearLayout>
+</LinearLayout>

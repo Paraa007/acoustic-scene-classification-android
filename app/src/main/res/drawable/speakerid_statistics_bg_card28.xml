@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- statistics.kv <FlatCard>: surface_color + RoundedRectangle radius dp(28) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_surface" />
+    <corners android:radius="28dp" />
+</shape>

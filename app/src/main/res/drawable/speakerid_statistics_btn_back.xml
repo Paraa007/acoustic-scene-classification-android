@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  main.kv <ModernBackButton@ModernButton>: normal_color = surface_color,
+  pressed_color = surface_dark_color, RoundedRectangle radius dp(25).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_surface_dark" />
+            <corners android:radius="25dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_surface" />
+            <corners android:radius="25dp" />
+        </shape>
+    </item>
+</selector>

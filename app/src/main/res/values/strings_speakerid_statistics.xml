@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Statistics-Screens - Texte exakt aus siqas
+  `gui/screens/statistics/statistics.kv` bzw. `statistics.py`;
+  Icon-Zeichen aus `gui/data/theme.py::ThemeManager.icons`.
+-->
+<resources>
+    <!-- SummaryCards (Titel + Default-Werte aus dem .kv) -->
+    <string name="speakerid_statistics_card_speakers_title">SPRECHER</string>
+    <string name="speakerid_statistics_card_total_title">GESAMT-\nDAUER</string>
+    <string name="speakerid_statistics_card_silence_title">STILLE</string>
+    <string name="speakerid_statistics_card_identified_title">IDENTI-\nFIZIERT</string>
+    <string name="speakerid_statistics_value_zero">0</string>
+    <string name="speakerid_statistics_value_time_zero">00:00</string>
+    <string name="speakerid_statistics_value_percent_zero" formatted="false">0%</string>
+
+    <!-- theme_manager.icons: "speakers" / "time" / "silence" / "active" -->
+    <string name="speakerid_statistics_icon_speakers">○</string>
+    <string name="speakerid_statistics_icon_time">⏱</string>
+    <string name="speakerid_statistics_icon_silence">⋯</string>
+    <string name="speakerid_statistics_icon_active">▶</string>
+
+    <string name="speakerid_statistics_title">Sprecher-Auswertung</string>
+
+    <!-- Zusammenfassung neben dem Pie-Chart -->
+    <string name="speakerid_statistics_total_fmt">Gesamt: %1$s</string>
+    <string name="speakerid_statistics_summary_fmt">"%1$s Stille  |  %2$s erkannt"</string>
+
+    <!-- Sprecherliste -->
+    <string name="speakerid_statistics_list_title">Sprecherliste</string>
+    <string name="speakerid_statistics_col_spacer">" "</string>
+    <string name="speakerid_statistics_col_name">NAME</string>
+    <string name="speakerid_statistics_col_duration">DAUER</string>
+    <string name="speakerid_statistics_col_share">ANTEIL</string>
+    <!-- statistics.py: name = "Target" if c.is_target else f"Sprecher {cid}" -->
+    <string name="speakerid_statistics_target_name">Target</string>
+    <string name="speakerid_statistics_speaker_name_fmt">Sprecher %1$s</string>
+    <!-- SpeakerStatsItem Target-Indikator "⁂" -->
+    <string name="speakerid_statistics_target_indicator">⁂</string>
+
+    <!-- pie_chart.py: name = "Target" if str(cid) == "1" else f"Sp. {cid}" -->
+    <string name="speakerid_statistics_pie_speaker_fmt">Sp. %1$s</string>
+
+    <string name="speakerid_statistics_finish_button">Session beenden\n&amp; neu starten</string>
+</resources>
