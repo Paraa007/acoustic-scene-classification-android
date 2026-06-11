@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   1:1-Port der <TableRow@BoxLayout> aus embeddings.kv - EIN Zeilentyp fuer
-  row_type "header" | "centroid" | "point". Das Fragment schaltet Hoehe
+  row_type "header" | "centroid" | "point". Das Fragment schaltet Mindesthoehe
   (22dp Header / 42dp sonst), Sichtbarkeiten, Hintergrund (surface_dark /
   Selektion secondary 15% / transparent), Farbbalken und Texte um.
+  .kv-Hoehe dp(42) nur als Minimum: die Vektor-Vorschau bricht auf schmalen
+  Screens zweizeilig um und clippte in der fixen Box (Kivy clippt nicht).
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/speakeridEmbeddingsRowRoot"
     android:layout_width="match_parent"
-    android:layout_height="42dp">
+    android:layout_height="wrap_content"
+    android:minHeight="42dp">
 
     <!-- Kivy Line am unteren Rand (border_color, width 1; nur Nicht-Header) -->
     <View
@@ -39,11 +42,16 @@
         android:textColor="@color/speakerid_text_secondary"
         android:visibility="gone" />
 
-    <!-- POINT/CENTROID-Inhalt: padding dc.PADDING_CARD [15,12], spacing 6 -->
+    <!-- POINT/CENTROID-Inhalt: padding dc.PADDING_CARD [15,12], spacing 6.
+         wrap_content: die (ggf. zweizeilige) Vektor-Spalte bestimmt die
+         Zeilenhoehe, alle match_parent-Spalten ziehen per LinearLayout-
+         Remeasure mit; unterhalb der 42dp-Mindesthoehe vertikal zentriert. -->
     <LinearLayout
         android:id="@+id/speakeridEmbeddingsRowContent"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:baselineAligned="false"
         android:orientation="horizontal"
         android:paddingStart="15dp"
         android:paddingEnd="15dp"
@@ -97,12 +105,13 @@
             android:textSize="10sp"
             android:textColor="@color/speakerid_text_secondary" />
 
-        <!-- Spalte 5: Vektor-Vorschau (42%) -->
+        <!-- Spalte 5: Vektor-Vorschau (42%); wrap_content = hoehentreibend -->
         <TextView
             android:id="@+id/speakeridEmbeddingsRowColVector"
             style="@style/Speakerid.Text"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
             android:layout_weight="0.42"
             android:layout_marginStart="6dp"
             android:gravity="end|center_vertical"

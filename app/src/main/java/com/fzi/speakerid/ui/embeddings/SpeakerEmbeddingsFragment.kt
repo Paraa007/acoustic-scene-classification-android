@@ -478,10 +478,13 @@ class SpeakerEmbeddingsFragment : Fragment() {
         for (row in rows) {
             val item = ViewSpeakeridEmbeddingsTableRowBinding.inflate(inflater, container, false)
             val isHeader = row.rowType == ROW_HEADER
+            // .kv-Hoehe (22dp Header / 42dp sonst) nur als Minimum: eine
+            // zweizeilige Vektor-Vorschau clippte in der fixen Box.
             item.root.layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                if (isHeader) dp(22f) else dp(42f),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
             )
+            item.root.minimumHeight = if (isHeader) dp(22f) else dp(42f)
 
             if (isHeader) {
                 item.root.setBackgroundColor(surfaceDark)
