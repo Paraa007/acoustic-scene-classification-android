@@ -264,9 +264,10 @@ class SpeakerExplorerFragment : Fragment() {
     }
 
     /**
-     * Port von `go_back`: Auswahl leeren, dann zurueck. Der modusabhaengige
-     * Zielscreen des Originals (performance_test/diarization_report/
-     * target_setup/previous_screen_name) ist hier der Aufrufer im Backstack.
+     * Port von `go_back`: Auswahl leeren, dann modusabhaengig zurueck wie im
+     * Original (performance -> performance_test, diarization ->
+     * diarization_report, target -> target_setup, sonst Experten-Dashboard;
+     * `expert_lab_active` ist im Port fuer MODE_ANALYSIS immer der Fall).
      */
     private fun goBack() {
         selection.clear()
@@ -274,7 +275,17 @@ class SpeakerExplorerFragment : Fragment() {
         binding.speakeridExplorerSelectionLabel.text =
             getString(R.string.speakerid_explorer_no_selection)
         currentPath?.let { setStatus(it.absolutePath) }
-        findNavController().popBackStack()
+        val target = when (selectionMode) {
+            MODE_PERFORMANCE -> R.id.speakeridPerformanceTestFragment
+            MODE_DIARIZATION -> R.id.diarizationReportFragment
+            MODE_TARGET -> R.id.targetSetupFragment
+            else -> R.id.speakerDashboardFragment
+        }
+        val nav = findNavController()
+        if (!nav.popBackStack(target, false)) {
+            // Ziel nicht im Backstack (Kivy wechselt einfach den Screen).
+            nav.navigate(target)
+        }
     }
 
     // ── Dateiliste (FileChooserListView-Ersatz) ──────────────────────────────

@@ -48,10 +48,11 @@ import kotlinx.coroutines.launch
  * (keine SharedPreferences) — gleiche Mechanik wie SpeakerSettingsFragment.
  *
  * Lifecycle: `on_enter`/`on_leave` (BaseScreen bindet/unbindet Observer)
- * entspricht `repeatOnLifecycle(STARTED)`. Hardware-Back (BaseScreen key 27 ->
- * 'settings') = Standard-Back der Navigation, ebenso der Header-Pfeil
- * (`on_back: root.manager.current = 'settings'`). `expert_settings.py` selbst
- * hat keine weitere Logik (set_theme deckt die Theme-SegmentedChoice ab).
+ * entspricht `repeatOnLifecycle(STARTED)`. Der Header-Pfeil folgt dem .kv
+ * (`on_back: root.manager.current = 'settings'`) und wechselt explizit zum
+ * Settings-Screen; Hardware-Back bleibt Standard-Back der Navigation.
+ * `expert_settings.py` selbst hat keine weitere Logik (set_theme deckt die
+ * Theme-SegmentedChoice ab).
  */
 class SpeakerExpertSettingsFragment : Fragment() {
 
@@ -73,7 +74,12 @@ class SpeakerExpertSettingsFragment : Fragment() {
         val panel = binding.speakeridExpertSettingsSharedPanel
 
         // ScreenHeader: on_back -> root.manager.current = 'settings'
-        binding.speakeridExpertSettingsHeader.onBack = { findNavController().popBackStack() }
+        binding.speakeridExpertSettingsHeader.onBack = {
+            val nav = findNavController()
+            if (!nav.popBackStack(R.id.speakerSettingsFragment, false)) {
+                nav.navigate(R.id.speakerSettingsFragment)
+            }
+        }
 
         // ── Experten-Tab-Leiste (main.kv tab_bar_container) ─────────────────
         binding.speakeridExpertSettingsTabBar.apply {

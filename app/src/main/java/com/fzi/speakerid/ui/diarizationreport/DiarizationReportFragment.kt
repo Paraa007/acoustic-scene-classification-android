@@ -78,8 +78,13 @@ class DiarizationReportFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         dataManager = SpeakerIdDataManager.getInstance(requireContext())
 
-        // ScreenHeader: on_back -> Standard-Back
-        binding.speakeridDiarizationHeader.onBack = { findNavController().popBackStack() }
+        // ScreenHeader: on_back -> root.manager.current = 'main_menu' (.kv)
+        binding.speakeridDiarizationHeader.onBack = {
+            val nav = findNavController()
+            if (!nav.popBackStack(R.id.speakeridMenuFragment, false)) {
+                nav.popBackStack()
+            }
+        }
 
         // ── Experten-Tab-Leiste (main.kv tab_bar_container) ─────────────────
         binding.speakeridDiarizationTabBar.apply {

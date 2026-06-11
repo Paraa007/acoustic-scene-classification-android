@@ -58,8 +58,13 @@ class SpeakerSettingsFragment : Fragment() {
         val dm = SpeakerIdDataManager.getInstance(requireContext().applicationContext)
         val panel = binding.speakeridSettingsSharedPanel
 
-        // ScreenHeader: on_back -> root.manager.current = 'main_menu'
-        binding.speakeridSettingsHeader.onBack = { findNavController().popBackStack() }
+        // ScreenHeader: on_back -> root.manager.current = 'main_menu' (.kv)
+        binding.speakeridSettingsHeader.onBack = {
+            val nav = findNavController()
+            if (!nav.popBackStack(R.id.speakeridMenuFragment, false)) {
+                nav.popBackStack()
+            }
+        }
 
         // ── Schwellenwert: Target-Matching ──────────────────────────────────
         panel.speakeridSettingsSliderTarget.apply {

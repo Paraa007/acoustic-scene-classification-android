@@ -139,8 +139,13 @@ class SpeakerPerformanceTestFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val b = binding
 
-        // ScreenHeader: on_back -> root.go_back()
-        b.speakeridPerfHeader.onBack = { findNavController().popBackStack() }
+        // ScreenHeader: on_back -> root.go_back() (BaseScreen-Default: 'main_menu')
+        b.speakeridPerfHeader.onBack = {
+            val nav = findNavController()
+            if (!nav.popBackStack(R.id.speakeridMenuFragment, false)) {
+                nav.popBackStack()
+            }
+        }
 
         // ── Experten-Tab-Leiste (main.kv tab_bar_container) ─────────────────
         val dmTab = SpeakerIdDataManager.getInstance(requireContext().applicationContext)
