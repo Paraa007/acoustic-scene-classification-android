@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Settings-Screens - Texte 1:1 aus siqas
+  `src/gui/screens/settings/settings.kv` (SettingsScreen + SharedSettingsPanel).
+-->
+<resources>
+    <!-- ScreenHeader title -->
+    <string name="speakerid_settings_title">Einstellungen</string>
+
+    <!-- Slider-Cards (SharedSettingsPanel) -->
+    <string name="speakerid_settings_target_matching">Target-Matching</string>
+    <string name="speakerid_settings_cluster_matching">Cluster-Matching</string>
+    <string name="speakerid_settings_chunk_duration">Chunk-Länge (s)</string>
+
+    <!-- SegmentedChoice "Design-Theme" -->
+    <string name="speakerid_settings_theme_label">DESIGN-THEME WÄHLEN</string>
+    <string name="speakerid_settings_theme_basic">BASIC</string>
+    <string name="speakerid_settings_theme_fzi">FZI</string>
+    <string name="speakerid_settings_theme_dark">DUNKEL</string>
+
+    <!-- LabeledToggle "Virtuelles Mikrofon" -->
+    <string name="speakerid_settings_virtual_mic_label">Simuliertes Mikrofon (Datei)</string>
+    <string name="speakerid_settings_virtual_mic_desc">Audio von Datei statt Mikrofon</string>
+
+    <!-- LabeledToggle "Stimmentrennung" (Pyannote) -->
+    <string name="speakerid_settings_pyannote_label">Stimmentrennung</string>
+    <string name="speakerid_settings_pyannote_desc">Trennt Stimmen, wenn mehrere Personen gleichzeitig sprechen (Pyannote)</string>
+
+    <!-- FlatButton -->
+    <string name="speakerid_settings_reset">Daten Reset</string>
+</resources>

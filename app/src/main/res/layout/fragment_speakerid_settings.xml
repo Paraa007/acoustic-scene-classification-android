@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Port von siqas `settings.kv` <SettingsScreen>:
+  BoxLayout vertical, padding dc.PADDING_SCREEN (20dp), spacing
+  dc.SPACING_SECTION (15dp), Hintergrund theme bg_color (Speakerid.Screen);
+  ScreenHeader "Einstellungen" + ScrollView mit SharedSettingsPanel,
+  "Daten Reset"-FlatButton (danger) und 30dp-Spacer.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <com.fzi.speakerid.ui.widgets.SpeakerIdScreenHeader
+        android:id="@+id/speakeridSettingsHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:speakeridHeaderTitle="@string/speakerid_settings_title" />
+
+    <!-- ScrollView (do_scroll_x: False) -->
+    <ScrollView
+        android:id="@+id/speakeridSettingsScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="15dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include
+                android:id="@+id/speakeridSettingsSharedPanel"
+                layout="@layout/view_speakerid_settings_shared_panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <com.fzi.speakerid.ui.widgets.SpeakerIdFlatButton
+                android:id="@+id/speakeridSettingsBtnReset"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="15dp"
+                android:text="@string/speakerid_settings_reset"
+                app:speakeridButtonType="danger" />
+
+            <!-- Widget: height dp(30) -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="30dp"
+                android:layout_marginTop="15dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
