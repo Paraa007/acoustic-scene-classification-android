@@ -151,7 +151,11 @@
              Experten-Labor ueberlappten und wirkten wie EINE Pille. Daher die Anteile
              im .kv-Verhaeltnis auf 0.30/0.21/0.30 skaliert (Caps 180/120/180dp bleiben). -->
 
-        <!-- "⚙  Einstellungen": 14sp bold, text_secondary -->
+        <!-- "⚙  Einstellungen": 14sp bold, text_secondary. Der laengste der
+             drei Texte passt bei 0.30-Breite nicht mehr in 14sp (der Android-
+             Button clippt, Kivy laesst das Label ueberstehen): padding 0 wie
+             das Kivy-Button-Label plus autoSize 9-14sp, damit der volle Text
+             sichtbar bleibt; Breitenanteile bleiben unveraendert. -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/speakeridMainMenuSettingsButton"
             android:layout_width="0dp"
@@ -162,12 +166,17 @@
             android:maxLines="1"
             android:minWidth="0dp"
             android:minHeight="0dp"
+            android:padding="0dp"
             android:stateListAnimator="@null"
             android:text="@string/speakerid_main_menu_settings"
             android:textAllCaps="false"
             android:textColor="@color/speakerid_text_secondary"
             android:textSize="14sp"
             android:textStyle="bold"
+            app:autoSizeMaxTextSize="14sp"
+            app:autoSizeMinTextSize="9sp"
+            app:autoSizeStepGranularity="1sp"
+            app:autoSizeTextType="uniform"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintHeight_percent="0.44"
             app:layout_constraintStart_toStartOf="@id/speakeridMainMenuFooterStartGuide"
