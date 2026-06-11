@@ -337,10 +337,12 @@
                     android:clipToPadding="false"
                     android:background="@drawable/speakerid_embeddings_compare_bg">
 
-                    <!-- 18dp-Box; 2-zeilige Textur ueberragt wie in Kivy (kein Clip) -->
+                    <!-- .kv-Hoehe 18dp nur als Minimum: anders als Kivy clippt der
+                         TextView seine zweizeilige Textur in einer fixen Box. -->
                     <TextView
                         android:layout_width="match_parent"
-                        android:layout_height="18dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="18dp"
                         style="@style/Speakerid.Text"
                         android:gravity="center"
                         android:textSize="10sp"

@@ -158,13 +158,15 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- "Zeitverlauf\n(1 Kästchen = 1 Chunk)": 14sp bold, secondary,
-                 height dc.HEIGHT_SECTION_LABEL dp(20) (clippt wie das Original) -->
+            <!-- "Zeitverlauf\n(1 Kästchen = 1 Chunk)": 14sp bold, secondary.
+                 .kv-Hoehe dp(20) nur als Minimum — der TextView clippt den
+                 zweizeiligen Text in einer fixen Box (Kivy clippt nicht). -->
             <TextView
                 android:id="@+id/speakeridPipelineLabelTimeline"
                 style="@style/Speakerid.Text.Label"
                 android:layout_width="match_parent"
-                android:layout_height="20dp"
+                android:layout_height="wrap_content"
+                android:minHeight="20dp"
                 android:gravity="start|bottom"
                 android:text="@string/speakerid_pipeline_timeline_label"
                 android:textColor="@color/speakerid_text_secondary"
