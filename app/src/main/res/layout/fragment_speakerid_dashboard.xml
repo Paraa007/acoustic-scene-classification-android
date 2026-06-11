@@ -418,7 +418,7 @@
 
                     <!-- Kivy-Button-Defaults: font_size 15sp, Textfarbe weiss,
                          height max(45dp, texture + 10dp) -->
-                    <Button
+                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/speakeridDashboardBtnDump"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -435,7 +435,7 @@
                         android:textColor="@color/speakerid_white"
                         android:textSize="15sp" />
 
-                    <Button
+                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/speakeridDashboardBtnDummy"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -453,7 +453,7 @@
                         android:textColor="@color/speakerid_white"
                         android:textSize="15sp" />
 
-                    <Button
+                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/speakeridDashboardBtnReassign"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

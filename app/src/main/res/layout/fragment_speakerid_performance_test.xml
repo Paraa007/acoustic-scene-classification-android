@@ -79,7 +79,7 @@
                         android:layout_marginTop="8dp"
                         android:orientation="horizontal">
 
-                        <Button
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/speakeridPerfBtnPickWav"
                             android:layout_width="120dp"
                             android:layout_height="match_parent"
@@ -189,7 +189,7 @@
                             android:textSize="11sp"
                             android:textStyle="bold" />
 
-                        <Button
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/speakeridPerfBtnDefaults"
                             android:layout_width="130dp"
                             android:layout_height="match_parent"
@@ -403,7 +403,7 @@
                 </LinearLayout>
 
                 <!-- ═══ Steuerung (Zeile 50dp) ═══ -->
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/speakeridPerfBtnStart"
                     android:layout_width="match_parent"
                     android:layout_height="50dp"

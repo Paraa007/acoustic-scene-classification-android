@@ -209,7 +209,7 @@
                 android:layout_weight="1"
                 android:orientation="horizontal">
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/speakeridPipelineBtnFile"
                     style="@style/Speakerid.Button"
                     android:layout_width="0dp"
@@ -220,7 +220,7 @@
                     android:text="@string/speakerid_pipeline_btn_file"
                     android:textColor="@color/speakerid_text_primary" />
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/speakeridPipelineBtnReset"
                     style="@style/Speakerid.Button"
                     android:layout_width="0dp"
@@ -233,7 +233,7 @@
                     android:textColor="@color/speakerid_error" />
 
                 <!-- disabled: not root.has_file or root.is_running -->
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/speakeridPipelineBtnStep"
                     style="@style/Speakerid.Button"
                     android:layout_width="0dp"
@@ -248,7 +248,7 @@
             </LinearLayout>
 
             <!-- Zeile 2: Auto-Analyse (volle Breite); disabled: not root.has_file -->
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/speakeridPipelineBtnAuto"
                 style="@style/Speakerid.Button"
                 android:layout_width="match_parent"
