@@ -19,10 +19,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.databinding.FragmentSpeakeridDashboardBinding
 import com.fzi.speakerid.ui.SpeakerIdDataManager
 import com.fzi.speakerid.ui.settings.SpeakerSettingsState
+import com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
 import java.util.Locale
 import kotlin.math.min
 import kotlinx.coroutines.flow.drop
@@ -66,6 +68,24 @@ class SpeakerDashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         dm = SpeakerIdDataManager.getInstance(requireContext())
+
+        // ── Experten-Tab-Leiste (main.kv tab_bar_container) ─────────────────
+        binding.speakeridDashboardTabBar.apply {
+            // kv: state: 'down' if screen_manager.current == 'dashboard'
+            setActiveTab(SpeakerIdExpertTabBar.Tab.STATUS)
+            onTabSelected = { tab ->
+                // kv on_release: screen_manager.current = 'diarization_report'
+                if (tab == SpeakerIdExpertTabBar.Tab.DIARIZATION) {
+                    findNavController().navigate(R.id.diarizationReportFragment)
+                }
+            }
+            onClose = {
+                // kv X-Button: app.expert_lab_active = False;
+                //              screen_manager.current = 'main_menu'
+                dm.expertModeActive.value = false
+                findNavController().popBackStack(R.id.speakeridMenuFragment, false)
+            }
+        }
 
         // ── Action-Buttons (on_release aus dem .kv) ─────────────────────────
         binding.speakeridDashboardBtnDump.setOnClickListener { printAllData() }

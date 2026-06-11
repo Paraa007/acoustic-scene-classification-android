@@ -23,6 +23,7 @@ import com.fzi.speakerid.library.pipeline.OnnxSessionProvider
 import com.fzi.speakerid.ui.AssetModelInstaller
 import com.fzi.speakerid.ui.SpeakerIdDataManager
 import com.fzi.speakerid.ui.SpeakerIdTheme
+import com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
@@ -87,6 +88,29 @@ class DiarizationReportFragment : Fragment() {
 
         // ScreenHeader: on_back -> Standard-Back
         binding.speakeridDiarizationHeader.onBack = { findNavController().popBackStack() }
+
+        // ── Experten-Tab-Leiste (main.kv tab_bar_container) ─────────────────
+        binding.speakeridDiarizationTabBar.apply {
+            // kv: state: 'down' if screen_manager.current == 'diarization_report'
+            setActiveTab(SpeakerIdExpertTabBar.Tab.DIARIZATION)
+            onTabSelected = { tab ->
+                // kv "Status": screen_manager.current = 'dashboard' — das
+                // Dashboard liegt im Backstack (einziger Einstieg hierher),
+                // andernfalls frisch dorthin navigieren.
+                if (tab == SpeakerIdExpertTabBar.Tab.STATUS) {
+                    val nav = findNavController()
+                    if (!nav.popBackStack(R.id.speakerDashboardFragment, false)) {
+                        nav.navigate(R.id.speakerDashboardFragment)
+                    }
+                }
+            }
+            onClose = {
+                // kv X-Button: app.expert_lab_active = False;
+                //              screen_manager.current = 'main_menu'
+                dataManager.expertModeActive.value = false
+                findNavController().popBackStack(R.id.speakeridMenuFragment, false)
+            }
+        }
 
         binding.speakeridDiarizationChooseFileButton.setOnClickListener { chooseFile() }
         binding.speakeridDiarizationRefreshButton.setOnClickListener { updateReport() }
