@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas `src/gui/screens/main_menu/main_menu.kv`.
+
+  Vertikale Aufteilung wie im .kv: Header 30 % (davon Logos 65 % / Titel 35 %),
+  Center mit Hero-Button 55 %, Footer 15 %. Kivy-size_hints werden als
+  LinearLayout-Weights bzw. ConstraintLayout-Percent abgebildet; die
+  min(dp, Anteil)-Breiten aus dem .kv via constraintWidth_percent +
+  constraintWidth_max. Adaptive Kivy-Schriftgroessen (min(sp(38), width*0.08)
+  bzw. min(sp(28), height*0.05)) via autoSize mit der sp-Obergrenze.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.fzi.speakerid.ui.mainmenu.SpeakerIdMenuFragment">
+
+    <!-- ─── HEADER: Logo & Titel (size_hint_y: 0.3) ─────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.3"
+        android:orientation="vertical">
+
+        <!-- Logos: zentrierte Reihe, Breite min(90 %, 480dp), FZI 0.38 / movisens 0.62, spacing 12dp -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.65">
+
+            <LinearLayout
+                android:id="@+id/speakeridMainMenuLogoRow"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:orientation="horizontal"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_max="480dp"
+                app:layout_constraintWidth_percent="0.9">
+
+                <ImageView
+                    android:id="@+id/speakeridMainMenuFziLogo"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.38"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/speakerid_fzi_logo" />
+
+                <ImageView
+                    android:id="@+id/speakeridMainMenuMovisensLogo"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="0.62"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/speakerid_movisens" />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Titel: app.app_title, bold, primary, font min(sp(38), width*0.08) -> autoSize bis 38sp -->
+        <TextView
+            android:id="@+id/speakeridMainMenuTitle"
+            style="@style/Speakerid.Text"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.35"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="@string/speakerid_main_menu_title"
+            android:textColor="@color/speakerid_primary"
+            android:textStyle="bold"
+            app:autoSizeMaxTextSize="38sp"
+            app:autoSizeMinTextSize="12sp"
+            app:autoSizeTextType="uniform" />
+    </LinearLayout>
+
+    <!-- ─── CENTER: Hero-Start-Button (size_hint_y: 0.55) ───────────────── -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.55">
+
+        <!-- Breite min(70 %, 600dp), Hoehe 50 % der Center-Sektion, radius 15dp,
+             font min(sp(28), height*0.05) -> autoSize bis 28sp -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/speakeridMainMenuStartButton"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/speakerid_main_menu_start_bg"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:maxLines="1"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_main_menu_start"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_white"
+            android:textStyle="bold"
+            app:autoSizeMaxTextSize="28sp"
+            app:autoSizeMinTextSize="10sp"
+            app:autoSizeTextType="uniform"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHeight_percent="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_max="600dp"
+            app:layout_constraintWidth_percent="0.7" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- ─── FOOTER: Einstellungen, Info, Spacer, Experten-Labor (size_hint_y: 0.15) ──
+         Kivy-padding [width*0.05, height*0.02]: 5 % Breite -> Guidelines 0.05/0.95;
+         2 % der ROOT-Hoehe oben+unten => Innenhoehe 0.11*H, Button-Hoehe 0.6 davon
+         = 0.066*H = 0.44 der Footer-Hoehe (vertikal zentriert, Padding symmetrisch). -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.15">
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/speakeridMainMenuFooterStartGuide"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.05" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/speakeridMainMenuFooterEndGuide"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.95" />
+
+        <!-- "⚙  Einstellungen": Breite min(180dp, 35 %), 14sp bold, text_secondary -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/speakeridMainMenuSettingsButton"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/speakerid_main_menu_footer_btn"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:maxLines="1"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_main_menu_settings"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_text_secondary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintHeight_percent="0.44"
+            app:layout_constraintStart_toStartOf="@id/speakeridMainMenuFooterStartGuide"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_max="180dp"
+            app:layout_constraintWidth_percent="0.35" />
+
+        <!-- "Info": Breite min(120dp, 25 %), spacing 10dp -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/speakeridMainMenuInfoButton"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/speakerid_main_menu_footer_btn"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:maxLines="1"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_main_menu_info"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_text_secondary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintHeight_percent="0.44"
+            app:layout_constraintStart_toEndOf="@id/speakeridMainMenuSettingsButton"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_max="120dp"
+            app:layout_constraintWidth_percent="0.25" />
+
+        <!-- Spacer-Widget aus dem .kv = freier Raum; "Experten-Labor" rechtsbuendig,
+             Breite min(180dp, 35 %) -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/speakeridMainMenuExpertButton"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/speakerid_main_menu_footer_btn"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:maxLines="1"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_main_menu_expert_lab"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_text_secondary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/speakeridMainMenuFooterEndGuide"
+            app:layout_constraintHeight_percent="0.44"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_max="180dp"
+            app:layout_constraintWidth_percent="0.35" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

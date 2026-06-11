@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte des SIQAS-Hauptmenues - 1:1 aus siqas
+  `src/gui/screens/main_menu/main_menu.kv` bzw. `gui/data/gui_config.py::APP_TITLE`.
+  Sprache/Schreibweise exakt uebernommen (inkl. Doppel-Leerzeichen nach dem
+  Zahnrad-Glyph, daher in Anfuehrungszeichen).
+-->
+<resources>
+    <!-- app.app_title (gui_config.APP_TITLE) -->
+    <string name="speakerid_main_menu_title">SIQAS Demonstrator 2.0</string>
+    <!-- Hero-Button -->
+    <string name="speakerid_main_menu_start">STARTEN</string>
+    <!-- Footer-Buttons -->
+    <string name="speakerid_main_menu_settings">"⚙  Einstellungen"</string>
+    <string name="speakerid_main_menu_info">Info</string>
+    <string name="speakerid_main_menu_expert_lab">Experten-Labor</string>
+</resources>

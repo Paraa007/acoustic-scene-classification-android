@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Hintergrund des Hero-Start-Buttons aus `main_menu.kv`:
+  RoundedRectangle mit radius dp(15), Fuellung = theme primary (#2FAE7A).
+  Pressed = Kivy-Down-Verdunkelung analog FlatButton (RGB * 0.8 -> #258B61,
+  vgl. SpeakerIdTheme.pressedVariant).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="15dp" />
+            <solid android:color="#258B61" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="15dp" />
+            <solid android:color="@color/speakerid_primary" />
+        </shape>
+    </item>
+</selector>
