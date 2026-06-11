@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port der <TableRow@BoxLayout> aus embeddings.kv - EIN Zeilentyp fuer
+  row_type "header" | "centroid" | "point". Das Fragment schaltet Hoehe
+  (22dp Header / 42dp sonst), Sichtbarkeiten, Hintergrund (surface_dark /
+  Selektion secondary 15% / transparent), Farbbalken und Texte um.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/speakeridEmbeddingsRowRoot"
+    android:layout_width="match_parent"
+    android:layout_height="42dp">
+
+    <!-- Kivy Line am unteren Rand (border_color, width 1; nur Nicht-Header) -->
+    <View
+        android:id="@+id/speakeridEmbeddingsRowBorder"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="bottom"
+        android:background="@color/speakerid_border" />
+
+    <!-- Farbbalken links: Rectangle pos (x, y) size (dp(4), height) -->
+    <View
+        android:id="@+id/speakeridEmbeddingsRowColorBar"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start" />
+
+    <!-- HEADER-Inhalt: section_label, 9sp bold, padding_x 12dp, text_secondary -->
+    <TextView
+        android:id="@+id/speakeridEmbeddingsRowHeaderLabel"
+        style="@style/Speakerid.Text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:gravity="start|center_vertical"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:textColor="@color/speakerid_text_secondary"
+        android:visibility="gone" />
+
+    <!-- POINT/CENTROID-Inhalt: padding dc.PADDING_CARD [15,12], spacing 6 -->
+    <LinearLayout
+        android:id="@+id/speakeridEmbeddingsRowContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:paddingStart="15dp"
+        android:paddingEnd="15dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
+
+        <!-- Spalte 1: Index / Badge (10%) -->
+        <TextView
+            android:id="@+id/speakeridEmbeddingsRowColIndex"
+            style="@style/Speakerid.Text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.10"
+            android:gravity="center"
+            android:textSize="10sp"
+            android:textColor="@color/speakerid_text_secondary" />
+
+        <!-- Spalte 2: Cluster-ID (18%), 12sp bold, row_color -->
+        <TextView
+            android:id="@+id/speakeridEmbeddingsRowColCluster"
+            style="@style/Speakerid.Text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.18"
+            android:layout_marginStart="6dp"
+            android:gravity="start|center_vertical"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- Spalte 3: Zeitstempel (15%) -->
+        <TextView
+            android:id="@+id/speakeridEmbeddingsRowColTimestamp"
+            style="@style/Speakerid.Text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.15"
+            android:layout_marginStart="6dp"
+            android:gravity="end|center_vertical"
+            android:textSize="10sp"
+            android:textColor="@color/speakerid_text_secondary" />
+
+        <!-- Spalte 4: VAD/Redeanteil (15%) -->
+        <TextView
+            android:id="@+id/speakeridEmbeddingsRowColVad"
+            style="@style/Speakerid.Text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.15"
+            android:layout_marginStart="6dp"
+            android:gravity="end|center_vertical"
+            android:textSize="10sp"
+            android:textColor="@color/speakerid_text_secondary" />
+
+        <!-- Spalte 5: Vektor-Vorschau (42%) -->
+        <TextView
+            android:id="@+id/speakeridEmbeddingsRowColVector"
+            style="@style/Speakerid.Text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.42"
+            android:layout_marginStart="6dp"
+            android:gravity="end|center_vertical"
+            android:textSize="9sp"
+            android:textColor="@color/speakerid_text_secondary" />
+    </LinearLayout>
+</FrameLayout>

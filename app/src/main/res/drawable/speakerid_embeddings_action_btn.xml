@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Action-Bar-Buttons (Refresh / + P / + C / + Cl): im .kv schlichte Kivy-
+  Default-Buttons (graue defaulttheme-Textur, leicht gerundete Ecken).
+  Pressed = RGB * 0.8 (Port-Konvention pressedVariant), Disabled dunkler.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_embeddings_btn_disabled" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_embeddings_btn_pressed" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_embeddings_btn_normal" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vergleichs-Box: surface_dim + RoundedRectangle radius [0, 0, 10, 10]
+  (Kivy-Reihenfolge tl, tr, br, bl -> nur untere Ecken gerundet).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_surface_dim" />
+    <corners
+        android:topLeftRadius="0dp"
+        android:topRightRadius="0dp"
+        android:bottomRightRadius="10dp"
+        android:bottomLeftRadius="10dp" />
+</shape>

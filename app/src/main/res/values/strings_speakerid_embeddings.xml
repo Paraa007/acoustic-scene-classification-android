@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Embeddings-Screens - Texte exakt aus siqas
+  `gui/screens/embeddings/embeddings.kv` bzw. `embeddings.py`/`point_map.py`.
+-->
+<resources>
+    <!-- Top-Navigation-Bar -->
+    <string name="speakerid_embeddings_title">Sprecher-Projektion</string>
+
+    <!-- Status-Label ueber der Karte ("Berechne..." if root.is_processing else "") -->
+    <string name="speakerid_embeddings_processing">Berechne...</string>
+
+    <!-- Action-Bar -->
+    <string name="speakerid_embeddings_btn_refresh">Refresh</string>
+    <string name="speakerid_embeddings_btn_add_point">+ P</string>
+    <string name="speakerid_embeddings_btn_add_centroid">+ C</string>
+    <string name="speakerid_embeddings_btn_add_cluster">+ Cl</string>
+
+    <!-- Details-Spalte -->
+    <string name="speakerid_embeddings_details_title">Details &amp; Vergleich</string>
+    <string name="speakerid_embeddings_hover_placeholder">Hover über einen Punkt für Details</string>
+    <!-- " " + type + " — Cluster: " + cluster (fuehrendes Leerzeichen aus dem .kv) -->
+    <string name="speakerid_embeddings_hover_fmt">" %1$s — Cluster: %2$s"</string>
+    <!-- point_map.py: hovered_data["type"] -->
+    <string name="speakerid_embeddings_hover_type_point">Punkt</string>
+    <string name="speakerid_embeddings_hover_type_centroid">Centroid</string>
+
+    <!-- Spalten-Header der Tabelle -->
+    <string name="speakerid_embeddings_col_index">#</string>
+    <string name="speakerid_embeddings_col_cluster">Cluster</string>
+    <string name="speakerid_embeddings_col_timestamp">Zeitpunkt</string>
+    <string name="speakerid_embeddings_col_vad">Redeanteil</string>
+    <string name="speakerid_embeddings_col_vector">Vektor\n(Vorschau)</string>
+
+    <!-- Sektions-Header der Tabelle (embeddings.py::_do_refresh_ui) -->
+    <string name="speakerid_embeddings_section_centroids">CENTROIDS</string>
+    <string name="speakerid_embeddings_section_embeddings">EMBEDDINGS</string>
+
+    <!-- Tabellenzellen -->
+    <string name="speakerid_embeddings_row_point_fmt">P%1$s</string>
+    <string name="speakerid_embeddings_row_centroid_badge">C</string>
+    <string name="speakerid_embeddings_row_centroid_fmt">C %1$s</string>
+
+    <!-- Vergleichs-Box -->
+    <string name="speakerid_embeddings_compare_title">Mathematischer Vergleich\n(192D Cosinus)</string>
+    <!-- Initialwert der Kivy-Property comparison_text -->
+    <string name="speakerid_embeddings_compare_initial">Wähle zwei Objekte</string>
+    <!-- _update_comparison_text bei len(sel) != 2 -->
+    <string name="speakerid_embeddings_compare_select_two">Wähle 2 Objekte</string>
+    <string name="speakerid_embeddings_compare_err_index">Fehler: Index außerhalb</string>
+    <string name="speakerid_embeddings_compare_err_no_vector">Fehler: Kein Vektor</string>
+    <string name="speakerid_embeddings_compare_err_zero_vector">Fehler: Null-Vektor</string>
+    <string name="speakerid_embeddings_compare_err_fmt">Fehler: %1$s</string>
+    <!-- "{names[0]} vs {names[1]}" + Zeile 2 fett (Kivy-Markup [b]..[/b]) -->
+    <string name="speakerid_embeddings_compare_names_fmt">%1$s vs %2$s</string>
+    <string name="speakerid_embeddings_compare_result_fmt">Cosinus-Ähnlichkeit: %1$s</string>
+</resources>

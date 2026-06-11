@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas `gui/screens/embeddings/embeddings.kv` (<EmbeddingsScreen>):
+  vertikale Box, padding 10, spacing 10, bg_color.
+
+  Responsive-Split wie im .kv (`orientation: "vertical" if root.width < dp(750)
+  else "horizontal"`): XML enthaelt den Vertikal-Fall (Karte size_hint_y 0.65,
+  Details 1.0); ab 750dp Breite stellt das Fragment auf horizontal
+  (0.63 / 0.37) um.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/speakeridEmbeddingsRoot"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.fzi.speakerid.ui.embeddings.SpeakerEmbeddingsFragment">
+
+    <!-- EXPERTEN-TAB-LEISTE (main.kv tab_bar_container, 48dp) — in Kivy
+         global ueber dem ScreenManager, sichtbar bei expert_lab_active;
+         Sichtbarkeit setzt das Fragment. -->
+    <com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
+        android:id="@+id/speakeridEmbeddingsTabBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:visibility="gone" />
+
+    <!-- Screen-Inhalt = <EmbeddingsScreen>-Wurzel (padding 10dp) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <!-- TOP NAVIGATION BAR: Hoehe dp(60), padding [12,0], surface_dim -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:background="@color/speakerid_surface_dim">
+
+            <!-- "Sprecher-Projektion": font_size min(sp(20), width*0.05) -> Code -->
+            <TextView
+                android:id="@+id/speakeridEmbeddingsTitle"
+                style="@style/Speakerid.Text"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="start|center_vertical"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/speakerid_secondary"
+                android:text="@string/speakerid_embeddings_title" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <!-- LogoBar: logo_width dp(130), hide_narrow True -->
+            <com.fzi.speakerid.ui.widgets.SpeakerIdLogoBar
+                android:id="@+id/speakeridEmbeddingsLogoBar"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                app:speakeridHideNarrow="true"
+                app:speakeridLogoWidth="130dp" />
+        </LinearLayout>
+
+        <!-- MAIN CONTENT AREA (id: main_content_split, spacing 12dp) -->
+        <LinearLayout
+            android:id="@+id/speakeridEmbeddingsMainSplit"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical">
+
+            <!-- LINKE/OBERE SPALTE: MAP & CONTROLS (spacing 10dp) -->
+            <LinearLayout
+                android:id="@+id/speakeridEmbeddingsMapColumn"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0.65"
+                android:orientation="vertical">
+
+                <!-- Header (nur Status-Label rechts), Hoehe 32dp -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp">
+
+                    <TextView
+                        android:id="@+id/speakeridEmbeddingsStatusLabel"
+                        style="@style/Speakerid.Text"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="end|bottom"
+                        android:textSize="15sp"
+                        android:textStyle="italic"
+                        android:textColor="@color/speakerid_embeddings_status_orange"
+                        tools:text="@string/speakerid_embeddings_processing" />
+                </FrameLayout>
+
+                <!-- Karte (RelativeLayout mit surface_dim, Radius 10, Border 1.2) -->
+                <FrameLayout
+                    android:id="@+id/speakeridEmbeddingsMapCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_embeddings_map_bg">
+
+                    <com.fzi.speakerid.ui.embeddings.SpeakerEmbeddingsPointMapView
+                        android:id="@+id/speakeridEmbeddingsPointMap"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </FrameLayout>
+
+                <!-- Action Bar: Hoehe 44dp, spacing 6dp -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/speakeridEmbeddingsBtnRefresh"
+                        style="@style/Speakerid.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@drawable/speakerid_embeddings_action_btn"
+                        android:textColor="@color/speakerid_embeddings_btn_text"
+                        android:textSize="11sp"
+                        android:gravity="center"
+                        android:text="@string/speakerid_embeddings_btn_refresh" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/speakeridEmbeddingsBtnAddPoint"
+                        style="@style/Speakerid.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/speakerid_embeddings_action_btn"
+                        android:textColor="@color/speakerid_embeddings_btn_text"
+                        android:textSize="11sp"
+                        android:textStyle="normal"
+                        android:text="@string/speakerid_embeddings_btn_add_point" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/speakeridEmbeddingsBtnAddCentroid"
+                        style="@style/Speakerid.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/speakerid_embeddings_action_btn"
+                        android:textColor="@color/speakerid_embeddings_btn_text"
+                        android:textSize="11sp"
+                        android:textStyle="normal"
+                        android:text="@string/speakerid_embeddings_btn_add_centroid" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/speakeridEmbeddingsBtnAddCluster"
+                        style="@style/Speakerid.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/speakerid_embeddings_action_btn"
+                        android:textColor="@color/speakerid_embeddings_btn_text"
+                        android:textSize="11sp"
+                        android:text="@string/speakerid_embeddings_btn_add_cluster" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- RECHTE/UNTERE SPALTE: DETAILS (spacing 8dp) -->
+            <LinearLayout
+                android:id="@+id/speakeridEmbeddingsDetailsColumn"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Speakerid.Text"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:gravity="center"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/speakerid_secondary"
+                    android:text="@string/speakerid_embeddings_details_title" />
+
+                <!-- Hover-Tooltip Box: 50dp, padding [10,4], surface_dim radius 6 -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="8dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:background="@drawable/speakerid_embeddings_hover_bg">
+
+                    <TextView
+                        android:id="@+id/speakeridEmbeddingsHoverLabel"
+                        style="@style/Speakerid.Text"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="start|center_vertical"
+                        android:textSize="11sp"
+                        android:textStyle="italic"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:text="@string/speakerid_embeddings_hover_placeholder" />
+                </FrameLayout>
+
+                <!-- Tabelle: padding [4,0], spacing 4dp -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
+
+                    <!-- Filter-Leiste: ScrollView 34dp, Chips-Box padding [2,3] -->
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="34dp"
+                        android:scrollbars="none"
+                        android:overScrollMode="never">
+
+                        <LinearLayout
+                            android:id="@+id/speakeridEmbeddingsFilterBar"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp" />
+                    </HorizontalScrollView>
+
+                    <!-- Spalten-Header: 22dp, padding [10,0] -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp">
+
+                        <TextView
+                            style="@style/Speakerid.Text"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0.10"
+                            android:gravity="center_horizontal|bottom"
+                            android:textSize="10sp"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:text="@string/speakerid_embeddings_col_index" />
+
+                        <TextView
+                            style="@style/Speakerid.Text"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0.18"
+                            android:gravity="start|bottom"
+                            android:textSize="10sp"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:text="@string/speakerid_embeddings_col_cluster" />
+
+                        <TextView
+                            style="@style/Speakerid.Text"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0.15"
+                            android:gravity="end|bottom"
+                            android:textSize="10sp"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:text="@string/speakerid_embeddings_col_timestamp" />
+
+                        <TextView
+                            style="@style/Speakerid.Text"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0.15"
+                            android:gravity="end|bottom"
+                            android:textSize="10sp"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:text="@string/speakerid_embeddings_col_vad" />
+
+                        <TextView
+                            style="@style/Speakerid.Text"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="0.42"
+                            android:gravity="end|bottom"
+                            android:textSize="10sp"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:text="@string/speakerid_embeddings_col_vector" />
+                    </LinearLayout>
+
+                    <!-- RecycleView -> Scroll-Liste der TableRows -->
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginTop="4dp"
+                        android:scrollbars="vertical"
+                        android:fillViewport="false">
+
+                        <LinearLayout
+                            android:id="@+id/speakeridEmbeddingsTableContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+                    </ScrollView>
+                </LinearLayout>
+
+                <!-- Vergleichs-Box: 110dp, padding 14dp, untere Ecken gerundet -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="110dp"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical"
+                    android:padding="14dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:background="@drawable/speakerid_embeddings_compare_bg">
+
+                    <!-- 18dp-Box; 2-zeilige Textur ueberragt wie in Kivy (kein Clip) -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="18dp"
+                        style="@style/Speakerid.Text"
+                        android:gravity="center"
+                        android:textSize="10sp"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:text="@string/speakerid_embeddings_compare_title" />
+
+                    <TextView
+                        android:id="@+id/speakeridEmbeddingsComparisonLabel"
+                        style="@style/Speakerid.Text"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:textSize="13sp"
+                        android:textColor="@color/speakerid_text_primary"
+                        android:text="@string/speakerid_embeddings_compare_initial" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

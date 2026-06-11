@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Farben des Embeddings-Screens (nur dort verwendet) - exakt aus
+  `gui/screens/embeddings/embeddings.kv`.
+-->
+<resources>
+    <!-- Status-Label "Berechne...": color 1, 0.7, 0, 1 -->
+    <color name="speakerid_embeddings_status_orange">#FFB300</color>
+
+    <!-- Selektierte Zeile: secondary_color[:3] + [0.15] = #0E2356 mit 15% Alpha -->
+    <color name="speakerid_embeddings_row_selected">#260E2356</color>
+
+    <!--
+      Kivy-Default-Button der Action-Bar (kein background_normal-Override im
+      .kv): dunkles Grau der defaulttheme-Textur; pressed = RGB*0.8
+      (Port-Konvention pressedVariant); disabled = dunklere Disabled-Textur.
+    -->
+    <color name="speakerid_embeddings_btn_normal">#585858</color>
+    <color name="speakerid_embeddings_btn_pressed">#464646</color>
+    <color name="speakerid_embeddings_btn_disabled">#3F3F3F</color>
+    <!-- Kivy disabled_color [1,1,1,0.3] -->
+    <color name="speakerid_embeddings_btn_text_disabled">#4DFFFFFF</color>
+</resources>
