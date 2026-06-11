@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Port des "Weiter"-Buttons aus siqas `target_setup.kv`:
+  - aktiv:    background primary, deaktiviert: background surface
+  - canvas.after: Line-Rechteck (scharfe Ecken) in border_color, Breite dp(1.5)
+  - pressed:  primary * 0.8 (Kivy-Pressed-Konvention dieses Ports,
+              #2FAE7A -> #258B61)
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_surface" />
+            <stroke android:width="1.5dp" android:color="@color/speakerid_border" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#258B61" />
+            <stroke android:width="1.5dp" android:color="@color/speakerid_border" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_primary" />
+            <stroke android:width="1.5dp" android:color="@color/speakerid_border" />
+        </shape>
+    </item>
+</selector>

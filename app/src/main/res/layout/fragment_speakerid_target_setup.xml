@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Port von siqas `gui/screens/target_setup/target_setup.kv`.
+
+  Kivy-BoxLayout (vertical, padding dp(10), spacing dp(20)) mit vier Kindern,
+  size_hint_y 0.2 / 0.8 / 0.3 / 0.2 -> LinearLayout-Weights (Kivy normalisiert
+  die Hints, LinearLayout-Weights tun dasselbe). spacing -> layout_marginTop.
+  Responsive Schriftgroessen (min(sp(x), root.width * f)) und die Breite des
+  "Weiter"-Buttons setzt TargetSetupFragment zur Laufzeit.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <!-- HEADER: Erklaerung (size_hint_y: 0.2, Label valign 'bottom') -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.2"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/titleLabel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="bottom|center_horizontal"
+            android:text="@string/speakerid_target_setup_title"
+            android:textColor="@color/speakerid_primary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- CENTER: Die zwei Wege (size_hint_y: 0.8, spacing dp(30),
+         padding [40, 20, 40, 20]) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="0.8"
+        android:orientation="horizontal"
+        android:paddingLeft="40dp"
+        android:paddingTop="20dp"
+        android:paddingRight="40dp"
+        android:paddingBottom="20dp">
+
+        <!-- Weg 1: Mikrofon -->
+        <com.fzi.speakerid.ui.targetsetup.TargetSetupCubeButton
+            android:id="@+id/recordButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="@string/speakerid_target_setup_record_button"
+            android:textSize="15sp" />
+
+        <!-- Weg 2: Datei -->
+        <com.fzi.speakerid.ui.targetsetup.TargetSetupCubeButton
+            android:id="@+id/fileButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="30dp"
+            android:layout_weight="1"
+            android:text="@string/speakerid_target_setup_file_button"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <!-- FOOTER: Status + Weiter (size_hint_y: 0.3, spacing SPACING_SECTION dp(15)) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="0.3"
+        android:orientation="vertical">
+
+        <!-- Kivy-Label ohne color-Property -> Default [1,1,1,1]; die Farbe wird
+             zur Laufzeit per Status-Markup ([color=00AA00]/[color=AA0000]) gesetzt. -->
+        <TextView
+            android:id="@+id/statusLabel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.5"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:text="@string/speakerid_target_setup_status_initial"
+            android:textColor="@color/speakerid_white"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- AnchorLayout (center/center) -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="15dp"
+            android:layout_weight="0.5">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/nextButton"
+                android:layout_width="280dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:background="@drawable/speakerid_target_setup_next_btn"
+                android:elevation="0dp"
+                android:enabled="false"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:stateListAnimator="@null"
+                android:text="@string/speakerid_target_setup_next"
+                android:textAllCaps="false"
+                android:textColor="@color/speakerid_target_setup_next_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Zurueck-Button (AnchorLayout size_hint_y: 0.2, anchor left/bottom,
+         padding dp(10)) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="0.2"
+        android:padding="10dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/backButton"
+            android:layout_width="110dp"
+            android:layout_height="44dp"
+            android:layout_gravity="bottom|start"
+            android:background="@drawable/speakerid_target_setup_back_btn"
+            android:elevation="0dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_target_setup_back"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+</LinearLayout>

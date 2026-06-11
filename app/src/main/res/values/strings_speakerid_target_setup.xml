@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte 1:1 aus siqas `gui/screens/target_setup/target_setup.kv` /
+  `target_setup.py` sowie aus dem Target-Pfad von
+  `gui/screens/explorer/explorer.py` (Dateiauswahl-Statusmeldungen).
+-->
+<resources>
+    <!-- target_setup.kv -->
+    <string name="speakerid_target_setup_title">Schritt 1:\nZielperson definieren</string>
+    <string name="speakerid_target_setup_record_button">Live Aufnehmen\n(Mikrofon)</string>
+    <string name="speakerid_target_setup_file_button">Audiodatei\nauswählen</string>
+    <string name="speakerid_target_setup_next">Weiter</string>
+    <string name="speakerid_target_setup_back">← Zurück</string>
+
+    <!-- target_setup.py Status-Texte -->
+    <string name="speakerid_target_setup_status_initial">Noch kein Zielsprecher definiert.</string>
+    <string name="speakerid_target_setup_status_ready">Zielsprecher erfolgreich erfasst!</string>
+    <string name="speakerid_target_setup_status_not_ready">Bitte nehmen Sie Ihre Stimme auf oder laden Sie eine Datei.</string>
+    <string name="speakerid_target_setup_error_recorder">Fehler: Recorder nicht verfügbar</string>
+    <string name="speakerid_target_setup_error_explorer">Fehler: Explorer nicht verfügbar</string>
+    <string name="speakerid_target_setup_error_arena">Fehler: Arena nicht verfügbar</string>
+    <string name="speakerid_target_setup_define_first">Bitte zuerst einen Zielsprecher definieren</string>
+
+    <!-- explorer.py (Target-Modus der Dateiauswahl) -->
+    <string name="speakerid_target_setup_status_analyzing">Analysiere %1$d Datei(en)…</string>
+    <string name="speakerid_target_setup_status_target_set">✓ Target gesetzt: %1$s</string>
+    <string name="speakerid_target_setup_error_saving">Fehler beim Speichern: %1$s</string>
+    <string name="speakerid_target_setup_error_generic">Fehler: %1$s</string>
+</resources>
