@@ -1,6 +1,8 @@
 package com.fzi.speakerid.ui
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import java.util.concurrent.Executors
 
 /**
@@ -33,19 +35,32 @@ object SpeakerLiveSession {
             val created = SpeakerSessionController(
                 SpeakerIdDataManager.getInstance(appContext),
                 AssetModelInstaller.modelsDir(appContext),
+                appContext,
             )
             controller = created
             return created
         }
     }
 
-    /** Port von `app.live_controller.toggle_live()` (Modelle sicherstellen, dann togglen). */
-    fun toggleLive(context: Context) {
+    /**
+     * Port von `app.live_controller.toggle_live()` (Modelle sicherstellen,
+     * dann togglen). [onStartFailed] wird auf dem Main-Thread aufgerufen,
+     * wenn ein START-Versuch fehlgeschlagen ist (Grund, ggf. null) — Python
+     * loggt solche Fehler nur; auf Android zeigt der Screen einen Hinweis.
+     */
+    fun toggleLive(
+        context: Context,
+        onStartFailed: ((SpeakerSessionController.StartFailure?) -> Unit)? = null,
+    ) {
         val appContext = context.applicationContext
         executor.execute {
             try {
                 AssetModelInstaller.install(appContext)
-                get(appContext).toggleLive()
+                val current = get(appContext)
+                if (!current.toggleLive() && onStartFailed != null) {
+                    val reason = current.lastStartFailure
+                    Handler(Looper.getMainLooper()).post { onStartFailed(reason) }
+                }
             } catch (_: Exception) {
                 // Python loggt Start-Fehler nur ("Fehler beim Start") — Session bleibt aus.
             }

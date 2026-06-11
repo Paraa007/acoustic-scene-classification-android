@@ -1,12 +1,16 @@
 package com.fzi.speakerid.ui.physicsarena
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -19,6 +23,7 @@ import com.fzi.acousticscene.databinding.FragmentSpeakeridPhysicsArenaBinding
 import com.fzi.speakerid.ui.SpeakerIdDataManager
 import com.fzi.speakerid.ui.SpeakerIdTheme
 import com.fzi.speakerid.ui.SpeakerLiveSession
+import com.fzi.speakerid.ui.SpeakerSessionController
 import java.util.Locale
 import kotlin.math.min
 import kotlinx.coroutines.delay
@@ -52,6 +57,22 @@ class PhysicsArenaFragment : Fragment() {
 
     private var lastLayoutWidth = 0
 
+    /**
+     * RECORD_AUDIO-Laufzeit-Permission (Android-Pflicht vor AudioRecord).
+     * Nicht dem gelieferten Boolean vertrauen, sondern den echten
+     * Permission-Stand pruefen — der Controller verweigert den Start ohne
+     * Berechtigung ohnehin (Defense in depth).
+     */
+    private val recordPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        if (hasRecordPermission()) {
+            toggleLive()
+        } else {
+            showStartHint(getString(R.string.speakerid_physics_mic_permission_denied))
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -74,7 +95,7 @@ class PhysicsArenaFragment : Fragment() {
         binding.labelTimeStatus.text = "$totalTimeStr\n$statusText"
 
         binding.btnBack.setOnClickListener { goBack() }
-        binding.btnToggle.setOnClickListener { SpeakerLiveSession.toggleLive(requireContext()) }
+        binding.btnToggle.setOnClickListener { onToggleClicked() }
         binding.btnEval.setOnClickListener { finishAnalysis() }
 
         // BaseScreen `_on_keyboard` (key 27) -> go_back()
@@ -220,6 +241,48 @@ class PhysicsArenaFragment : Fragment() {
     }
 
     // ── Aktionen ─────────────────────────────────────────────────────────────
+
+    /**
+     * START/PAUSE: vor einem Start mit ECHTEM Mikrofon erst die
+     * RECORD_AUDIO-Permission sicherstellen (Stopp und Datei-Simulation
+     * brauchen keine); Original-Pendant ist `root.toggle_live()`.
+     */
+    private fun onToggleClicked() {
+        val ctx = requireContext()
+        val controller = SpeakerLiveSession.get(ctx)
+        val wantsMicStart =
+            !controller.isLiveProcessing.value && !dm.useVirtualMic.value
+        if (wantsMicStart && !hasRecordPermission()) {
+            recordPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            toggleLive()
+        }
+    }
+
+    /** `app.live_controller.toggle_live()` + Hinweis, falls der Start scheitert. */
+    private fun toggleLive() {
+        SpeakerLiveSession.toggleLive(requireContext()) { failure ->
+            if (_binding == null) return@toggleLive
+            val msg = when (failure) {
+                SpeakerSessionController.StartFailure.MIC_PERMISSION_MISSING ->
+                    getString(R.string.speakerid_physics_mic_permission_denied)
+                SpeakerSessionController.StartFailure.SIM_FILE_MISSING ->
+                    getString(R.string.speakerid_physics_sim_file_missing)
+                else -> getString(R.string.speakerid_physics_start_failed)
+            }
+            showStartHint(msg)
+        }
+    }
+
+    private fun hasRecordPermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            requireContext(), Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+    /** Sichtbarer deutscher Hinweis statt des stillen Python-Konsolen-Logs. */
+    private fun showStartHint(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+    }
 
     /** Port von `finish_analysis`: Live-Session beenden, zur Statistik. */
     private fun finishAnalysis() {

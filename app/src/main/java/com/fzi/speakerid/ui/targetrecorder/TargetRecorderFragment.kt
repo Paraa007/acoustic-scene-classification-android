@@ -112,20 +112,19 @@ class TargetRecorderFragment : Fragment() {
         if (_binding != null) navigateBack()
     }
 
-    /** RECORD_AUDIO-Laufzeit-Permission (Android-Pflicht vor AudioRecord). */
+    /**
+     * RECORD_AUDIO-Laufzeit-Permission (Android-Pflicht vor AudioRecord).
+     * Dem gelieferten Boolean wird nicht vertraut — entscheidend ist der
+     * echte Permission-Stand nach der Dialog-Rueckkehr; [startRecording]
+     * prueft ihn zusaetzlich selbst (Defense in depth).
+     */
     private val recordPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
+    ) { _ ->
+        if (hasRecordPermission()) {
             startRecording()
         } else {
-            setStatus(
-                getString(
-                    R.string.speakerid_target_recorder_mic_error,
-                    getString(R.string.speakerid_target_recorder_permission_denied),
-                ),
-                neutralStatusColor(),
-            )
+            showPermissionDeniedStatus()
         }
     }
 
@@ -173,18 +172,39 @@ class TargetRecorderFragment : Fragment() {
     }
 
     private fun startRecordingWithPermission() {
-        val granted = ContextCompat.checkSelfPermission(
-            requireContext(), Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-        if (granted) {
+        if (hasRecordPermission()) {
             startRecording()
         } else {
             recordPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 
+    private fun hasRecordPermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            requireContext(), Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+    /** Status "Mikrofon-Fehler: Mikrofon-Berechtigung verweigert". */
+    private fun showPermissionDeniedStatus() {
+        setStatus(
+            getString(
+                R.string.speakerid_target_recorder_mic_error,
+                getString(R.string.speakerid_target_recorder_permission_denied),
+            ),
+            neutralStatusColor(),
+        )
+    }
+
     /** Port von `start_recording`. */
     private fun startRecording() {
+        // Harte Sperre: Ohne erteilte RECORD_AUDIO-Permission startet weder
+        // der Recorder noch der Timer — egal, ueber welchen Pfad der Aufruf
+        // kommt (Button, Permission-Callback).
+        if (!hasRecordPermission()) {
+            showPermissionDeniedStatus()
+            return
+        }
+
         isRecording = true
         synchronized(frames) { frames.clear() }
         startTime = System.currentTimeMillis()

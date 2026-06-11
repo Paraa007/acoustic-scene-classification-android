@@ -30,4 +30,12 @@
     <string name="speakerid_physics_row_speaker_fmt">Sprecher %1$s</string>
     <!-- Target-Markierung (ArenaTableRow + bubble_widget.kv): "⁂" -->
     <string name="speakerid_physics_target_marker">⁂</string>
+
+    <!-- Android-Zusatz: Start-Fehler sichtbar machen (Python loggt nur auf
+         die Konsole; live_processor.py start()). -->
+    <string name="speakerid_physics_mic_permission_denied">Ohne Mikrofon-Berechtigung kann keine Aufnahme gestartet werden.</string>
+    <!-- live_processor.py: "Fehler: Simulations-Datei nicht gefunden unter ..." -->
+    <string name="speakerid_physics_sim_file_missing">Simulations-Datei nicht gefunden. Bitte eine Audiodatei wählen oder das simulierte Mikrofon in den Einstellungen ausschalten.</string>
+    <!-- live_processor.py: "Fehler beim Start: ..." -->
+    <string name="speakerid_physics_start_failed">Fehler beim Start der Live-Analyse.</string>
 </resources>

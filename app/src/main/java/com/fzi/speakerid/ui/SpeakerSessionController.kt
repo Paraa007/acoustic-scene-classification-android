@@ -1,6 +1,10 @@
 package com.fzi.speakerid.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.fzi.speakerid.audio.SpeakerAudioRecorder
 import com.fzi.speakerid.library.LiveProcessor
 import com.fzi.speakerid.library.LiveProcessorConfig
@@ -48,7 +52,20 @@ class SpeakerSessionController(
     private val dataManager: SpeakerIdDataManager,
     /** ONNX-Modellverzeichnis, z. B. von [AssetModelInstaller.install]. */
     private val modelsDir: File,
+    /**
+     * App-Context fuer den RECORD_AUDIO-Check vor dem Mikrofon-Start
+     * (Android-Pflicht; null nur fuer kontextfreie Tests — dann entfaellt
+     * der Check wie im Original).
+     */
+    private val appContext: Context? = null,
 ) {
+
+    /** Grund des letzten fehlgeschlagenen [start] (fuer UI-Hinweise). */
+    enum class StartFailure { MIC_PERMISSION_MISSING, SIM_FILE_MISSING, ERROR }
+
+    @Volatile
+    var lastStartFailure: StartFailure? = null
+        private set
 
     private val _isLiveProcessing = MutableStateFlow(false)
 
@@ -75,13 +92,21 @@ class SpeakerSessionController(
     /**
      * Port von `toggle_live`: Start/Stopp mit 0,3-s-Debounce gegen
      * Touch-Doppelevents.
+     *
+     * @return false nur, wenn ein Start-Versuch fehlgeschlagen ist
+     *   (Grund in [lastStartFailure]); Stopp/Debounce liefern true.
      */
-    fun toggleLive() {
+    fun toggleLive(): Boolean {
         val now = System.nanoTime()
-        if (now - lastToggleNanos < 300_000_000L) return
+        if (now - lastToggleNanos < 300_000_000L) return true
         lastToggleNanos = now
 
-        if (_isLiveProcessing.value) stop() else start()
+        return if (_isLiveProcessing.value) {
+            stop()
+            true
+        } else {
+            start()
+        }
     }
 
     /**
@@ -98,7 +123,18 @@ class SpeakerSessionController(
      */
     fun start(): Boolean {
         if (_isLiveProcessing.value) return true
+        lastStartFailure = null
         try {
+            // Android-Pflicht VOR dem Mikrofon-Start: ohne erteilte
+            // RECORD_AUDIO-Permission darf KEINE Aufnahme beginnen (auch
+            // nicht optimistisch) — sonst laeuft die Session-UI weiter,
+            // obwohl der Nutzer die Berechtigung verweigert hat.
+            if (!dataManager.useVirtualMic.value && !hasRecordPermission()) {
+                Log.e(TAG, "Fehler: RECORD_AUDIO-Berechtigung fehlt — Start abgelehnt.")
+                lastStartFailure = StartFailure.MIC_PERMISSION_MISSING
+                return false
+            }
+
             val processor = buildLiveProcessor()
             liveProcessor = processor
 
@@ -125,6 +161,7 @@ class SpeakerSessionController(
                 val simFile = File(dataManager.currentAudioPath.value)
                 if (!simFile.isFile) {
                     Log.e(TAG, "Fehler: Simulations-Datei nicht gefunden unter $simFile")
+                    lastStartFailure = StartFailure.SIM_FILE_MISSING
                     return false
                 }
                 Log.i(TAG, "SIMULATION wird gestartet: ${simFile.name}")
@@ -137,9 +174,18 @@ class SpeakerSessionController(
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Fehler beim Start: $e")
+            lastStartFailure = StartFailure.ERROR
             _isLiveProcessing.value = false
             return false
         }
+    }
+
+    /** RECORD_AUDIO erteilt? Ohne [appContext] (Tests) immer true. */
+    private fun hasRecordPermission(): Boolean {
+        val ctx = appContext ?: return true
+        return ContextCompat.checkSelfPermission(
+            ctx, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     /** Port von `LiveProcessor.stop`. */
