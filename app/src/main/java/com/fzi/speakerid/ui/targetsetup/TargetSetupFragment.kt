@@ -1,23 +1,18 @@
 package com.fzi.speakerid.ui.targetsetup
 
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.databinding.FragmentSpeakeridTargetSetupBinding
-import com.fzi.speakerid.ui.AssetModelInstaller
 import com.fzi.speakerid.ui.SpeakerIdDataManager
-import java.io.File
+import com.fzi.speakerid.ui.explorer.SpeakerExplorerFragment
 import kotlin.math.min
 
 /**
@@ -30,13 +25,11 @@ import kotlin.math.min
  *    (gruen "Zielsprecher erfolgreich erfasst!" bzw. rot "Bitte nehmen Sie
  *    Ihre Stimme auf...") -> hier [onResume].
  *  - "Live Aufnehmen (Mikrofon)" -> target_recorder.
- *  - "Audiodatei auswaehlen": Der Explorer-Screen existiert im Port nicht;
- *    stattdessen oeffnet ein SAF-Picker die WAV-Datei und der Target-Pfad des
- *    Explorers (`confirm_selection` im Modus "target" ->
- *    `generate_target_centroid_from_files` -> Cluster-"1"-Centroid +
- *    `save_target_cache` + `target_audio_path`) laeuft direkt auf diesem
- *    Screen ab, mit denselben Statusmeldungen ("Analysiere N Datei(en)…",
- *    "Fehler: ...").
+ *  - "Audiodatei auswaehlen" -> `go_to_explorer`: Explorer-Screen im Modus
+ *    "target" (Welle 2); dessen `confirm_selection` erzeugt den Cluster-"1"-
+ *    Centroid (`generate_target_centroid_from_files` + `save_target_cache` +
+ *    `target_audio_path`) und springt selbst hierher zurueck — `on_enter`
+ *    (onResume) zeigt dann den gruenen Ready-Status.
  *  - "Weiter" (nur aktiv bei is_target_ready) -> physics_arena.
  *  - ModernBackButton unten links -> zurueck (Hauptmenue).
  *  - Responsive Schriftklammern `min(sp(x), root.width * f)` und die Breite
@@ -50,20 +43,7 @@ class TargetSetupFragment : Fragment() {
 
     private lateinit var dm: SpeakerIdDataManager
 
-    private val mainHandler = Handler(Looper.getMainLooper())
-
     private var lastLayoutWidth = 0
-
-    /** Laeuft gerade eine Hintergrund-Analyse (Explorer-`confirm_selection`)? */
-    private var isAnalyzing = false
-
-    /**
-     * SAF-Ersatz fuer den Explorer im Modus "target" (WAV-Auswahl).
-     * `OpenDocument` statt `GetContent`, damit gezielt Audio waehlbar ist.
-     */
-    private val pickAudioLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri -> if (uri != null) onAudioFilePicked(uri) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -103,7 +83,6 @@ class TargetSetupFragment : Fragment() {
 
     /** Prueft, ob der Target-Cluster bereits einen Centroid (Vektor) hat. */
     private fun checkTargetStatus() {
-        if (isAnalyzing) return
         val targetCluster = dm.clusters["1"]
         if (targetCluster?.centroid != null) {
             binding.nextButton.isEnabled = true
@@ -136,10 +115,20 @@ class TargetSetupFragment : Fragment() {
         }
     }
 
-    /** Port von `go_to_explorer` (Explorer-Screen -> SAF-Picker). */
+    /**
+     * Port von `go_to_explorer`: `explorer.selection_mode = "target"` +
+     * Screenwechsel. Der Explorer navigiert nach erfolgreicher Analyse
+     * selbst zurueck (popBackStack auf dieses Fragment).
+     */
     private fun goToExplorer() {
         try {
-            pickAudioLauncher.launch(arrayOf("audio/*"))
+            findNavController().navigate(
+                R.id.speakeridExplorerFragment,
+                bundleOf(
+                    SpeakerExplorerFragment.ARG_SELECTION_MODE to
+                        SpeakerExplorerFragment.MODE_TARGET,
+                ),
+            )
         } catch (e: Exception) {
             setStatus(
                 getString(R.string.speakerid_target_setup_error_explorer),
@@ -168,80 +157,6 @@ class TargetSetupFragment : Fragment() {
         }
     }
 
-    // ── Explorer-Target-Pfad (confirm_selection im Modus "target") ──────────
-
-    private fun onAudioFilePicked(uri: Uri) {
-        isAnalyzing = true
-        // explorer.py: self.status_message = f"Analysiere {len(files)} Datei(en)…"
-        setStatus(
-            getString(R.string.speakerid_target_setup_status_analyzing, 1),
-            neutralStatusColor(),
-        )
-
-        val appContext = requireContext().applicationContext
-        Thread({
-            try {
-                // SAF-Uri in den Cache kopieren (WavReader braucht eine Datei).
-                val name = uri.lastPathSegment?.substringAfterLast('/')
-                    ?.substringAfterLast(':') ?: "target_pick.wav"
-                val cached = File(appContext.cacheDir, "speakerid_target_pick.wav")
-                appContext.contentResolver.openInputStream(uri).use { input ->
-                    requireNotNull(input) { "Datei nicht lesbar" }
-                    cached.outputStream().use { output -> input.copyTo(output) }
-                }
-
-                // generate_target_centroid_from_files([...])
-                val modelsDir = AssetModelInstaller.install(appContext)
-                val vector = TargetCentroidGenerator.generateFromFiles(
-                    listOf(cached), modelsDir
-                )
-                mainHandler.post { onTargetSuccess(vector, cached.absolutePath, name) }
-            } catch (e: Exception) {
-                val msg = e.message ?: e.toString()
-                mainHandler.post { onTargetError(msg) }
-            }
-        }, "TargetSetupAnalyze").apply {
-            isDaemon = true
-            start()
-        }
-    }
-
-    /** Port von explorer.py `_on_target_success`. */
-    private fun onTargetSuccess(targetVector: DoubleArray, filepath: String, displayName: String) {
-        isAnalyzing = false
-        if (_binding == null) return
-        try {
-            dm.clusters["1"]?.let { cluster ->
-                cluster.centroid = targetVector
-            }
-            dm.dispatchClusters()
-            dm.targetAudioPath.value = filepath
-            dm.saveTargetCache()
-            // explorer: "✓ Target gesetzt: name", danach zurueck zum target_setup,
-            // wo on_enter den gruenen Ready-Status setzt -> direkt anzeigen.
-            setStatus(
-                getString(R.string.speakerid_target_setup_status_target_set, displayName),
-                neutralStatusColor(),
-            )
-            checkTargetStatus()
-        } catch (e: Exception) {
-            setStatus(
-                getString(R.string.speakerid_target_setup_error_saving, e.message ?: e.toString()),
-                Color.parseColor("#AA0000"),
-            )
-        }
-    }
-
-    /** Port von explorer.py `_on_target_error`. */
-    private fun onTargetError(errorMsg: String) {
-        isAnalyzing = false
-        if (_binding == null) return
-        setStatus(
-            getString(R.string.speakerid_target_setup_error_generic, errorMsg),
-            Color.parseColor("#AA0000"),
-        )
-    }
-
     // ── UI-Helfer ────────────────────────────────────────────────────────────
 
     private fun setStatus(text: String, color: Int) {
@@ -249,10 +164,6 @@ class TargetSetupFragment : Fragment() {
         b.statusLabel.text = text
         b.statusLabel.setTextColor(color)
     }
-
-    /** Kivy-Label-Default [1,1,1,1] (Statuszeile ohne Markup). */
-    private fun neutralStatusColor(): Int =
-        ContextCompat.getColor(requireContext(), R.color.speakerid_white)
 
     /**
      * Responsive Groessen aus dem .kv:

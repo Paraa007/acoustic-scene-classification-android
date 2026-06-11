@@ -15,6 +15,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +24,7 @@ import androidx.navigation.fragment.findNavController
 import com.fzi.acousticscene.R
 import com.fzi.acousticscene.databinding.FragmentSpeakeridDashboardBinding
 import com.fzi.speakerid.ui.SpeakerIdDataManager
+import com.fzi.speakerid.ui.explorer.SpeakerExplorerFragment
 import com.fzi.speakerid.ui.settings.SpeakerSettingsState
 import com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
 import java.util.Locale
@@ -74,9 +76,28 @@ class SpeakerDashboardFragment : Fragment() {
             // kv: state: 'down' if screen_manager.current == 'dashboard'
             setActiveTab(SpeakerIdExpertTabBar.Tab.STATUS)
             onTabSelected = { tab ->
-                // kv on_release: screen_manager.current = 'diarization_report'
-                if (tab == SpeakerIdExpertTabBar.Tab.DIARIZATION) {
-                    findNavController().navigate(R.id.diarizationReportFragment)
+                // kv on_release: screen_manager.current = '<screen>' — der
+                // Explorer-Tab setzt zusaetzlich selection_mode = "analysis".
+                val nav = findNavController()
+                when (tab) {
+                    SpeakerIdExpertTabBar.Tab.EXPLORER -> nav.navigate(
+                        R.id.speakeridExplorerFragment,
+                        bundleOf(
+                            SpeakerExplorerFragment.ARG_SELECTION_MODE to
+                                SpeakerExplorerFragment.MODE_ANALYSIS,
+                        ),
+                    )
+                    SpeakerIdExpertTabBar.Tab.PIPELINE ->
+                        nav.navigate(R.id.speakeridPipelineFragment)
+                    SpeakerIdExpertTabBar.Tab.EMBEDDINGS ->
+                        nav.navigate(R.id.speakeridEmbeddingsFragment)
+                    SpeakerIdExpertTabBar.Tab.PERFORMANCE ->
+                        nav.navigate(R.id.speakeridPerformanceTestFragment)
+                    SpeakerIdExpertTabBar.Tab.SETTINGS ->
+                        nav.navigate(R.id.speakeridExpertSettingsFragment)
+                    SpeakerIdExpertTabBar.Tab.DIARIZATION ->
+                        nav.navigate(R.id.diarizationReportFragment)
+                    SpeakerIdExpertTabBar.Tab.STATUS -> Unit
                 }
             }
             onClose = {

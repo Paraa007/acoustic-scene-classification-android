@@ -24,9 +24,6 @@ import com.fzi.acousticscene.R
  *  - Klick auf den bereits aktiven Tab war in Kivy ein No-Op
  *    (`screen_manager.current = <gleicher Screen>`) -> Callback wird nur
  *    bei Tab-Wechsel gefeuert.
- *  - Welle-2-Tabs (Datei-Auswahl/Analyse/2D-Projektion/Performance-Test/
- *    Einstellungen) haben noch keinen Ziel-Screen im Port und sind bis zur
- *    Portierung deaktiviert.
  *  - X-Button: `app.expert_lab_active = False; current = 'main_menu'` ->
  *    [onClose]-Lambda (Flag + Navigation setzt der Fragment-Host).
  */
@@ -70,10 +67,6 @@ class SpeakerIdExpertTabBar @JvmOverloads constructor(
             Tab.DIARIZATION to findViewById(R.id.speakeridExpertTabDiarization),
         )
         for ((tab, view) in tabViews) {
-            if (tab in PENDING_WAVE_2) {
-                view.isEnabled = false
-                continue
-            }
             view.setOnClickListener {
                 if (tab != activeTab) onTabSelected?.invoke(tab)
             }
@@ -112,11 +105,4 @@ class SpeakerIdExpertTabBar @JvmOverloads constructor(
     }
 
     private fun dp(v: Float): Int = (v * resources.displayMetrics.density + 0.5f).toInt()
-
-    private companion object {
-        /** Screens, die erst in Welle 2 portiert werden. */
-        val PENDING_WAVE_2 = setOf(
-            Tab.EXPLORER, Tab.PIPELINE, Tab.EMBEDDINGS, Tab.PERFORMANCE, Tab.SETTINGS,
-        )
-    }
 }

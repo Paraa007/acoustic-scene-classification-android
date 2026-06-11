@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Navigationsgraph des SIQAS-Ports (Welle 1) — als nested graph in
+  Navigationsgraph des SIQAS-Ports (Welle 1 + 2) — als nested graph in
   nav_graph.xml eingebunden. Pendant zum Kivy-ScreenManager aus
   siqas gui/app.py: ein flacher Pool von Screens, das Hauptmenue ist der
   Einstieg ("main_menu"). Die Screens navigieren direkt ueber die
@@ -65,4 +65,36 @@
         android:id="@+id/speakerInfoFragment"
         android:name="com.fzi.speakerid.ui.info.SpeakerInfoFragment"
         android:label="SpeakerInfo" />
+
+    <!-- ── Welle 2: Dev-Tools des Experten-Labors ───────────────────────── -->
+
+    <!-- "explorer" — Datei-Auswahl (Sandbox-Dateibrowser) -->
+    <fragment
+        android:id="@+id/speakeridExplorerFragment"
+        android:name="com.fzi.speakerid.ui.explorer.SpeakerExplorerFragment"
+        android:label="SpeakerExplorer" />
+
+    <!-- "pipeline" — Schritt-fuer-Schritt-Analyse einer Audiodatei -->
+    <fragment
+        android:id="@+id/speakeridPipelineFragment"
+        android:name="com.fzi.speakerid.ui.pipeline.SpeakerPipelineFragment"
+        android:label="SpeakerPipeline" />
+
+    <!-- "embeddings" — 2D-Projektion der Embeddings -->
+    <fragment
+        android:id="@+id/speakeridEmbeddingsFragment"
+        android:name="com.fzi.speakerid.ui.embeddings.SpeakerEmbeddingsFragment"
+        android:label="SpeakerEmbeddings" />
+
+    <!-- "performance_test" — Benchmark der Pipeline-Stufen -->
+    <fragment
+        android:id="@+id/speakeridPerformanceTestFragment"
+        android:name="com.fzi.speakerid.ui.performancetest.SpeakerPerformanceTestFragment"
+        android:label="SpeakerPerformanceTest" />
+
+    <!-- "expert_settings" — Parameter &amp; KI -->
+    <fragment
+        android:id="@+id/speakeridExpertSettingsFragment"
+        android:name="com.fzi.speakerid.ui.expertsettings.SpeakerExpertSettingsFragment"
+        android:label="SpeakerExpertSettings" />
 </navigation>

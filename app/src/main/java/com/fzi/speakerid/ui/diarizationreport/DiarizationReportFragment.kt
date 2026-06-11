@@ -1,16 +1,13 @@
 package com.fzi.speakerid.ui.diarizationreport
 
-import android.content.Context
-import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +20,7 @@ import com.fzi.speakerid.library.pipeline.OnnxSessionProvider
 import com.fzi.speakerid.ui.AssetModelInstaller
 import com.fzi.speakerid.ui.SpeakerIdDataManager
 import com.fzi.speakerid.ui.SpeakerIdTheme
+import com.fzi.speakerid.ui.explorer.SpeakerExplorerFragment
 import com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
 import java.io.File
 import java.util.Locale
@@ -67,12 +65,6 @@ class DiarizationReportFragment : Fragment() {
     private var splitIsVertical: Boolean? = null
     private var provider: OnnxSessionProvider? = null
 
-    /** Ersatz fuer den Explorer-Screen: System-Dateiauswahl (SAF). */
-    private val wavPicker =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) onWavPicked(uri)
-        }
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -94,14 +86,32 @@ class DiarizationReportFragment : Fragment() {
             // kv: state: 'down' if screen_manager.current == 'diarization_report'
             setActiveTab(SpeakerIdExpertTabBar.Tab.DIARIZATION)
             onTabSelected = { tab ->
-                // kv "Status": screen_manager.current = 'dashboard' — das
-                // Dashboard liegt im Backstack (einziger Einstieg hierher),
-                // andernfalls frisch dorthin navigieren.
-                if (tab == SpeakerIdExpertTabBar.Tab.STATUS) {
-                    val nav = findNavController()
-                    if (!nav.popBackStack(R.id.speakerDashboardFragment, false)) {
-                        nav.navigate(R.id.speakerDashboardFragment)
-                    }
+                // kv on_release: screen_manager.current = '<screen>' — das
+                // Dashboard liegt meist im Backstack (Einstieg ins Labor),
+                // andernfalls frisch dorthin navigieren. Der Explorer-Tab
+                // setzt zusaetzlich selection_mode = "analysis" (main.kv).
+                val nav = findNavController()
+                when (tab) {
+                    SpeakerIdExpertTabBar.Tab.STATUS ->
+                        if (!nav.popBackStack(R.id.speakerDashboardFragment, false)) {
+                            nav.navigate(R.id.speakerDashboardFragment)
+                        }
+                    SpeakerIdExpertTabBar.Tab.EXPLORER -> nav.navigate(
+                        R.id.speakeridExplorerFragment,
+                        bundleOf(
+                            SpeakerExplorerFragment.ARG_SELECTION_MODE to
+                                SpeakerExplorerFragment.MODE_ANALYSIS,
+                        ),
+                    )
+                    SpeakerIdExpertTabBar.Tab.PIPELINE ->
+                        nav.navigate(R.id.speakeridPipelineFragment)
+                    SpeakerIdExpertTabBar.Tab.EMBEDDINGS ->
+                        nav.navigate(R.id.speakeridEmbeddingsFragment)
+                    SpeakerIdExpertTabBar.Tab.PERFORMANCE ->
+                        nav.navigate(R.id.speakeridPerformanceTestFragment)
+                    SpeakerIdExpertTabBar.Tab.SETTINGS ->
+                        nav.navigate(R.id.speakeridExpertSettingsFragment)
+                    SpeakerIdExpertTabBar.Tab.DIARIZATION -> Unit
                 }
             }
             onClose = {
@@ -114,6 +124,22 @@ class DiarizationReportFragment : Fragment() {
 
         binding.speakeridDiarizationChooseFileButton.setOnClickListener { chooseFile() }
         binding.speakeridDiarizationRefreshButton.setOnClickListener { updateReport() }
+
+        // Explorer-Rueckgabe ("diarization"-Mode) — Port von `on_selected_file`:
+        // bei NEU gewaehlter Datei automatisch rechnen, beim reinen
+        // Screen-Wechsel (kein Ergebnis im Handle) nicht.
+        val backStackEntry = findNavController().currentBackStackEntry
+        backStackEntry?.savedStateHandle
+            ?.getLiveData<String>(SpeakerExplorerFragment.RESULT_SELECTED_FILE)
+            ?.observe(viewLifecycleOwner) { path ->
+                if (!path.isNullOrEmpty()) {
+                    backStackEntry.savedStateHandle
+                        .remove<String>(SpeakerExplorerFragment.RESULT_SELECTED_FILE)
+                    selectedFile = path
+                    binding.speakeridDiarizationFileNameLabel.text = File(path).name
+                    updateReport()
+                }
+            }
 
         // "SPEAKER-CLUSTER STANDBILD (<projection_method>)" — live an dm gebunden
         viewLifecycleOwner.lifecycleScope.launch {
@@ -186,25 +212,19 @@ class DiarizationReportFragment : Fragment() {
         updateReport()
     }
 
-    /** Port von `choose_file` (Explorer-Ersatz: SAF-Auswahl). */
+    /**
+     * Port von `choose_file`: "Switches to the ExplorerScreen in diarization
+     * mode." — `explorer.selection_mode = "diarization"`, Rueckgabe des
+     * gewaehlten Pfads via savedStateHandle (siehe [onViewCreated]).
+     */
     private fun chooseFile() {
-        wavPicker.launch(arrayOf("audio/x-wav", "audio/wav", "audio/*"))
-    }
-
-    /** Port von `on_selected_file`: neue Datei -> automatisch rechnen. */
-    private fun onWavPicked(uri: Uri) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val file = withContext(Dispatchers.IO) { copyToCache(uri) }
-                selectedFile = file.absolutePath
-                binding.speakeridDiarizationFileNameLabel.text = file.name
-                updateReport()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "WAV-Auswahl fehlgeschlagen: $e")
-            }
-        }
+        findNavController().navigate(
+            R.id.speakeridExplorerFragment,
+            bundleOf(
+                SpeakerExplorerFragment.ARG_SELECTION_MODE to
+                    SpeakerExplorerFragment.MODE_DIARIZATION,
+            ),
+        )
     }
 
     /** Port von `update_report`. */
@@ -481,26 +501,6 @@ class DiarizationReportFragment : Fragment() {
             emptyList<Pair<Double, Double>>() to ""
         }
     }
-
-    /** Kopiert die SAF-Auswahl in den Cache (WavReader braucht einen Pfad). */
-    private fun copyToCache(uri: Uri): File {
-        val ctx = requireContext()
-        val name = queryDisplayName(ctx, uri)
-            ?: uri.lastPathSegment?.substringAfterLast('/')
-            ?: "selected.wav"
-        val dir = File(ctx.cacheDir, "speakerid_diarization").apply { mkdirs() }
-        val out = File(dir, name)
-        ctx.contentResolver.openInputStream(uri)?.use { input ->
-            out.outputStream().use { input.copyTo(it) }
-        } ?: throw IllegalStateException("Konnte $uri nicht oeffnen")
-        return out
-    }
-
-    private fun queryDisplayName(ctx: Context, uri: Uri): String? =
-        ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
-            val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
-        }
 
     // ── Metriken (Port von `_on_metrics_changed` / `_clear_metrics`) ────────
 
