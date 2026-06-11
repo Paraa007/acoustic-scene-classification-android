@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Textfarbe "Aktualisieren": weiss [1,1,1,1]; disabled = Kivys
+  disabled_color-Default [1,1,1,0.3] (waehrend root.is_processing).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="#4DFFFFFF" />
+    <item android:color="@color/speakerid_white" />
+</selector>

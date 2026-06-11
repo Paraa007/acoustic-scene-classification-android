@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  "Aktualisieren"-Button: primary-Fuellung, Radius dc.RADIUS_CARD dp(8)
+  (Kivy-Button mit background_normal '' + canvas.before RoundedRectangle).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_primary" />
+    <corners android:radius="8dp" />
+</shape>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Screens "Diarisations-Vergleich" - 1:1 aus siqas
+  `src/gui/screens/diarization_report/diarization_report.kv` / `.py` sowie den
+  Track-Labels aus `src/gui/widgets/diarization_timeline_widget.py`.
+-->
+<resources>
+    <string name="speakerid_diarization_report_title">Diarisations-Vergleich</string>
+
+    <!-- Moduswahl & Steuerung -->
+    <string name="speakerid_diarization_report_mode_label">VERGLEICHS-MODUS WÄHLEN</string>
+    <string name="speakerid_diarization_report_mode_live">Live-Datei-Modus</string>
+    <string name="speakerid_diarization_report_mode_select">Dateiauswahl-Modus</string>
+    <string name="speakerid_diarization_report_choose_wav">WAV wählen</string>
+    <string name="speakerid_diarization_report_no_file">(Keine Datei gewählt)</string>
+
+    <!-- Status / Warnungen (diarization_report.py) -->
+    <string name="speakerid_diarization_report_status_default">Keine Datei geladen</string>
+    <string name="speakerid_diarization_report_status_live_mic">Live-Modus (Mikrofon)</string>
+    <string name="speakerid_diarization_report_status_live_file">Live-Modus (Datei: %1$s)</string>
+    <string name="speakerid_diarization_report_status_loaded">Geladen: %1$s</string>
+    <string name="speakerid_diarization_report_warning_pick">Bitte wählen Sie eine Audiodatei aus.</string>
+    <string name="speakerid_diarization_report_warning_no_gt">Vergleich nicht möglich: Keine passende RTTM-Wahrheitsdatei gefunden.</string>
+    <string name="speakerid_diarization_report_warning_gt_error">Fehler beim Laden der Ground-Truth: %1$s</string>
+    <string name="speakerid_diarization_report_warning_analysis_error">Fehler bei der Analyse: %1$s</string>
+
+    <!-- Timeline / Action Bar -->
+    <string name="speakerid_diarization_report_processing">Analysiere Audiodatei...</string>
+    <string name="speakerid_diarization_report_refresh">Aktualisieren</string>
+
+    <!-- Metriken-Karte -->
+    <string name="speakerid_diarization_report_metrics_title">DIARISATION METRIKEN (DER)</string>
+    <string name="speakerid_diarization_report_col_overall">Insgesamt</string>
+    <string name="speakerid_diarization_report_col_target">Target</string>
+    <string name="speakerid_diarization_report_row_der">Fehlerrate</string>
+    <string name="speakerid_diarization_report_row_miss">Missed speech</string>
+    <string name="speakerid_diarization_report_row_fa">False alarm</string>
+    <string name="speakerid_diarization_report_row_conf">Confusion</string>
+    <string name="speakerid_diarization_report_metric_placeholder">—</string>
+
+    <!-- Snapshot-Karte -->
+    <string name="speakerid_diarization_report_snapshot_title">SPEAKER-CLUSTER STANDBILD (%1$s)</string>
+    <string name="speakerid_diarization_report_snapshot_projecting">Berechne Projektion...</string>
+    <string name="speakerid_diarization_report_snapshot_frozen">Snapshot eingefroren</string>
+
+    <!-- DiarizationTimelineWidget-Texte -->
+    <string name="speakerid_diarization_report_timeline_no_data">Keine Daten geladen</string>
+    <string name="speakerid_diarization_report_track_ref_target">Soll: Target</string>
+    <string name="speakerid_diarization_report_track_ref_speaker">Soll: Sp %1$s</string>
+    <string name="speakerid_diarization_report_track_hyp_target">Ist: Target</string>
+    <string name="speakerid_diarization_report_track_hyp_speaker">Ist: Sp %1$s</string>
+    <string name="speakerid_diarization_report_track_hyp_extra">Ist: Sp %1$s (zusätzlich)</string>
+    <string name="speakerid_diarization_report_track_live_target">Target</string>
+    <string name="speakerid_diarization_report_track_live_speaker">Sp %1$s</string>
+</resources>
