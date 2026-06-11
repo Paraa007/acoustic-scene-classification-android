@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.navigation.findNavController
 import com.fzi.acousticscene.R
 import kotlin.math.min
 
@@ -33,7 +34,11 @@ class SpeakerIdScreenHeader @JvmOverloads constructor(
             titleView.text = value
         }
 
-    /** Pendant zum Kivy-Event `on_back`. */
+    /**
+     * Pendant zum Kivy-Event `on_back`. Ohne Override greift der Default
+     * "zurueck zum vorherigen Screen" (popBackStack), damit der Button nie
+     * tot ist — Screens mit Sonderlogik setzen ein eigenes Lambda.
+     */
     var onBack: (() -> Unit)? = null
 
     private val titleView: TextView
@@ -71,7 +76,15 @@ class SpeakerIdScreenHeader @JvmOverloads constructor(
             layoutParams = LayoutParams(dp(110f), dp(42f)).apply {
                 marginEnd = dp(12f) // spacing: dp(12)
             }
-            setOnClickListener { onBack?.invoke() }
+            setOnClickListener {
+                val handler = onBack
+                if (handler != null) {
+                    handler()
+                } else {
+                    // Default wie Kivy-Standard-Back: vorheriger Screen.
+                    runCatching { findNavController().popBackStack() }
+                }
+            }
         }
         addView(backButton)
 
