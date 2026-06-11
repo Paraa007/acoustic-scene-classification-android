@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Port von siqas `expert_settings.kv` <ExpertSettingsScreen>:
+  BoxLayout vertical, padding dc.PADDING_SCREEN (20dp), spacing
+  dc.SPACING_SECTION (15dp), Hintergrund theme bg_color (Speakerid.Screen);
+  ScreenHeader "Parameter & KI" + ScrollView mit SharedSettingsPanel,
+  LabeledToggle "Silero VAD", SegmentedChoice "CENTROID-MODUS" (3 Spalten),
+  SegmentedChoice "PROJEKTIONS-METHODE" (3 Spalten, disabled auf Mobile),
+  System-Tools-Zeile (42dp: "Daten Reset" danger + "Werte ausgeben" default)
+  und 30dp-Spacer. Optionen/Werte der Choices setzt das Fragment im Code.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- EXPERTEN-TAB-LEISTE (main.kv tab_bar_container, 48dp) — in Kivy
+         global ueber dem ScreenManager, sichtbar bei expert_lab_active;
+         Sichtbarkeit setzt das Fragment. -->
+    <com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
+        android:id="@+id/speakeridExpertSettingsTabBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:visibility="gone" />
+
+    <!-- Screen-Inhalt = <ExpertSettingsScreen>-Wurzel (padding 20dp) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <com.fzi.speakerid.ui.widgets.SpeakerIdScreenHeader
+            android:id="@+id/speakeridExpertSettingsHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:speakeridHeaderTitle="@string/speakerid_expert_settings_title" />
+
+        <!-- ScrollView (do_scroll_x: False) -->
+        <ScrollView
+            android:id="@+id/speakeridExpertSettingsScroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="15dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <include
+                    android:id="@+id/speakeridExpertSettingsSharedPanel"
+                    layout="@layout/view_speakerid_settings_shared_panel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <!-- ── VAD ── -->
+                <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledToggle
+                    android:id="@+id/speakeridExpertSettingsToggleVad"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    app:speakeridToggleDescription="@string/speakerid_expert_settings_vad_desc"
+                    app:speakeridToggleLabel="@string/speakerid_expert_settings_vad_label" />
+
+                <!-- ── Centroid-Modus ── -->
+                <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+                    android:id="@+id/speakeridExpertSettingsChoiceCentroid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    app:speakeridChoiceColumns="3"
+                    app:speakeridChoiceLabel="@string/speakerid_expert_settings_centroid_label" />
+
+                <!-- ── Projektions-Methode (disabled: is_mobile) ── -->
+                <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+                    android:id="@+id/speakeridExpertSettingsChoiceProjection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    app:speakeridChoiceColumns="3"
+                    app:speakeridChoiceLabel="@string/speakerid_expert_settings_projection_label" />
+
+                <!-- ── System-Tools (BoxLayout height dp(42), spacing 15) ── -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:layout_marginTop="15dp"
+                    android:orientation="horizontal">
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdFlatButton
+                        android:id="@+id/speakeridExpertSettingsBtnReset"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="@string/speakerid_expert_settings_reset"
+                        app:speakeridButtonType="danger" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdFlatButton
+                        android:id="@+id/speakeridExpertSettingsBtnPrint"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="15dp"
+                        android:layout_weight="1"
+                        android:text="@string/speakerid_expert_settings_print"
+                        app:speakeridButtonType="defaultType" />
+
+                </LinearLayout>
+
+                <!-- Widget: height dp(30) -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:layout_marginTop="15dp" />
+
+            </LinearLayout>
+        </ScrollView>
+
+    </LinearLayout>
+</LinearLayout>
