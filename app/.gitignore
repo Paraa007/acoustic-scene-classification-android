@@ -75,14 +75,15 @@ maestro_screenshots/
 *.ai
 *.svg
 
-# Whitelist: app resources (launcher icons, drawables shipped with the APK)
-!app/src/main/res/**/*.png
-!app/src/main/res/**/*.jpg
-!app/src/main/res/**/*.jpeg
-!app/src/main/res/**/*.webp
-!app/src/main/res/**/*.gif
-!app/src/main/res/**/*.svg
-!app/src/main/res/**/*.xml
+# Whitelist: app resources (launcher icons, drawables shipped with the APK).
+# Paths in this file are relative to app/ — no app/ prefix here.
+!src/main/res/**/*.png
+!src/main/res/**/*.jpg
+!src/main/res/**/*.jpeg
+!src/main/res/**/*.webp
+!src/main/res/**/*.gif
+!src/main/res/**/*.svg
+!src/main/res/**/*.xml
 
 # Audio recordings / samples — large, never commit
 *.wav
