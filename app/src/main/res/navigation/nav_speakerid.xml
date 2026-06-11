@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Navigationsgraph des SIQAS-Ports (Welle 1) — als nested graph in
+  nav_graph.xml eingebunden. Pendant zum Kivy-ScreenManager aus
+  siqas gui/app.py: ein flacher Pool von Screens, das Hauptmenue ist der
+  Einstieg ("main_menu"). Die Screens navigieren direkt ueber die
+  Destination-IDs (Kivy: `manager.current = '<name>'`), daher braucht es
+  hier keine Action-Kanten.
+-->
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_speakerid"
+    app:startDestination="@id/speakeridMenuFragment">
+
+    <!-- "main_menu" — Einstieg in den SIQAS-Demonstrator -->
+    <fragment
+        android:id="@+id/speakeridMenuFragment"
+        android:name="com.fzi.speakerid.ui.mainmenu.SpeakerIdMenuFragment"
+        android:label="SpeakerIdMenu" />
+
+    <!-- "target_setup" — Schritt 1: Zielperson definieren -->
+    <fragment
+        android:id="@+id/targetSetupFragment"
+        android:name="com.fzi.speakerid.ui.targetsetup.TargetSetupFragment"
+        android:label="TargetSetup" />
+
+    <!-- "target_recorder" — Live-Aufnahme der Zielstimme -->
+    <fragment
+        android:id="@+id/targetRecorderFragment"
+        android:name="com.fzi.speakerid.ui.targetrecorder.TargetRecorderFragment"
+        android:label="TargetRecorder" />
+
+    <!-- "physics_arena" — Schritt 2: Live-Visualisierung -->
+    <fragment
+        android:id="@+id/physicsArenaFragment"
+        android:name="com.fzi.speakerid.ui.physicsarena.PhysicsArenaFragment"
+        android:label="PhysicsArena" />
+
+    <!-- "dashboard" — Experten-Labor: Live-Status -->
+    <fragment
+        android:id="@+id/speakerDashboardFragment"
+        android:name="com.fzi.speakerid.ui.dashboard.SpeakerDashboardFragment"
+        android:label="SpeakerDashboard" />
+
+    <!-- "statistics" — Auswertung nach der Live-Session -->
+    <fragment
+        android:id="@+id/speakerStatisticsFragment"
+        android:name="com.fzi.speakerid.ui.statistics.SpeakerStatisticsFragment"
+        android:label="SpeakerStatistics" />
+
+    <!-- "diarization_report" — RTTM-/DER-Analyse -->
+    <fragment
+        android:id="@+id/diarizationReportFragment"
+        android:name="com.fzi.speakerid.ui.diarizationreport.DiarizationReportFragment"
+        android:label="DiarizationReport" />
+
+    <!-- "settings" — Einstellungen -->
+    <fragment
+        android:id="@+id/speakerSettingsFragment"
+        android:name="com.fzi.speakerid.ui.settings.SpeakerSettingsFragment"
+        android:label="SpeakerSettings" />
+
+    <!-- "info" — Informationen -->
+    <fragment
+        android:id="@+id/speakerInfoFragment"
+        android:name="com.fzi.speakerid.ui.info.SpeakerInfoFragment"
+        android:label="SpeakerInfo" />
+</navigation>

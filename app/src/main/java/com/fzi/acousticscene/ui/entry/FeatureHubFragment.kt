@@ -27,7 +27,7 @@ class FeatureHubFragment : Fragment(R.layout.fragment_feature_hub) {
             findNavController().navigate(R.id.action_hub_to_mode_select)
         }
         view.findViewById<LinearLayout>(R.id.featureSpeakerIdTile).setOnClickListener {
-            findNavController().navigate(R.id.action_hub_to_speakerid_placeholder)
+            findNavController().navigate(R.id.action_hub_to_speakerid)
         }
     }
 }

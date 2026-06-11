@@ -16,13 +16,20 @@
         <action
             android:id="@+id/action_hub_to_speakerid_placeholder"
             app:destination="@id/speakerIdPlaceholderFragment" />
+        <action
+            android:id="@+id/action_hub_to_speakerid"
+            app:destination="@id/nav_speakerid" />
     </fragment>
 
-    <!-- Placeholder until the SIQAS port lands. -->
+    <!-- Placeholder from before the SIQAS port landed — kept but unplugged
+         (the hub tile now opens the nested SIQAS graph below). -->
     <fragment
         android:id="@+id/speakerIdPlaceholderFragment"
         android:name="com.fzi.speakerid.SpeakerIdPlaceholderFragment"
         android:label="SpeakerIdPlaceholder" />
+
+    <!-- SIQAS port (Welle 1) as a nested graph; entry = speakeridMenuFragment. -->
+    <include app:graph="@navigation/nav_speakerid" />
 
     <!-- Acoustic Scene Classification entry — picks Test vs Config mode.
          Reached from the feature hub; the flow from here is unchanged. -->
