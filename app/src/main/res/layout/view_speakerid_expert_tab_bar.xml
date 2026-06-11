@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port der Experten-Tab-Leiste aus siqas `src/gui/main.kv`
+  (tab_bar_container): BoxLayout 48dp hoch, bg surface_color, darin ein
+  horizontaler ScrollView (bar_width 0) mit Tab-Zeile
+  (padding [10, 4, 10, 4], spacing 5).
+
+  Kivy gibt allen TabButtons size_hint_x: 1 — die Tabs teilen sich die
+  Fensterbreite gleichmaessig (die festen `width`-Angaben sind bei gesetztem
+  size_hint wirkungslos, BoxLayout.minimum_width bleibt klein). Android:
+  fillViewport + layout_weight 1; der X-Button ist fix 48dp (size_hint None).
+
+  Wird von com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar inflated
+  (Selektion, Bold-Schalter und Klick-Callbacks liegen dort).
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.FrameLayout">
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="4dp">
+
+            <!-- TabButton "Status" -> Screen 'dashboard' -->
+            <TextView
+                android:id="@+id/speakeridExpertTabStatus"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_bg_expert_tab"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_status"
+                android:textColor="@color/speakerid_expert_tab_text"
+                android:textSize="11sp" />
+
+            <!-- TabButton "Datei-Auswahl" -> Screen 'explorer' (Welle 2) -->
+            <TextView
+                android:id="@+id/speakeridExpertTabExplorer"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_bg_expert_tab"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_explorer"
+                android:textColor="@color/speakerid_expert_tab_text"
+                android:textSize="11sp" />
+
+            <!-- TabButton "Analyse" -> Screen 'pipeline' (Welle 2) -->
+            <TextView
+                android:id="@+id/speakeridExpertTabPipeline"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_bg_expert_tab"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_pipeline"
+                android:textColor="@color/speakerid_expert_tab_text"
+                android:textSize="11sp" />
+
+            <!-- TabButton "2D-Projektion" -> Screen 'embeddings' (Welle 2) -->
+            <TextView
+                android:id="@+id/speakeridExpertTabEmbeddings"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_bg_expert_tab"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_embeddings"
+                android:textColor="@color/speakerid_expert_tab_text"
+                android:textSize="11sp" />
+
+            <!-- TabButton "Performance-Test" -> Screen 'performance_test' (Welle 2) -->
+            <TextView
+                android:id="@+id/speakeridExpertTabPerformance"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_bg_expert_tab"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_performance"
+                android:textColor="@color/speakerid_expert_tab_text"
+                android:textSize="11sp" />
+
+            <!-- TabButton "Einstellungen" -> Screen 'expert_settings' (Welle 2) -->
+            <TextView
+                android:id="@+id/speakeridExpertTabSettings"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_bg_expert_tab"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_settings"
+                android:textColor="@color/speakerid_expert_tab_text"
+                android:textSize="11sp" />
+
+            <!-- TabButton "Vergleich" -> Screen 'diarization_report' -->
+            <TextView
+                android:id="@+id/speakeridExpertTabDiarization"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_bg_expert_tab"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_diarization"
+                android:textColor="@color/speakerid_expert_tab_text"
+                android:textSize="11sp" />
+
+            <!-- X-Button: expert_lab_active = False, zurueck zum 'main_menu' -->
+            <TextView
+                android:id="@+id/speakeridExpertTabClose"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="5dp"
+                android:background="@drawable/speakerid_bg_expert_tab_close"
+                android:fontFamily="@font/speakerid_dejavu_sans_bold"
+                android:gravity="center"
+                android:text="@string/speakerid_tab_close"
+                android:textColor="@color/speakerid_white"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+</merge>

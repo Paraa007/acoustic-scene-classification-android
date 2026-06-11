@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte der Experten-Tab-Leiste — 1:1 aus siqas `src/gui/main.kv`
+  (tab_bar_container, TabButtons + X-Button). Sprache wie im Original.
+-->
+<resources>
+    <string name="speakerid_tab_status">Status</string>
+    <string name="speakerid_tab_explorer">Datei-Auswahl</string>
+    <string name="speakerid_tab_pipeline">Analyse</string>
+    <string name="speakerid_tab_embeddings">2D-Projektion</string>
+    <string name="speakerid_tab_performance">Performance-Test</string>
+    <string name="speakerid_tab_settings">Einstellungen</string>
+    <string name="speakerid_tab_diarization">Vergleich</string>
+    <string name="speakerid_tab_close">X</string>
+</resources>

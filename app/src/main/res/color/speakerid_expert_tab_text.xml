@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Textfarbe eines TabButtons (siqas `main.kv`):
+  `[0.0, 0.75, 0.25, 1] if self.state == 'down' else text_secondary_color`.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true" android:color="@color/speakerid_vibrant_green" />
+    <item android:color="@color/speakerid_text_secondary" />
+</selector>
