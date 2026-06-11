@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Textfarbe des "← Zurück"-Buttons: text_primary_color; disabled wie Kivys
+  Default-disabled_color [1, 1, 1, 0.3] (waehrend der Aufnahme).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="#4DFFFFFF" />
+    <item android:color="@color/speakerid_text_primary" />
+</selector>

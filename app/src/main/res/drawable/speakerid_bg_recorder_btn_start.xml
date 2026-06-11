@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  target_recorder.kv Aufnahme-Button (Zustand "Mikrofon starten"):
+  Kivy-Button, background_normal '' -> flaches Rechteck in primary_color.
+  Pressed: * 0.8 (#2FAE7A -> #258B61), wie FlatButton._update_colors.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#258B61" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_primary" />
+        </shape>
+    </item>
+</selector>

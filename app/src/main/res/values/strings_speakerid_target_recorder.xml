@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte 1:1 aus siqas target_recorder.kv / target_recorder.py
+  (deutsche Originaltexte, exakt uebernommen).
+-->
+<resources>
+    <string name="speakerid_target_recorder_back">← Zurück</string>
+    <string name="speakerid_target_recorder_title">Live Target\nRecording</string>
+    <string name="speakerid_target_recorder_subtitle">Nehmen Sie Ihre Stimme auf,\num sie als Referenz zu nutzen.</string>
+    <string name="speakerid_target_recorder_timer_zero">00:00</string>
+
+    <!-- status_text-Zustaende (target_recorder.py) -->
+    <string name="speakerid_target_recorder_status_ready">Bereit zur Aufnahme</string>
+    <string name="speakerid_target_recorder_status_recording">Aufnahme läuft...</string>
+    <string name="speakerid_target_recorder_status_saving">Speichere und analysiere Audio... Bitte warten</string>
+    <string name="speakerid_target_recorder_status_success">Erfolgreich! Kehre zurück...</string>
+    <string name="speakerid_target_recorder_status_no_audio">Fehler: Keine Datei aufgenommen</string>
+    <string name="speakerid_target_recorder_status_error">Fehler: %1$s</string>
+    <string name="speakerid_target_recorder_mic_error">Mikrofon-Fehler: %1$s</string>
+    <!-- Detailtexte fuer mic_error (Android-Laufzeit-Permission bzw. AudioRecord-Abbruch) -->
+    <string name="speakerid_target_recorder_permission_denied">Berechtigung verweigert</string>
+    <string name="speakerid_target_recorder_record_failed">Aufnahme fehlgeschlagen</string>
+
+    <!-- Aufnahme-Button (Text wechselt mit is_recording) -->
+    <string name="speakerid_target_recorder_btn_start">Mikrofon\nstarten</string>
+    <string name="speakerid_target_recorder_btn_stop">Beenden\n&amp; Speichern</string>
+</resources>

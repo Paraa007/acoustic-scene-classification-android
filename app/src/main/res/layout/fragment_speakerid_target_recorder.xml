@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas target_recorder.kv (<TargetRecorderScreen>):
+  vertikale BoxLayout, padding dc.PADDING_SCREEN dp(20), spacing dp(20),
+  Hintergrund bg_color. Header-Karte (60dp) mit Zurueck-Button + LogoBar,
+  darunter die Recorder-Karte (size_hint_y 1.0) mit Titel, Untertitel,
+  Spacer (0.05), Timer (0.45), Status, Spacer (0.05) und Aufnahme-Button.
+  Kivy-spacing dp(12) der Karte = marginTop je Folge-Kind.
+  Responsive font_size-Klammern (min(sp, root.width * f)) setzt das Fragment.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/targetRecorderRoot"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- ─── HEADER: Navigation (RecorderCard, height dp(60), padding [8, 6]) ─── -->
+    <FrameLayout
+        android:id="@+id/headerCard"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@drawable/speakerid_bg_recorder_card"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnBack"
+            android:layout_width="90dp"
+            android:layout_height="40dp"
+            android:layout_gravity="start|center_vertical"
+            android:background="@drawable/speakerid_bg_recorder_back_button"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:stateListAnimator="@null"
+            android:text="@string/speakerid_target_recorder_back"
+            android:textAllCaps="false"
+            android:textColor="@color/speakerid_recorder_back_text"
+            android:textSize="12sp" />
+
+        <com.fzi.speakerid.ui.widgets.SpeakerIdLogoBar
+            android:id="@+id/logoBar"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end|center_vertical" />
+    </FrameLayout>
+
+    <!-- ─── MAIN CONTENT: Recorder Karte (size_hint_y 1.0, padding 16, spacing 12) ─── -->
+    <LinearLayout
+        android:id="@+id/mainCard"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="1"
+        android:background="@drawable/speakerid_bg_recorder_card"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Titel: Box height dp(36); Kivy clippt Label-Texturen nicht,
+             daher Slot mit clipChildren=false und zentriertem wrap-TextView -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <TextView
+                android:id="@+id/labelTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center_horizontal"
+                android:text="@string/speakerid_target_recorder_title"
+                android:textColor="@color/speakerid_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/labelSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="12dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="top|center_horizontal"
+            android:text="@string/speakerid_target_recorder_subtitle"
+            android:textColor="@color/speakerid_text_secondary"
+            android:textSize="12sp" />
+
+        <!-- Widget size_hint_y 0.05 -->
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="0.05" />
+
+        <!-- Der Timer (Riesig, aber responsiv; size_hint_y 0.45) -->
+        <TextView
+            android:id="@+id/labelTimer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="0.45"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:text="@string/speakerid_target_recorder_timer_zero"
+            android:textColor="@color/speakerid_text_primary"
+            android:textSize="72sp"
+            android:textStyle="bold" />
+
+        <!-- Status Message (height dp(40), halign center) -->
+        <TextView
+            android:id="@+id/labelStatus"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="12dp"
+            android:fontFamily="@font/speakerid_dejavu"
+            android:gravity="center"
+            android:text="@string/speakerid_target_recorder_status_ready"
+            android:textColor="@color/speakerid_text_secondary"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- Widget size_hint_y 0.05 -->
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="0.05" />
+
+        <!-- ─── CONTROLS (AnchorLayout height dp(80), Button 320x64 zentriert) ─── -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_marginTop="12dp">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnRecord"
+                android:layout_width="320dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:background="@drawable/speakerid_bg_recorder_btn_start"
+                android:fontFamily="@font/speakerid_dejavu"
+                android:gravity="center"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:stateListAnimator="@null"
+                android:text="@string/speakerid_target_recorder_btn_start"
+                android:textAllCaps="false"
+                android:textColor="@color/speakerid_white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>
