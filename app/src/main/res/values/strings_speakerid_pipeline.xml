@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte des Pipeline-Screens — woertlich aus siqas
+  `gui/screens/pipeline/pipeline.kv`, `pipeline.py` und
+  `gui/logic/pipeline_logic.py` (status_text/step_logs).
+  Mehrfach-Leerzeichen sind beabsichtigt (Python-f-Strings) -> Werte quotiert.
+-->
+<resources>
+    <!-- pipeline.kv -->
+    <string name="speakerid_pipeline_title">Datei-Analyse</string>
+    <string name="speakerid_pipeline_current_file_label">Aktuelle Audiodatei:</string>
+    <string name="speakerid_pipeline_progress_label">Fortschritt / Status:</string>
+    <string name="speakerid_pipeline_step_waiting">"—  Warte auf ersten Schritt"</string>
+    <string name="speakerid_pipeline_timeline_label">"Zeitverlauf\n(1 Kästchen = 1 Chunk)"</string>
+    <string name="speakerid_pipeline_btn_file">Datei</string>
+    <string name="speakerid_pipeline_btn_reset">Reset</string>
+    <string name="speakerid_pipeline_btn_step">1 Schritt</string>
+    <string name="speakerid_pipeline_btn_pause">PAUSE</string>
+    <string name="speakerid_pipeline_btn_start">Analyse starten</string>
+
+    <!-- pipeline.py (Screen-Properties) -->
+    <string name="speakerid_pipeline_no_file">Keine Datei ausgewählt</string>
+    <string name="speakerid_pipeline_pick_file">Bitte im Explorer eine Datei wählen.</string>
+    <string name="speakerid_pipeline_progress_dash">—</string>
+    <string name="speakerid_pipeline_progress_ready_analysis">Bereit zur Analyse</string>
+    <string name="speakerid_pipeline_progress_chunks">%1$d / %2$d Chunks</string>
+    <string name="speakerid_pipeline_progress_status">"%1$d / %2$d  —  %3$s"</string>
+    <string name="speakerid_pipeline_step_detail">"Chunk %1$d  |  Schritt: %2$s  |  %3$s"</string>
+    <string name="speakerid_pipeline_step_name_vad">VAD</string>
+    <string name="speakerid_pipeline_step_name_embedding">Embedding</string>
+    <string name="speakerid_pipeline_step_name_matching">Matching</string>
+    <string name="speakerid_pipeline_step_name_saving">Speichern</string>
+    <string name="speakerid_pipeline_step_name_none">—</string>
+    <string name="speakerid_pipeline_detail_vad_running">Stille-Check läuft...</string>
+    <!-- %1$s = mit Locale.US auf 2 Nachkommastellen formatierte VAD-Dauer -->
+    <string name="speakerid_pipeline_detail_embedding">"VAD: %1$ss Sprache  →  Embedding wird berechnet..."</string>
+    <string name="speakerid_pipeline_detail_matching">"Embedding: %1$s  →  Matching..."</string>
+    <string name="speakerid_pipeline_detail_saving">"Cluster [%1$s] zugewiesen  →  Wird gespeichert..."</string>
+
+    <!-- pipeline_logic.py: status_text -->
+    <string name="speakerid_pipeline_status_ready">Bereit</string>
+    <string name="speakerid_pipeline_status_reset">Zurückgesetzt</string>
+    <string name="speakerid_pipeline_status_audio_ready">Audio bereit.</string>
+    <string name="speakerid_pipeline_status_segments">%1$d Segmente vorbereitet.</string>
+    <string name="speakerid_pipeline_status_done">Analyse abgeschlossen.</string>
+    <string name="speakerid_pipeline_status_progress">Fortschritt: %1$d/%2$d</string>
+    <!-- Port-Zusatz: Python liesse die Exception durchschlagen; hier Status-Anzeige. -->
+    <string name="speakerid_pipeline_status_error">Fehler: %1$s</string>
+
+    <!-- pipeline_logic.py: step_logs (nirgends im Screen angezeigt, 1:1 portiert) -->
+    <string name="speakerid_pipeline_log_loading">Lade und normalisiere Audio...</string>
+    <string name="speakerid_pipeline_log_chunking">Erstelle 1-Sekunden-Segmente...</string>
+    <string name="speakerid_pipeline_log_done">Fertig.</string>
+    <string name="speakerid_pipeline_log_vad">Chunk %1$d | VAD: %2$ss Sprache erkannt.</string>
+    <string name="speakerid_pipeline_log_silence">Chunk %1$d -&gt; Stille erkannt. Gehe direkt zu Speicher.</string>
+    <string name="speakerid_pipeline_log_embedding">Chunk %1$d | Embedding: 192D Vektor berechnet.</string>
+    <string name="speakerid_pipeline_log_match">Chunk %1$d | Match: Cluster [%2$s]</string>
+</resources>

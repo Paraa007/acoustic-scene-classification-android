@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  pipeline.kv <FlatCard@BoxLayout>: RoundedRectangle in surface_color mit
+  radius [dp(16)] (abweichend vom dc.RADIUS_CARD-8dp-Standard).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/speakerid_surface" />
+    <corners android:radius="16dp" />
+</shape>

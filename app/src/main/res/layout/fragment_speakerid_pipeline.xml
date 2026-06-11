@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas gui/screens/pipeline/pipeline.kv (<PipelineScreen>).
+  Wurzel: BoxLayout vertical, padding dc.PADDING_SCREEN (20dp), spacing
+  dc.SPACING_SECTION (15dp -> layout_marginTop je Section), bg = theme bg_color.
+
+  Responsive Werte aus dem .kv (Titel min(sp(20), w*0.055), LogoBar
+  min(dp(90), w*0.2), Button-Schriften min(sp(12), w*0.033) bzw.
+  min(sp(15), w*0.042)) setzt SpeakerPipelineFragment per Layout-Listener.
+  Kivy-Label ohne valign = bottom-anker -> gravity bottom.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- EXPERTEN-TAB-LEISTE (main.kv tab_bar_container, 48dp) — in Kivy
+         global ueber dem ScreenManager, sichtbar bei expert_lab_active;
+         Sichtbarkeit setzt das Fragment. -->
+    <com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
+        android:id="@+id/speakeridPipelineTabBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:visibility="gone" />
+
+    <!-- Screen-Inhalt = <PipelineScreen>-Wurzel (padding 20dp) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- HEADER (LABOR-STIL): BoxLayout, height dp(50) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:orientation="horizontal">
+
+            <!-- "Datei-Analyse": bold, text_primary, halign left / valign middle -->
+            <TextView
+                android:id="@+id/speakeridPipelineTitle"
+                style="@style/Speakerid.Text"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="start|center_vertical"
+                android:text="@string/speakerid_pipeline_title"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <!-- LogoBar: logo_width min(dp(90), root.width * 0.2) -->
+            <com.fzi.speakerid.ui.widgets.SpeakerIdLogoBar
+                android:id="@+id/speakeridPipelineLogoBar"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                app:speakeridLogoWidth="90dp" />
+        </LinearLayout>
+
+        <!-- DATEI-INFO & STATUS: FlatCard, height dp(80), padding dp(15), spacing 15 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_marginTop="15dp"
+            android:background="@drawable/speakerid_pipeline_card"
+            android:orientation="horizontal"
+            android:padding="15dp">
+
+            <!-- size_hint_x: 0.7 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.7"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/speakeridPipelineLabelFileCaption"
+                    style="@style/Speakerid.Text.Secondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="start|bottom"
+                    android:text="@string/speakerid_pipeline_current_file_label" />
+
+                <!-- root.file_name: 15sp bold, primary/error, shorten_from left -->
+                <TextView
+                    android:id="@+id/speakeridPipelineLabelFileName"
+                    style="@style/Speakerid.Text"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:ellipsize="start"
+                    android:gravity="start|bottom"
+                    android:singleLine="true"
+                    android:text="@string/speakerid_pipeline_no_file"
+                    android:textColor="@color/speakerid_error"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- size_hint_x: 0.3, spacing dc.SPACING_SECTION (15dp) -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="15dp"
+                android:layout_weight="0.3"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/speakeridPipelineLabelProgressCaption"
+                    style="@style/Speakerid.Text.Secondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="end|bottom"
+                    android:text="@string/speakerid_pipeline_progress_label" />
+
+                <!-- root.progress_text: 15sp bold, text_primary, halign right -->
+                <TextView
+                    android:id="@+id/speakeridPipelineLabelProgress"
+                    style="@style/Speakerid.Text"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="end|bottom"
+                    android:text="@string/speakerid_pipeline_status_ready"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- SUB-SCHRITT DETAIL: FlatCard height dp(36), padding dp(10)/dp(6) -->
+        <TextView
+            android:id="@+id/speakeridPipelineLabelStepDetail"
+            style="@style/Speakerid.Text.Body"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="15dp"
+            android:background="@drawable/speakerid_pipeline_card"
+            android:gravity="start|center_vertical"
+            android:paddingStart="10dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="6dp"
+            android:text="@string/speakerid_pipeline_step_waiting"
+            android:textColor="@color/speakerid_text_secondary" />
+
+        <!-- WAVEFORM TIMELINE: FlatCard size_hint_y 1.0, vertical,
+             padding dc.PADDING_SCREEN (20dp), spacing dp(10) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="15dp"
+            android:layout_weight="1"
+            android:background="@drawable/speakerid_pipeline_card"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- "Zeitverlauf\n(1 Kästchen = 1 Chunk)": 14sp bold, secondary,
+                 height dc.HEIGHT_SECTION_LABEL dp(20) (clippt wie das Original) -->
+            <TextView
+                android:id="@+id/speakeridPipelineLabelTimeline"
+                style="@style/Speakerid.Text.Label"
+                android:layout_width="match_parent"
+                android:layout_height="20dp"
+                android:gravity="start|bottom"
+                android:text="@string/speakerid_pipeline_timeline_label"
+                android:textColor="@color/speakerid_text_secondary"
+                android:textStyle="bold" />
+
+            <!-- ScrollView (do_scroll_x: False, do_scroll_y: True) -->
+            <ScrollView
+                android:id="@+id/speakeridPipelineScroll"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="10dp"
+                android:layout_weight="1"
+                android:scrollbars="vertical">
+
+                <com.fzi.speakerid.ui.pipeline.SpeakerPipelineWaveformView
+                    android:id="@+id/speakeridPipelineWaveform"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </ScrollView>
+        </LinearLayout>
+
+        <!-- STEUERUNG: BoxLayout vertical, height dp(100), spacing dc.SPACING_ITEM (8dp) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:layout_marginTop="15dp"
+            android:orientation="vertical">
+
+            <!-- Zeile 1: Datei + Reset + Schritt (spacing 8dp) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/speakeridPipelineBtnFile"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/speakerid_pipeline_btn_dark"
+                    android:minHeight="0dp"
+                    android:text="@string/speakerid_pipeline_btn_file"
+                    android:textColor="@color/speakerid_text_primary" />
+
+                <Button
+                    android:id="@+id/speakeridPipelineBtnReset"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/speakerid_pipeline_btn_dark"
+                    android:minHeight="0dp"
+                    android:text="@string/speakerid_pipeline_btn_reset"
+                    android:textColor="@color/speakerid_error" />
+
+                <!-- disabled: not root.has_file or root.is_running -->
+                <Button
+                    android:id="@+id/speakeridPipelineBtnStep"
+                    style="@style/Speakerid.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/speakerid_pipeline_btn_step"
+                    android:enabled="false"
+                    android:minHeight="0dp"
+                    android:text="@string/speakerid_pipeline_btn_step"
+                    android:textColor="@color/speakerid_white" />
+            </LinearLayout>
+
+            <!-- Zeile 2: Auto-Analyse (volle Breite); disabled: not root.has_file -->
+            <Button
+                android:id="@+id/speakeridPipelineBtnAuto"
+                style="@style/Speakerid.Button"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/speakerid_pipeline_btn_start"
+                android:enabled="false"
+                android:minHeight="0dp"
+                android:text="@string/speakerid_pipeline_btn_start"
+                android:textColor="@color/speakerid_white"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

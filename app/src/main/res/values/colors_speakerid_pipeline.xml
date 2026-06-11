@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Farb-Konstanten der Pipeline-Timeline aus siqas
+  `gui/widgets/waveform_widget.py` (RGBA-Floats exakt nach Hex, gerundet wie
+  in speakerid_colors.xml).
+-->
+<resources>
+    <!-- UNLABELED_COLOR (0.55, 0.55, 0.65, 1) "Helles Blaugrau" -->
+    <color name="speakerid_pipeline_wf_unlabeled">#8C8CA6</color>
+    <!-- SILENCE_COLOR (0.08, 0.08, 0.1, 1) "Fast Schwarz (Anthrazit)" -->
+    <color name="speakerid_pipeline_wf_silence">#14141A</color>
+    <!-- Rahmen um das gesamte Widget: Color(0.2, 0.2, 0.2, 1) -->
+    <color name="speakerid_pipeline_wf_border">#333333</color>
+    <!-- Rahmen je Kaestchen: Color(0, 0, 0, 0.2) -->
+    <color name="speakerid_pipeline_wf_cell_frame">#33000000</color>
+</resources>

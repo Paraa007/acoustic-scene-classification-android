@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  pipeline.kv Buttons "Datei"/"Reset": Kivy-Button mit background_normal '' ->
+  flaches Rechteck in surface_dark_color (#F0F1F3). Die canvas.before-
+  RoundedRectangles (border_color bzw. error*0.3) liegen UNTER der deckenden
+  Hintergrund-Flaeche und sind im Original unsichtbar -> nicht gezeichnet.
+  Pressed/Disabled: Hintergrund * 0.8 (Port-Konvention pressedVariant,
+  #F0F1F3 -> #C0C0C2).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="#C0C0C2" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#C0C0C2" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_surface_dark" />
+        </shape>
+    </item>
+</selector>

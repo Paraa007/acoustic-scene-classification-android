@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  pipeline.kv Auto-Analyse-Button, Zustand "Analyse starten":
+  background_color primary_color (#2FAE7A), flaches Rechteck
+  (background_normal ''). Pressed/Disabled: * 0.8 -> #258B61.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="#258B61" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#258B61" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_primary" />
+        </shape>
+    </item>
+</selector>
