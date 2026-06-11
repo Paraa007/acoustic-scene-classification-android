@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Kivy-ProgressBar-Pendant (performance_test.kv nutzt den Default-Look):
+  Spur = border-Farbe, Fuellung = primary, abgerundet.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp" />
+            <solid android:color="@color/speakerid_border" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="4dp" />
+                <solid android:color="@color/speakerid_primary" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

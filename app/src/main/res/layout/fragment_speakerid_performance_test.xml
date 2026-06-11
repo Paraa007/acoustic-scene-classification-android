@@ -1,0 +1,820 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Port von siqas `performance_test.kv` <PerformanceTestScreen>:
+  BoxLayout vertical, padding dp(15), spacing dp(10), Hintergrund bg_color;
+  ScreenHeader "Performance-Test" + ScrollView (spacing dp(12)) mit den Karten
+  KONFIGURATION, PIPELINE-PARAMETER, Steuerung/Status/Progress, ERGEBNISSE
+  (Quittungs-Stil) und WANDZEIT PRO CHUNK (Liniengraph).
+  Kivy-`spacing` ist als layout_marginTop der Folge-Kinder uebersetzt;
+  Karten = surface mit Radius dp(14) (speakerid_performance_card).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- EXPERTEN-TAB-LEISTE (main.kv tab_bar_container, 48dp) — in Kivy
+         global ueber dem ScreenManager, sichtbar bei expert_lab_active;
+         Sichtbarkeit setzt das Fragment. -->
+    <com.fzi.speakerid.ui.widgets.SpeakerIdExpertTabBar
+        android:id="@+id/speakeridPerfTabBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:visibility="gone" />
+
+    <!-- Screen-Inhalt = <PerformanceTestScreen>-Wurzel (padding 15dp) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="15dp">
+
+        <com.fzi.speakerid.ui.widgets.SpeakerIdScreenHeader
+            android:id="@+id/speakeridPerfHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:speakeridHeaderTitle="@string/speakerid_perf_title" />
+
+        <ScrollView
+            android:id="@+id/speakeridPerfScroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- ═══ Karte: KONFIGURATION (spacing dc.SPACING_ITEM 8) ═══ -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/speakerid_performance_card"
+                    android:orientation="vertical"
+                    android:paddingLeft="15dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="15dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/speakerid_perf_section_config"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <!-- Datei-Auswahl (Zeile 40dp, spacing 8) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/speakeridPerfBtnPickWav"
+                            android:layout_width="120dp"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/speakerid_performance_btn_flat"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="@string/speakerid_perf_btn_pick_wav"
+                            android:textAllCaps="false"
+                            android:textColor="@color/speakerid_text_primary"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/speakeridPerfLabelFile"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:ellipsize="middle"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="start|center_vertical"
+                            android:singleLine="true"
+                            android:text="@string/speakerid_perf_no_file"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Chunk-Laenge -->
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderChunk"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:speakeridSliderFmt="%.2f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_chunk"
+                        app:speakeridSliderMax="5.0"
+                        app:speakeridSliderMin="0.2"
+                        app:speakeridSliderStep="0.05"
+                        app:speakeridSliderValue="1.0" />
+
+                    <!-- Modul-Toggles -->
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledToggle
+                        android:id="@+id/speakeridPerfToggleVad"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:speakeridToggleActive="true"
+                        app:speakeridToggleLabel="@string/speakerid_perf_toggle_vad" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledToggle
+                        android:id="@+id/speakeridPerfToggleNoise"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:speakeridToggleActive="true"
+                        app:speakeridToggleLabel="@string/speakerid_perf_toggle_noise" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceDisableFrame
+                        android:id="@+id/speakeridPerfFrameNoiseChoice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+
+                        <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+                            android:id="@+id/speakeridPerfChoiceNoise"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:speakeridChoiceColumns="3"
+                            app:speakeridChoiceLabel="@string/speakerid_perf_choice_noise_label" />
+                    </com.fzi.speakerid.ui.performancetest.SpeakerPerformanceDisableFrame>
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledToggle
+                        android:id="@+id/speakeridPerfTogglePyannote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:speakeridToggleActive="true"
+                        app:speakeridToggleLabel="@string/speakerid_perf_toggle_pyannote" />
+                </LinearLayout>
+
+                <!-- ═══ Karte: PIPELINE-PARAMETER (spacing dp(4)) ═══ -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/speakerid_performance_card"
+                    android:orientation="vertical"
+                    android:paddingLeft="15dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="15dp"
+                    android:paddingBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="start|center_vertical"
+                            android:text="@string/speakerid_perf_section_pipeline"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <Button
+                            android:id="@+id/speakeridPerfBtnDefaults"
+                            android:layout_width="130dp"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/speakerid_performance_btn_flat"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:stateListAnimator="@null"
+                            android:text="@string/speakerid_perf_btn_defaults"
+                            android:textAllCaps="false"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <!-- Strategien (klickbare Pill-Auswahl) -->
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+                        android:id="@+id/speakeridPerfChoiceCentroid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridChoiceColumns="3"
+                        app:speakeridChoiceLabel="@string/speakerid_perf_choice_centroid_label" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+                        android:id="@+id/speakeridPerfChoiceAssignment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridChoiceColumns="3"
+                        app:speakeridChoiceLabel="@string/speakerid_perf_choice_assignment_label" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+                        android:id="@+id/speakeridPerfChoiceClustering"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridChoiceColumns="2"
+                        app:speakeridChoiceLabel="@string/speakerid_perf_choice_clustering_label" />
+
+                    <!-- Numerische Parameter (Slider) -->
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderThresholdTarget"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.2f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_threshold_target"
+                        app:speakeridSliderMax="0.90"
+                        app:speakeridSliderMin="0.55"
+                        app:speakeridSliderStep="0.01"
+                        app:speakeridSliderValue="0.7" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderThresholdNormal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.2f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_threshold_normal"
+                        app:speakeridSliderMax="0.90"
+                        app:speakeridSliderMin="0.55"
+                        app:speakeridSliderStep="0.01"
+                        app:speakeridSliderValue="0.7" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderEmaAlpha"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.2f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_ema_alpha"
+                        app:speakeridSliderMax="1.0"
+                        app:speakeridSliderMin="0.01"
+                        app:speakeridSliderStep="0.01"
+                        app:speakeridSliderValue="0.1" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderMaWindow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.0f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_ma_window"
+                        app:speakeridSliderMax="100"
+                        app:speakeridSliderMin="2"
+                        app:speakeridSliderStep="1"
+                        app:speakeridSliderValue="10" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderMinSamples"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.0f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_min_samples"
+                        app:speakeridSliderMax="10"
+                        app:speakeridSliderMin="2"
+                        app:speakeridSliderStep="1"
+                        app:speakeridSliderValue="3" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderClusteringInterval"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.0f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_clustering_interval"
+                        app:speakeridSliderMax="50"
+                        app:speakeridSliderMin="1"
+                        app:speakeridSliderStep="1"
+                        app:speakeridSliderValue="1" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceDisableFrame
+                        android:id="@+id/speakeridPerfFrameCleanerMinDuration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp">
+
+                        <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                            android:id="@+id/speakeridPerfSliderCleanerMinDuration"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:speakeridSliderFmt="%.2f"
+                            app:speakeridSliderLabel="@string/speakerid_perf_slider_cleaner_min_duration"
+                            app:speakeridSliderMax="1.5"
+                            app:speakeridSliderMin="0.1"
+                            app:speakeridSliderStep="0.05"
+                            app:speakeridSliderValue="0.2" />
+                    </com.fzi.speakerid.ui.performancetest.SpeakerPerformanceDisableFrame>
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceDisableFrame
+                        android:id="@+id/speakeridPerfFrameCleanerMinIsland"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp">
+
+                        <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                            android:id="@+id/speakeridPerfSliderCleanerMinIsland"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:speakeridSliderFmt="%.2f"
+                            app:speakeridSliderLabel="@string/speakerid_perf_slider_cleaner_min_island"
+                            app:speakeridSliderMax="0.5"
+                            app:speakeridSliderMin="0.0"
+                            app:speakeridSliderStep="0.01"
+                            app:speakeridSliderValue="0.02" />
+                    </com.fzi.speakerid.ui.performancetest.SpeakerPerformanceDisableFrame>
+
+                    <!-- Widget: height dp(8) -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="4dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/speakerid_perf_section_sim"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start"
+                        android:text="@string/speakerid_perf_sim_desc"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="10sp" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderSimSpeakers"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.0f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_sim_speakers"
+                        app:speakeridSliderMax="100"
+                        app:speakeridSliderMin="0"
+                        app:speakeridSliderStep="1"
+                        app:speakeridSliderValue="0" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderSimPoints"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.0f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_sim_points"
+                        app:speakeridSliderMax="100"
+                        app:speakeridSliderMin="1"
+                        app:speakeridSliderStep="1"
+                        app:speakeridSliderValue="5" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdLabeledSlider
+                        android:id="@+id/speakeridPerfSliderPoolPrefill"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:speakeridSliderFmt="%.0f"
+                        app:speakeridSliderLabel="@string/speakerid_perf_slider_pool_prefill"
+                        app:speakeridSliderMax="36000"
+                        app:speakeridSliderMin="0"
+                        app:speakeridSliderStep="5"
+                        app:speakeridSliderValue="0" />
+                </LinearLayout>
+
+                <!-- ═══ Steuerung (Zeile 50dp) ═══ -->
+                <Button
+                    android:id="@+id/speakeridPerfBtnStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/speakerid_performance_btn_start"
+                    android:fontFamily="@font/speakerid_dejavu"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/speakerid_perf_btn_start"
+                    android:textAllCaps="false"
+                    android:textColor="@color/speakerid_white"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <!-- ═══ Status ═══ -->
+                <TextView
+                    android:id="@+id/speakeridPerfLabelStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="24dp"
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="@font/speakerid_dejavu"
+                    android:gravity="start|center_vertical"
+                    android:text="@string/speakerid_perf_status_ready"
+                    android:textColor="@color/speakerid_text_secondary"
+                    android:textSize="12sp" />
+
+                <!-- Fortschritt (Zeile 28dp, spacing 8) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="28dp"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ProgressBar
+                        android:id="@+id/speakeridPerfProgress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="8dp"
+                        android:layout_weight="1"
+                        android:max="1000"
+                        android:progressDrawable="@drawable/speakerid_performance_progress" />
+
+                    <TextView
+                        android:id="@+id/speakeridPerfLabelChunks"
+                        android:layout_width="80dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="end|center_vertical"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- ═══ Ergebnisse: Quittungs-Stil (spacing dp(2), padding [15,15]) ═══ -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/speakerid_performance_card"
+                    android:orientation="vertical"
+                    android:padding="15dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/speakerid_perf_section_results"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <!-- Spalten-Kopf (padding [20, 0, 8, 0]) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:layout_marginTop="2dp"
+                        android:orientation="horizontal"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="8dp">
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:layout_width="150dp"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="end|center_vertical"
+                            android:text="@string/speakerid_perf_col_avg"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="150dp"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="end|center_vertical"
+                            android:text="@string/speakerid_perf_col_max"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- ── Pre-Embedding ── -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|bottom"
+                        android:text="@string/speakerid_perf_header_pre"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowMono"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowNormalize"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowResample"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowVad"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="2dp" />
+
+                    <!-- ── Embedding ── -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|bottom"
+                        android:text="@string/speakerid_perf_header_embedding"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowEmbedding"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="2dp" />
+
+                    <!-- ── Post-Embedding ── -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|bottom"
+                        android:text="@string/speakerid_perf_header_post"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowAssignment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowCentroid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowClustering"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="2dp" />
+
+                    <!-- ── Optional / geplant ── -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|bottom"
+                        android:text="@string/speakerid_perf_header_optional"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowNoise"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceReceiptRowView
+                        android:id="@+id/speakeridPerfRowPyannote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="2dp" />
+
+                    <!-- ReceiptDivider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="2dp"
+                        android:background="@color/speakerid_border" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="2dp" />
+
+                    <!-- ── Summen ── -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="26dp"
+                        android:layout_marginTop="2dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="start|center_vertical"
+                            android:text="@string/speakerid_perf_sum_pipeline"
+                            android:textColor="@color/speakerid_text_primary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/speakeridPerfSumPipeline"
+                            android:layout_width="110dp"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="end|center_vertical"
+                            android:textColor="@color/speakerid_text_primary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"
+                        android:layout_marginTop="2dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="start|center_vertical"
+                            android:text="@string/speakerid_perf_sum_wall_avg"
+                            android:textColor="@color/speakerid_text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/speakeridPerfSumWallAvg"
+                            android:layout_width="110dp"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="end|center_vertical"
+                            android:textColor="@color/speakerid_text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:layout_marginTop="2dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="start|center_vertical"
+                            android:text="@string/speakerid_perf_sum_wall_max"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/speakeridPerfSumWallMax"
+                            android:layout_width="110dp"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="end|center_vertical"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"
+                        android:layout_marginTop="2dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="start|center_vertical"
+                            android:text="@string/speakerid_perf_sum_ratio"
+                            android:textColor="@color/speakerid_text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/speakeridPerfSumRatio"
+                            android:layout_width="110dp"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/speakerid_dejavu"
+                            android:gravity="end|center_vertical"
+                            android:textColor="@color/speakerid_text_secondary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="18dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="end|center_vertical"
+                        android:text="@string/speakerid_perf_ratio_hint"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="10sp" />
+                </LinearLayout>
+
+                <!-- ═══ Liniengraph: Wandzeit pro Chunk (spacing dp(6)) ═══ -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/speakerid_performance_card"
+                    android:orientation="vertical"
+                    android:paddingLeft="15dp"
+                    android:paddingTop="12dp"
+                    android:paddingRight="15dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="22dp"
+                        android:fontFamily="@font/speakerid_dejavu"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/speakerid_perf_section_chart"
+                        android:textColor="@color/speakerid_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <com.fzi.speakerid.ui.widgets.SpeakerIdSegmentedChoice
+                        android:id="@+id/speakeridPerfChoiceChart"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        app:speakeridChoiceColumns="4" />
+
+                    <com.fzi.speakerid.ui.performancetest.SpeakerPerformanceChunkTimeChartView
+                        android:id="@+id/speakeridPerfChart"
+                        android:layout_width="match_parent"
+                        android:layout_height="220dp"
+                        android:layout_marginTop="6dp" />
+                </LinearLayout>
+
+                <!-- Widget: height dc.HEIGHT_SECTION_LABEL (20dp) -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="20dp"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</LinearLayout>

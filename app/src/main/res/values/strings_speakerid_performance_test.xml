@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Performance-Test-Screens - Texte 1:1 aus siqas
+  `src/gui/screens/performance_test/performance_test.kv` + `.py`
+  (Status-Texte, Optionen der SegmentedChoices, Quittungs-Zeilen).
+  Doppel-Leerzeichen der Originale sind per Quoting erhalten.
+-->
+<resources>
+    <!-- ScreenHeader -->
+    <string name="speakerid_perf_title">Performance-Test</string>
+
+    <!-- Karte "Konfiguration" -->
+    <string name="speakerid_perf_section_config">KONFIGURATION</string>
+    <string name="speakerid_perf_btn_pick_wav">WAV wählen</string>
+    <string name="speakerid_perf_no_file">(keine Datei)</string>
+    <string name="speakerid_perf_slider_chunk">Chunk-Länge (s)</string>
+    <string name="speakerid_perf_toggle_vad">VAD (Silero)</string>
+    <string name="speakerid_perf_toggle_noise">Hintergrundgeräusch-Entfernung</string>
+    <string name="speakerid_perf_choice_noise_label">Methode zur Rauschunterdrückung</string>
+    <string name="speakerid_perf_noise_opt_spectral">Spektralsubtraktion (NumPy)</string>
+    <string name="speakerid_perf_noise_opt_noisereduce">Noisereduce (Python-Lib)</string>
+    <string name="speakerid_perf_toggle_pyannote">Overlap-Filter (Pyannote)</string>
+
+    <!-- Karte "Pipeline-Parameter" -->
+    <string name="speakerid_perf_section_pipeline">PIPELINE-PARAMETER</string>
+    <string name="speakerid_perf_btn_defaults">↺ App-Defaults</string>
+    <string name="speakerid_perf_choice_centroid_label">Centroid-Update-Methode (wie wird der Sprecher-Mittelpunkt aktualisiert?)</string>
+    <string name="speakerid_perf_centroid_static">Statisch (Initialwert, kein Update)</string>
+    <string name="speakerid_perf_centroid_mean">Mittelwert aller Punkte</string>
+    <string name="speakerid_perf_centroid_moving_average">Gleitender Mittelwert (letzte N Punkte)</string>
+    <string name="speakerid_perf_centroid_ema">Exponentiell gewichtet (EMA)</string>
+    <string name="speakerid_perf_centroid_median">Median über alle Punkte</string>
+    <string name="speakerid_perf_centroid_medoid">Medoid (echter Punkt mit min. Distanz)</string>
+    <string name="speakerid_perf_choice_assignment_label">Sprecher-Zuordnung (wie wird ein neuer Punkt einem Sprecher zugewiesen?)</string>
+    <string name="speakerid_perf_assignment_first">Erster passender Cluster</string>
+    <string name="speakerid_perf_assignment_last">Letzter passender Cluster</string>
+    <string name="speakerid_perf_assignment_best">Bester Cluster insgesamt</string>
+    <string name="speakerid_perf_assignment_target">Target-Sprecher hat Vorrang</string>
+    <string name="speakerid_perf_assignment_knn">K-nächste Nachbarn (zeitgewichtet)</string>
+    <string name="speakerid_perf_choice_clustering_label">Neuen-Sprecher-Erkennung (wie werden neue Sprecher aus dem Pool extrahiert?)</string>
+    <string name="speakerid_perf_clustering_clique">Clique (jeder mit jedem, robust)</string>
+    <string name="speakerid_perf_clustering_star">Stern (alle vs. neuestem Punkt, schnell)</string>
+    <string name="speakerid_perf_clustering_temporal">Zeitfenster (letzte N Punkte)</string>
+    <string name="speakerid_perf_slider_threshold_target">Schwellwert Target-Sprecher (Cosinus-Ähnlichkeit für Match)</string>
+    <string name="speakerid_perf_slider_threshold_normal">Schwellwert weitere Sprecher (Cosinus-Ähnlichkeit für Match)</string>
+    <string name="speakerid_perf_slider_ema_alpha">EMA Alpha — Gewicht des neuen Punkts (nur bei EMA-Methode)</string>
+    <string name="speakerid_perf_slider_ma_window">Fenstergröße für gleitenden Mittelwert (nur bei dieser Methode)</string>
+    <string name="speakerid_perf_slider_min_samples">Mindestanzahl ähnlicher Chunks für neuen Sprecher</string>
+    <string name="speakerid_perf_slider_clustering_interval">Clustering-Intervall — alle wieviel Chunks nach neuen Sprechern suchen?</string>
+    <string name="speakerid_perf_slider_cleaner_min_duration">Pyannote: Mindestdauer für extrahierte Sprache (s)</string>
+    <string name="speakerid_perf_slider_cleaner_min_island">Pyannote: Insel-Filter (Schnipsel kürzer als X verwerfen)</string>
+    <string name="speakerid_perf_section_sim">"STARTZUSTAND SIMULIEREN  (Last-Test mit zufälligen Embeddings)"</string>
+    <string name="speakerid_perf_sim_desc">Erzeugt vor dem Test künstliche Sprecher und/oder Pool-Punkte (zufällige normalisierte Vektoren), um die Pipeline unter realistischer Last zu messen.</string>
+    <string name="speakerid_perf_slider_sim_speakers">Anzahl simulierter Sprecher zum Start (mit Centroid + Punkten)</string>
+    <string name="speakerid_perf_slider_sim_points">Punkte pro simuliertem Sprecher</string>
+    <string name="speakerid_perf_slider_pool_prefill">Zufällige Punkte im Unlabeled-Pool zum Start</string>
+
+    <!-- Steuerung + Status -->
+    <string name="speakerid_perf_btn_start">Benchmark starten</string>
+    <string name="speakerid_perf_btn_stop">Stoppen</string>
+    <string name="speakerid_perf_status_ready">Bereit</string>
+
+    <!-- Status-Texte aus performance_test.py -->
+    <string name="speakerid_perf_status_no_file">Keine gültige Audiodatei gewählt.</string>
+    <string name="speakerid_perf_status_loading">Lade Audio …</string>
+    <string name="speakerid_perf_status_pyannote_init">Initialisiere Pyannote-Modell...</string>
+    <string name="speakerid_perf_status_too_short">Audio zu kurz für die gewählte Chunk-Länge.</string>
+    <string name="speakerid_perf_status_warmup">Warm-up %1$d/%2$d (ONNX-Sessions werden stabilisiert)…</string>
+    <string name="speakerid_perf_status_processing">Verarbeite %1$d Chunks à %2$s s …</string>
+    <string name="speakerid_perf_status_done">Fertig.</string>
+    <string name="speakerid_perf_status_error">Fehler: %1$s</string>
+
+    <!-- Quittung "Ergebnisse" -->
+    <string name="speakerid_perf_section_results">"ERGEBNISSE  (pro Chunk)"</string>
+    <string name="speakerid_perf_col_avg">Ø</string>
+    <string name="speakerid_perf_col_max">max</string>
+    <string name="speakerid_perf_header_pre">"PRE-EMBEDDING  (pro Mikrofon-Chunk)"</string>
+    <string name="speakerid_perf_row_mono">Stereo → Mono</string>
+    <string name="speakerid_perf_row_normalize">Normalisierung</string>
+    <string name="speakerid_perf_row_resample">Resampling (nur wenn Mikrofon ≠ 16kHz)</string>
+    <string name="speakerid_perf_row_vad">VAD (Silero)</string>
+    <string name="speakerid_perf_header_embedding">EMBEDDING</string>
+    <string name="speakerid_perf_row_redimnet">ReDimNet</string>
+    <string name="speakerid_perf_header_post">POST-EMBEDDING</string>
+    <string name="speakerid_perf_row_assignment">Sprecher-Zuordnung</string>
+    <string name="speakerid_perf_row_centroid">Centroid-Update</string>
+    <string name="speakerid_perf_row_clustering">Clustering (periodisch)</string>
+    <string name="speakerid_perf_header_optional">OPTIONAL / GEPLANT</string>
+    <string name="speakerid_perf_row_noise">Hintergrund-Reducer</string>
+    <string name="speakerid_perf_row_pyannote">Overlap-Filter (Pyannote)</string>
+    <string name="speakerid_perf_sum_pipeline">Ø Summe Pipeline-Schritte</string>
+    <string name="speakerid_perf_sum_wall_avg">Ø TATSÄCHLICH / CHUNK</string>
+    <string name="speakerid_perf_sum_wall_max">max TATSÄCHLICH / CHUNK</string>
+    <string name="speakerid_perf_sum_ratio">Realzeit-Verhältnis</string>
+    <string name="speakerid_perf_ratio_hint">"&lt; 1.0 = echtzeit-tauglich  ·  basiert auf tatsächlicher Chunk-Laufzeit"</string>
+
+    <!-- Karte "Wandzeit pro Chunk" -->
+    <string name="speakerid_perf_section_chart">WANDZEIT PRO CHUNK</string>
+    <string name="speakerid_perf_chart_total">Gesamt</string>
+    <string name="speakerid_perf_chart_mono">Mono</string>
+    <string name="speakerid_perf_chart_normalize">Normalize</string>
+    <string name="speakerid_perf_chart_resample">Resample</string>
+    <string name="speakerid_perf_chart_vad">VAD</string>
+    <string name="speakerid_perf_chart_embedding">Embedding</string>
+    <string name="speakerid_perf_chart_assignment">Zuordnung</string>
+    <string name="speakerid_perf_chart_centroid">Centroid</string>
+    <string name="speakerid_perf_chart_clustering">Clustering</string>
+    <string name="speakerid_perf_chart_noise">Rausch</string>
+    <string name="speakerid_perf_chart_pyannote">Pyannote</string>
+</resources>

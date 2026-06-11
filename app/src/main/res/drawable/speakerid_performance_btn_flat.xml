@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  "WAV wählen" / "↺ App-Defaults" aus performance_test.kv:
+  background_color surface_dark, RoundedRectangle radius [dc.RADIUS_CARD] = 8dp.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/speakerid_surface_dark" />
+    <corners android:radius="8dp" />
+</shape>
