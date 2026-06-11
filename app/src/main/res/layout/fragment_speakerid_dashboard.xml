@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1:1-Port von siqas gui/screens/dashboard/dashboard.kv (<DashboardScreen>).
+  Wurzel: BoxLayout vertical, padding 10dp, spacing 10dp, bg = theme bg_color.
+
+  Die responsiven Zeilen (orientation vertical/horizontal je nach
+  root.width-Breakpoint 700/850/750dp) stehen hier im Default "vertical"
+  (Phone-Fall) und werden in SpeakerDashboardFragment.applyResponsiveRows()
+  zur Laufzeit umkonfiguriert.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Speakerid.Screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <!-- TOP NAVIGATION BAR: 60dp hoch, surface_dim, padding [10dp, 0] -->
+    <LinearLayout
+        android:id="@+id/speakeridDashboardTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/speakerid_surface_dim"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <!-- "Dashboard\nLive-Status": bold, secondary_color,
+             font_size min(sp(24), root.width*0.05) wird im Fragment gesetzt -->
+        <TextView
+            android:id="@+id/speakeridDashboardTitle"
+            style="@style/Speakerid.Text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="center_vertical|start"
+            android:maxLines="2"
+            android:text="@string/speakerid_dashboard_title"
+            android:textColor="@color/speakerid_secondary"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- LogoBar: logo_width dp(130), hide_narrow True -->
+        <com.fzi.speakerid.ui.widgets.SpeakerIdLogoBar
+            android:id="@+id/speakeridDashboardLogoBar"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            app:speakeridHideNarrow="true"
+            app:speakeridLogoWidth="130dp" />
+    </LinearLayout>
+
+    <!-- ScrollView (do_scroll_x: False), Inhalt: spacing 15dp, padding [10,10,10,20] -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="10dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="20dp">
+
+            <!-- REIHE 1: AUDIO-PFADE (Breakpoint 700dp) -->
+            <LinearLayout
+                android:id="@+id/speakeridDashboardRowAudio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- StatusCard ANALYSE-AUDIO -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_analyse_audio"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardAudioValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_initial_audio" />
+                </LinearLayout>
+
+                <!-- StatusCard TARGET-AUDIO -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_target_audio"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardTargetValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_initial_target" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- REIHE 2: THRESHOLDS (eigene volle Zeile, 75dp) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="75dp"
+                android:layout_marginTop="15dp"
+                android:background="@drawable/speakerid_bg_dashboard_card"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    style="@style/Speakerid.Text.Small"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="start"
+                    android:text="@string/speakerid_dashboard_card_thresholds"
+                    android:textColor="@color/speakerid_text_secondary" />
+
+                <TextView
+                    android:id="@+id/speakeridDashboardThresholdValue"
+                    style="@style/Speakerid.Text.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="start" />
+            </LinearLayout>
+
+            <!-- REIHE 3: ML-ANALYSE (3er Gruppe, Breakpoint 850dp) -->
+            <LinearLayout
+                android:id="@+id/speakeridDashboardRowMl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:orientation="vertical">
+
+                <!-- StatusCard EMBEDDINGS -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_embeddings"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardEmbeddingsValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_initial_embeddings" />
+                </LinearLayout>
+
+                <!-- StatusCard SPRECHER -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_speakers"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardSpeakersValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_initial_speakers" />
+                </LinearLayout>
+
+                <!-- StatusCard UNLABELED -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_unlabeled"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardUnlabeledValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- REIHE 4: STRATEGIEN (Breakpoint 700dp) -->
+            <LinearLayout
+                android:id="@+id/speakeridDashboardRowStrategies"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:orientation="vertical">
+
+                <!-- StatusCard ZUWEISUNG -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_assignment"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardAssignmentValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start" />
+                </LinearLayout>
+
+                <!-- StatusCard CENTROID-UPDATE -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_centroid_update"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardUpdateValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- REIHE 5: SYSTEM (Breakpoint 700dp) -->
+            <LinearLayout
+                android:id="@+id/speakeridDashboardRowSystem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:orientation="vertical">
+
+                <!-- StatusCard DESIGN-THEME -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_theme"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardThemeValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start" />
+                </LinearLayout>
+
+                <!-- StatusCard LIVE-AUFNAHME -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="75dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_bg_dashboard_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        style="@style/Speakerid.Text.Small"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start"
+                        android:text="@string/speakerid_dashboard_card_recording"
+                        android:textColor="@color/speakerid_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/speakeridDashboardRecordingValue"
+                        style="@style/Speakerid.Text.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="start" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- CHUNK TIMELINE CARD: padding 12dp, spacing dc.SPACING_ITEM (8dp) -->
+            <LinearLayout
+                android:id="@+id/speakeridDashboardTimelineCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:background="@drawable/speakerid_bg_dashboard_card"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <!-- 11sp, text_secondary, bold, Hoehe dc.HEIGHT_SECTION_LABEL (20dp) -->
+                <TextView
+                    style="@style/Speakerid.Text.Small"
+                    android:layout_width="match_parent"
+                    android:layout_height="20dp"
+                    android:gravity="center_vertical|start"
+                    android:text="@string/speakerid_dashboard_card_chunk_timeline"
+                    android:textColor="@color/speakerid_text_secondary"
+                    android:textStyle="bold" />
+
+                <com.fzi.speakerid.ui.dashboard.SpeakerIdSegmentedWaveformView
+                    android:id="@+id/speakeridDashboardWaveform"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <!-- ACTION BUTTONS (Breakpoint 750dp), padding [0,10,0,20], spacing 10dp -->
+            <LinearLayout
+                android:id="@+id/speakeridDashboardRowButtons"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:orientation="vertical"
+                android:paddingTop="10dp"
+                android:paddingBottom="20dp">
+
+                <!-- Kivy-Button-Defaults: font_size 15sp, Textfarbe weiss,
+                     height max(45dp, texture + 10dp) -->
+                <Button
+                    android:id="@+id/speakeridDashboardBtnDump"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/speakerid_bg_dashboard_btn_dump"
+                    android:fontFamily="@font/speakerid_dejavu"
+                    android:gravity="center"
+                    android:minWidth="0dp"
+                    android:minHeight="45dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/speakerid_dashboard_btn_dump"
+                    android:textAllCaps="false"
+                    android:textColor="@color/speakerid_white"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/speakeridDashboardBtnDummy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_bg_dashboard_btn_test"
+                    android:fontFamily="@font/speakerid_dejavu"
+                    android:gravity="center"
+                    android:minWidth="0dp"
+                    android:minHeight="45dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/speakerid_dashboard_btn_dummy"
+                    android:textAllCaps="false"
+                    android:textColor="@color/speakerid_white"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/speakeridDashboardBtnReassign"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/speakerid_bg_dashboard_btn_reassign"
+                    android:fontFamily="@font/speakerid_dejavu"
+                    android:gravity="center"
+                    android:minWidth="0dp"
+                    android:minHeight="45dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/speakerid_dashboard_btn_reassign"
+                    android:textAllCaps="false"
+                    android:textColor="@color/speakerid_white"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

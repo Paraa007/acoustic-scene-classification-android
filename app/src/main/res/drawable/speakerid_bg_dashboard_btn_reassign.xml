@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  dashboard.kv Button "Ungelabelte Punkte neu zuordnen":
+  background_color = theme secondary_color (#0E2356), kein Radius.
+  Pressed = RGB * 0.8 (Port-Konvention pressedVariant).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#0B1C44" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/speakerid_secondary" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  dashboard.kv Button "DataManager: Alle Daten ausgeben":
+  background_color (0.2, 0.2, 0.25, 1) = #333340, kein Radius
+  (background_normal: ''). Pressed = RGB * 0.8 (Port-Konvention pressedVariant).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#282833" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#333340" />
+        </shape>
+    </item>
+</selector>

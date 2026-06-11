@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings des Dashboard-Screens - Texte exakt aus
+  siqas gui/screens/dashboard/dashboard.kv und dashboard.py.
+-->
+<resources>
+    <!-- Top-Bar -->
+    <string name="speakerid_dashboard_title">Dashboard\nLive-Status</string>
+
+    <!-- StatusCard-Labels -->
+    <string name="speakerid_dashboard_card_analyse_audio">ANALYSE-AUDIO</string>
+    <string name="speakerid_dashboard_card_target_audio">TARGET-AUDIO</string>
+    <string name="speakerid_dashboard_card_thresholds">THRESHOLDS</string>
+    <string name="speakerid_dashboard_card_embeddings">EMBEDDINGS</string>
+    <string name="speakerid_dashboard_card_speakers">SPRECHER</string>
+    <string name="speakerid_dashboard_card_unlabeled">UNLABELED</string>
+    <string name="speakerid_dashboard_card_assignment">ZUWEISUNG</string>
+    <string name="speakerid_dashboard_card_centroid_update">CENTROID-UPDATE</string>
+    <string name="speakerid_dashboard_card_theme">DESIGN-THEME</string>
+    <string name="speakerid_dashboard_card_recording">LIVE-AUFNAHME</string>
+    <string name="speakerid_dashboard_card_chunk_timeline">CHUNK TIMELINE</string>
+
+    <!-- Action-Buttons -->
+    <string name="speakerid_dashboard_btn_dump">DataManager:\nAlle Daten ausgeben</string>
+    <string name="speakerid_dashboard_btn_dummy">Test:\n3 Dummy-Embeddings\nhinzufügen</string>
+    <string name="speakerid_dashboard_btn_reassign">Ungelabelte Punkte\nneu zuordnen</string>
+
+    <!-- Initialwerte (StringProperty-Defaults aus dashboard.py) -->
+    <string name="speakerid_dashboard_initial_audio">Keine Datei</string>
+    <string name="speakerid_dashboard_initial_target">Kein Target-Audio geladen</string>
+    <string name="speakerid_dashboard_initial_embeddings">0 Embeddings</string>
+    <string name="speakerid_dashboard_initial_speakers">0 Sprecher erkannt</string>
+
+    <!-- Dynamische Wert-Bausteine (Markup-Strings aus dashboard.py/_refresh_all) -->
+    <string name="speakerid_dashboard_value_no_file">Keine Datei geladen</string>
+    <string name="speakerid_dashboard_value_no_target">Kein Target geladen</string>
+    <string name="speakerid_dashboard_value_threshold_target_prefix">"Target: "</string>
+    <string name="speakerid_dashboard_value_threshold_separator">"  |  "</string>
+    <string name="speakerid_dashboard_value_threshold_cluster_prefix">"Cluster: "</string>
+    <string name="speakerid_dashboard_value_embeddings_suffix">" Embeddings"</string>
+    <string name="speakerid_dashboard_value_speakers_suffix">" Sprecher erkannt"</string>
+    <string name="speakerid_dashboard_value_chunks_suffix">" Chunks"</string>
+    <string name="speakerid_dashboard_value_theme_prefix">"Aktuelles Theme: "</string>
+    <string name="speakerid_dashboard_value_theme_name">FZI</string>
+    <string name="speakerid_dashboard_value_recording_active">AKTIV</string>
+    <string name="speakerid_dashboard_value_recording_standby">Standby</string>
+</resources>

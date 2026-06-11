@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  dashboard.kv <StatusCard@BoxLayout> bzw. Chunk-Timeline-Card:
+  RoundedRectangle mit surface_color und radius [12] (12dp).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/speakerid_surface" />
+    <corners android:radius="12dp" />
+</shape>

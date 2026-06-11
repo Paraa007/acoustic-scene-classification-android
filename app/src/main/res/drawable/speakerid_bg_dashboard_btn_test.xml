@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  dashboard.kv Button "Test: 3 Dummy-Embeddings hinzufügen":
+  background_color (0.15, 0.35, 0.15, 1) = #265926, kein Radius.
+  Pressed = RGB * 0.8 (Port-Konvention pressedVariant).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#1E471E" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#265926" />
+        </shape>
+    </item>
+</selector>
