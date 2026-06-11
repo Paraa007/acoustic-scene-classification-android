@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -63,7 +64,11 @@ class TargetRecorderFragment : Fragment() {
     /** `self.frames` — Zugriff synchronisiert (Callback laeuft auf Worker-Thread). */
     private val frames = ArrayList<FloatArray>()
 
-    /** `self.start_time` (Epoch-Millis statt `time.time()`). */
+    /**
+     * `self.start_time` — als monotone [SystemClock.elapsedRealtime]-Marke
+     * statt Wanduhr: NTP-/manuelle Uhr-Korrekturen waehrend einer Aufnahme
+     * duerfen die Timer-Anzeige nicht verzerren.
+     */
     private var startTime = 0L
 
     private var recorder: SpeakerAudioRecorder? = null
@@ -101,7 +106,7 @@ class TargetRecorderFragment : Fragment() {
                 return
             }
 
-            val elapsed = (System.currentTimeMillis() - startTime) / 1000.0
+            val elapsed = (SystemClock.elapsedRealtime() - startTime) / 1000.0
             b.labelTimer.text = formatTime(elapsed)
             b.root.postDelayed(this, 100L)
         }
@@ -207,7 +212,7 @@ class TargetRecorderFragment : Fragment() {
 
         isRecording = true
         synchronized(frames) { frames.clear() }
-        startTime = System.currentTimeMillis()
+        startTime = SystemClock.elapsedRealtime()
         // "[color=CC0000]Aufnahme läuft...[/color]"
         setStatus(
             getString(R.string.speakerid_target_recorder_status_recording),

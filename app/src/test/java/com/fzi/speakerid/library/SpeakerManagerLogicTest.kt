@@ -129,4 +129,32 @@ class SpeakerManagerLogicTest {
         )
         assertEquals("0", unmatched)
     }
+
+    /**
+     * Arena-"Laufzeit" = Summe aller Cluster-Zeiten (physics_arena.py
+     * `_sync_ui`): pro Chunk darf exakt die (overlap-skalierte) Segment-
+     * Dauer dazukommen — 60 Chunks a 1,0 s ohne Overlap ergeben 60 s,
+     * nicht mehr (Regression gegen zu schnell laufende Laufzeit-Anzeige).
+     */
+    @Test
+    fun clusterTimeSum_growsExactlyByChunkDuration() {
+        val manager = newManager()
+        val nearTarget = unit(1.0, 0.1, 0.0, 0.0)
+        repeat(30) { manager.applyResult(null, isSilent = true, durationS = 1.0) }
+        repeat(30) { manager.applyResult(nearTarget, isSilent = false, durationS = 1.0) }
+
+        val totalSec = manager.clusters.values.sumOf { it.totalTime }
+        assertEquals(60.0, totalSec, 1e-9)
+
+        // Mit Overlap: real_time_added = duration * (chunk - overlap) / chunk
+        // (live_processor.py `_apply_results`).
+        val overlapManager = SpeakerManager(
+            targetCentroid = targetAxis,
+            chunkDurationS = 1.0,
+            chunkOverlapS = 0.5,
+        )
+        repeat(10) { overlapManager.applyResult(null, isSilent = true, durationS = 1.0) }
+        val overlapTotal = overlapManager.clusters.values.sumOf { it.totalTime }
+        assertEquals(5.0, overlapTotal, 1e-9)
+    }
 }
